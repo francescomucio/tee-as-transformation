@@ -1,0 +1,5 @@
+project_folder = "t_project"
+
+[connection]
+type = "duckdb"
+path = "t_project/data/t_project.duckdb"

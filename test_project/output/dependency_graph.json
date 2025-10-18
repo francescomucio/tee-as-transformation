@@ -1,0 +1,47 @@
+{
+  "nodes": [
+    "schema.table_b",
+    "schema.table_a",
+    "schema.table_c"
+  ],
+  "edges": [
+    [
+      "schema.table_a",
+      "schema.table_b"
+    ],
+    [
+      "schema.table_b",
+      "schema.table_c"
+    ],
+    [
+      "schema.table_a",
+      "schema.table_c"
+    ]
+  ],
+  "dependencies": {
+    "schema.table_a": [],
+    "schema.table_b": [
+      "schema.table_a"
+    ],
+    "schema.table_c": [
+      "schema.table_b",
+      "schema.table_a"
+    ]
+  },
+  "dependents": {
+    "schema.table_b": [
+      "schema.table_c"
+    ],
+    "schema.table_a": [
+      "schema.table_b",
+      "schema.table_c"
+    ],
+    "schema.table_c": []
+  },
+  "execution_order": [
+    "schema.table_a",
+    "schema.table_b",
+    "schema.table_c"
+  ],
+  "cycles": []
+}

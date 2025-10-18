@@ -1,0 +1,115 @@
+# Cursor Rules for UV Python Project
+
+## Project Overview
+This is a Python project managed with uv, a fast Python package installer and resolver.
+
+## Python Version
+- Python 3.14+ required
+- Use `uv run` for executing Python scripts
+- Use `uv add` for adding dependencies
+- Use `uv sync` for installing dependencies
+
+## File Structure
+- `pyproject.toml` - Project configuration and dependencies
+- `main.py` - Main entry point
+- `tee/` - Main module with parser and engine submodules
+- `tests/` - Test files
+- `README.md` - Project documentation
+
+## Development Guidelines
+
+### Dependency Management
+- Always use `uv add <package>` instead of pip install
+- Dependencies are managed in `pyproject.toml`
+- Use `uv sync` to install dependencies from lock file
+- Use `uv lock` to update lock file
+
+### Running Code and Tests
+- **ALWAYS use `uv run` for all Python execution**
+- Use `uv run python main.py` to run the main script
+- Use `uv run python <script_name>` for other Python scripts
+- Use `uv run pytest` for running tests
+- Use `uv run pytest tests/ -v` for verbose test output
+- Use `uv run pytest tests/ -k <test_name>` for specific tests
+- Use `uv run python -c "code"` for one-liner Python execution
+
+### Virtual Environment
+- uv automatically manages virtual environments
+- No need to manually activate/deactivate venv
+- Use `uv shell` to activate the virtual environment shell
+- Never use `python` directly - always use `uv run python`
+
+### Project Dependencies
+- Add development dependencies with `uv add --dev <package>`
+- Add optional dependencies with `uv add --optional <package>`
+- Group dependencies by purpose in pyproject.toml
+
+### Testing
+- Use pytest for testing
+- Place tests in `tests/` directory
+- Run tests with `uv run pytest`
+- Use `uv run pytest tests/ -v` for detailed output
+- Use `uv run pytest tests/ -k <pattern>` for specific test patterns
+
+### Code Organization
+- Keep main logic in `main.py` or appropriate modules
+- Create separate modules for different functionality
+- Use `__init__.py` files for package structure
+- Follow the tee module structure: `tee/parser/` and `tee/engine/`
+
+## Common Commands
+```bash
+# Add a dependency
+uv add requests
+
+# Add a development dependency
+uv add --dev pytest
+
+# Install all dependencies
+uv sync
+
+# Run a script
+uv run python script.py
+
+# Run tests
+uv run pytest
+
+# Run tests with verbose output
+uv run pytest tests/ -v
+
+# Run specific tests
+uv run pytest tests/ -k test_name
+
+# Run one-liner Python code
+uv run python -c "print('Hello')"
+
+# Update dependencies
+uv lock --upgrade
+
+# Show installed packages
+uv pip list
+```
+
+## Best Practices
+- Keep `pyproject.toml` clean and well-organized
+- Use semantic versioning for project version
+- Document dependencies and their purposes
+- Use virtual environments for isolation
+- Write tests for new functionality
+- Use type hints for better code documentation
+- **NEVER use `python` directly - always use `uv run python`**
+- **NEVER use `pytest` directly - always use `uv run pytest`**
+
+## Module Structure
+- `tee/` - Main module containing parser and engine
+- `tee/parser/` - SQL parsing and dependency analysis
+- `tee/engine/` - Execution engine for running SQL models
+- `tee/executor.py` - High-level execution functions
+- `tests/` - All test files
+
+## Error Handling
+- Always use proper exception handling
+- Log errors appropriately
+- Provide meaningful error messages
+- Test error conditions
+

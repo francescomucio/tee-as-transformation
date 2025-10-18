@@ -1,0 +1,102 @@
+site_name: TEE Documentation
+site_description: Transform, Extract, Execute - A Python framework for SQL data transformations
+site_url: https://your-username.github.io/tee
+repo_url: https://github.com/your-username/tee
+repo_name: your-username/tee
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.top
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.snippets
+  - pymdownx.arithmatex
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - pymdownx.details
+  - pymdownx.critic
+  - pymdownx.caret
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.tilde
+  - admonition
+  - pymdownx.superfences
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+
+nav:
+  - Home: README.md
+  - Getting Started:
+    - getting-started/installation.md
+    - getting-started/quick-start.md
+    - getting-started/configuration.md
+  - User Guide:
+    - user-guide/overview.md
+    - user-guide/execution-engine.md
+    - user-guide/database-adapters.md
+    - user-guide/sql-dialect-conversion.md
+    - Examples:
+      - user-guide/examples/basic-usage.md
+      - user-guide/examples/multi-database.md
+      - user-guide/examples/custom-adapters.md
+  - API Reference:
+    - api-reference/engine/
+    - api-reference/parser/
+    - api-reference/adapters/
+  - Development:
+    - development/architecture.md
+    - development/contributing.md
+    - development/migration-guides/
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/your-username/tee
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/tee
+  version:
+    provider: mike

@@ -1,0 +1,23 @@
+[project]
+name = "tee"
+version = "0.1.0"
+description = "SQL Model Execution Framework"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "duckdb>=1.4.1",
+    "pydantic>=2.12.2",
+    "pyyaml>=6.0.3",
+    "sqlglot[rs]>=27.27.0",
+    "toml>=0.10.2",
+]
+
+[project.scripts]
+tee = "tee.cli.main:main"
+
+[dependency-groups]
+dev = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.22",
+    "pytest>=8.4.2",
+]

@@ -1,0 +1,52 @@
+# Example database configuration for pyproject.toml
+# This file shows how to configure different database adapters
+
+[tool.tee.database]
+# Default database configuration
+type = "duckdb"
+path = ":memory:"
+source_dialect = "postgresql"  # Write models in PostgreSQL, convert to DuckDB
+
+# Alternative: Multiple database configurations
+[tool.tee.databases]
+
+[tool.tee.databases.duckdb]
+type = "duckdb"
+path = "data/my_project.db"
+source_dialect = "postgresql"
+
+[tool.tee.databases.snowflake]
+type = "snowflake"
+host = "myaccount.snowflakecomputing.com"
+user = "myuser"
+password = "mypassword"
+database = "mydb"
+warehouse = "mywarehouse"
+role = "myrole"
+schema = "public"
+source_dialect = "postgresql"
+
+[tool.tee.databases.postgresql]
+type = "postgresql"
+host = "localhost"
+port = 5432
+database = "mydb"
+user = "myuser"
+password = "mypassword"
+schema = "public"
+source_dialect = "postgresql"
+
+[tool.tee.databases.bigquery]
+type = "bigquery"
+project = "my-project"
+database = "my_dataset"
+source_dialect = "postgresql"
+# BigQuery uses service account authentication
+extra = { service_account_path = "/path/to/service-account.json" }
+
+# Environment variable overrides
+# You can override any configuration using environment variables:
+# TEE_DB_TYPE=duckdb
+# TEE_DB_PATH=/path/to/database.db
+# TEE_DB_SOURCE_DIALECT=postgresql
+# TEE_DB_TARGET_DIALECT=duckdb
