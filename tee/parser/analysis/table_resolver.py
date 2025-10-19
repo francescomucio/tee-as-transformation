@@ -52,9 +52,14 @@ class TableResolver:
                     # If file is directly in models folder
                     return sql_file.stem
             else:
-                # For other connection types, use file path
+                # For other connection types, use file path but remove all extensions
                 relative_path = sql_file.relative_to(models_folder)
-                return str(relative_path).replace('/', '.').replace('\\', '.').replace('.sql', '')
+                # Convert path separators to dots and remove all file extensions
+                table_name = str(relative_path).replace('/', '.').replace('\\', '.')
+                # Remove any file extension (not just .sql)
+                if '.' in table_name:
+                    table_name = table_name.rsplit('.', 1)[0]
+                return table_name
         except Exception as e:
             raise TableResolutionError(f"Failed to generate table name for {sql_file}: {e}")
     

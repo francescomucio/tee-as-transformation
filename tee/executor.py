@@ -15,6 +15,49 @@ if TYPE_CHECKING:
     from tee.adapters import AdapterConfig
 
 
+def create_base_adapter_config(connection_dict: Dict[str, Any]) -> 'AdapterConfig':
+    """
+    Create a base AdapterConfig with common fields validated.
+    
+    This function handles the common database connection fields that are
+    shared across all adapters, providing early validation and type safety.
+    
+    Args:
+        connection_dict: Raw connection configuration dictionary
+        
+    Returns:
+        AdapterConfig with common fields populated
+        
+    Raises:
+        ValueError: If required common fields are missing
+    """
+    from tee.adapters import AdapterConfig
+    
+    # Validate required common fields
+    if not connection_dict.get('type'):
+        raise ValueError("Database type is required")
+    
+    # Create base config with common fields
+    return AdapterConfig(
+        type=connection_dict.get('type'),
+        host=connection_dict.get('host'),
+        port=connection_dict.get('port'),
+        database=connection_dict.get('database'),
+        user=connection_dict.get('user'),
+        password=connection_dict.get('password'),
+        path=connection_dict.get('path'),
+        source_dialect=connection_dict.get('source_dialect'),
+        target_dialect=connection_dict.get('target_dialect'),
+        connection_timeout=connection_dict.get('connection_timeout', 30),
+        query_timeout=connection_dict.get('query_timeout', 300),
+        schema=connection_dict.get('schema'),
+        warehouse=connection_dict.get('warehouse'),
+        role=connection_dict.get('role'),
+        project=connection_dict.get('project'),
+        # Don't set extra here - let adapters handle their specific fields
+    )
+
+
 def execute_models(project_folder: str, connection_config: Union[Dict[str, Any], AdapterConfig], 
                   save_analysis: bool = True, variables: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
@@ -36,14 +79,8 @@ def execute_models(project_folder: str, connection_config: Union[Dict[str, Any],
     """
     logger = logging.getLogger(__name__)
     
-    # Convert dict config to AdapterConfig if needed
-    if isinstance(connection_config, dict):
-        from tee.adapters import AdapterConfig
-        connection_config = AdapterConfig(
-            type=connection_config.get('type', 'duckdb'),
-            path=connection_config.get('path', ':memory:'),
-            source_dialect=connection_config.get('source_dialect', 'postgresql')
-        )
+    # Keep raw config dict for adapter validation
+    # Adapters will handle their own validation and config creation
     
     print("\n" + "="*50)
     print("TEE: PARSING AND EXECUTING SQL MODELS")
@@ -137,14 +174,8 @@ def parse_models_only(project_folder: str, connection_config: Union[Dict[str, An
     """
     logger = logging.getLogger(__name__)
     
-    # Convert dict config to AdapterConfig if needed
-    if isinstance(connection_config, dict):
-        from tee.adapters import AdapterConfig
-        connection_config = AdapterConfig(
-            type=connection_config.get('type', 'duckdb'),
-            path=connection_config.get('path', ':memory:'),
-            source_dialect=connection_config.get('source_dialect', 'postgresql')
-        )
+    # Keep raw config dict for adapter validation
+    # Adapters will handle their own validation and config creation
     
     print("\n" + "="*50)
     print("TEE: PARSING SQL MODELS")

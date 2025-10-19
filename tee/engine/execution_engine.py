@@ -5,7 +5,7 @@ This module provides the main execution engine that uses the new adapter system
 for database-agnostic SQL model execution with automatic dialect conversion.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
 import logging
 
 from ..adapters import get_adapter, AdapterConfig
@@ -23,12 +23,12 @@ class ExecutionEngine:
     - Database-specific optimizations and features
     """
     
-    def __init__(self, config: Optional[AdapterConfig] = None, config_name: str = "default"):
+    def __init__(self, config: Optional[Union[AdapterConfig, Dict[str, Any]]] = None, config_name: str = "default"):
         """
         Initialize the execution engine.
         
         Args:
-            config: Database adapter configuration (if None, loads from config files)
+            config: Database adapter configuration (AdapterConfig or dict, if None, loads from config files)
             config_name: Configuration name to load (if config is None)
         """
         self.config = config or load_database_config(config_name)
@@ -59,7 +59,8 @@ class ExecutionEngine:
             "failed_tables": [],
             "execution_log": [],
             "table_info": {},
-            "dialect_conversions": []
+            "dialect_conversions": [],
+            "warnings": []
         }
         
         self.logger.info(f"Starting execution of {len(execution_order)} models using {self.adapter.__class__.__name__}")
@@ -103,10 +104,10 @@ class ExecutionEngine:
                     continue
                 
                 # Log dialect conversion if applicable
-                if self.config.source_dialect and self.config.source_dialect != self.adapter.get_default_dialect():
+                if self.adapter.config.source_dialect and self.adapter.config.source_dialect != self.adapter.get_default_dialect():
                     results["dialect_conversions"].append({
                         "table": table_name,
-                        "from_dialect": self.config.source_dialect,
+                        "from_dialect": self.adapter.config.source_dialect,
                         "to_dialect": self.adapter.get_default_dialect()
                     })
                 

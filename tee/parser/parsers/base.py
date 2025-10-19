@@ -22,14 +22,13 @@ class BaseParser(ABC):
         self._cache.clear()
     
     @abstractmethod
-    def parse(self, content: str, file_path: FilePath = None, **kwargs) -> ParsedModel:
+    def parse(self, content: str, file_path: FilePath = None) -> ParsedModel:
         """
         Parse content and return parsed model data.
         
         Args:
             content: The content to parse
             file_path: Optional file path for context
-            **kwargs: Additional parsing options
             
         Returns:
             Parsed model data

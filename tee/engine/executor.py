@@ -6,7 +6,7 @@ for database-agnostic SQL model execution.
 """
 
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Union
 from .execution_engine import ExecutionEngine
 from .config import load_database_config
 from ..adapters import AdapterConfig
@@ -15,13 +15,13 @@ from ..adapters import AdapterConfig
 class ModelExecutor:
     """Enhanced executor that uses the new adapter system for database-agnostic execution."""
     
-    def __init__(self, project_folder: str, config: Optional[AdapterConfig] = None, config_name: str = "default"):
+    def __init__(self, project_folder: str, config: Optional[Union[AdapterConfig, Dict[str, Any]]] = None, config_name: str = "default"):
         """
         Initialize the ModelExecutor.
         
         Args:
             project_folder: Path to the project folder containing SQL models
-            config: Database adapter configuration (if None, loads from config files)
+            config: Database adapter configuration (AdapterConfig or dict, if None, loads from config files)
             config_name: Configuration name to load (if config is None)
         """
         self.project_folder = project_folder
@@ -82,6 +82,8 @@ class ModelExecutor:
             # Log results
             self.logger.info(f"Successfully executed: {len(results['executed_tables'])} tables")
             self.logger.info(f"Failed: {len(results['failed_tables'])} tables")
+            if results.get('warnings'):
+                self.logger.info(f"Warnings: {len(results['warnings'])} warnings")
             
             # Log dialect conversion summary
             if results.get('dialect_conversions'):

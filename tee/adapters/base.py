@@ -75,17 +75,87 @@ class DatabaseAdapter(ABC):
     including SQL dialect conversion, connection management, and database-specific features.
     """
     
-    def __init__(self, config: AdapterConfig):
-        self.config = config
+    # Override in subclasses to define required and optional fields
+    REQUIRED_FIELDS = ['type']
+    OPTIONAL_FIELDS = ['host', 'user', 'password', 'database', 'port', 
+                      'schema', 'connection_timeout', 'query_timeout', 'source_dialect']
+    
+    def __init__(self, config_dict: Dict[str, Any]):
+        self._raw_config = config_dict
         self.connection = None
         self.logger = logging.getLogger(self.__class__.__name__)
         
-        # SQLglot dialect objects
-        self.source_dialect = self._get_dialect(config.source_dialect)
-        self.target_dialect = self._get_dialect(config.target_dialect or self.get_default_dialect())
+        # Validate configuration first
+        self._validate_config(config_dict)
         
-        # Validate configuration
-        self.validate_config()
+        # Create adapter config
+        self.config = self._create_adapter_config(config_dict)
+        
+        # SQLglot dialect objects
+        self.source_dialect = self._get_dialect(self.config.source_dialect)
+        self.target_dialect = self._get_dialect(self.config.target_dialect or self.get_default_dialect())
+    
+    def _validate_config(self, config_dict: Dict[str, Any]) -> None:
+        """Validate configuration against adapter requirements."""
+        # Check required fields
+        missing = set(self.REQUIRED_FIELDS) - set(config_dict.keys())
+        if missing:
+            raise ValueError(f"Missing required fields for {self.__class__.__name__}: {missing}")
+        
+        # Validate field types
+        self._validate_field_types(config_dict)
+        
+        # Validate field values
+        self._validate_field_values(config_dict)
+    
+    def _validate_field_types(self, config_dict: Dict[str, Any]) -> None:
+        """Validate field types."""
+        if 'port' in config_dict and config_dict['port'] is not None:
+            if not isinstance(config_dict['port'], int):
+                raise ValueError("Port must be an integer")
+        
+        if 'connection_timeout' in config_dict and config_dict['connection_timeout'] is not None:
+            if not isinstance(config_dict['connection_timeout'], int):
+                raise ValueError("Connection timeout must be an integer")
+        
+        if 'query_timeout' in config_dict and config_dict['query_timeout'] is not None:
+            if not isinstance(config_dict['query_timeout'], int):
+                raise ValueError("Query timeout must be an integer")
+    
+    def _validate_field_values(self, config_dict: Dict[str, Any]) -> None:
+        """Validate field values."""
+        if 'port' in config_dict and config_dict['port'] is not None:
+            if not (1 <= config_dict['port'] <= 65535):
+                raise ValueError("Port must be between 1 and 65535")
+        
+        if 'connection_timeout' in config_dict and config_dict['connection_timeout'] is not None:
+            if config_dict['connection_timeout'] <= 0:
+                raise ValueError("Connection timeout must be positive")
+        
+        if 'query_timeout' in config_dict and config_dict['query_timeout'] is not None:
+            if config_dict['query_timeout'] <= 0:
+                raise ValueError("Query timeout must be positive")
+    
+    def _create_adapter_config(self, config_dict: Dict[str, Any]) -> AdapterConfig:
+        """Create AdapterConfig from validated dictionary."""
+        return AdapterConfig(
+            type=config_dict['type'],
+            host=config_dict.get('host'),
+            port=config_dict.get('port'),
+            database=config_dict.get('database'),
+            user=config_dict.get('user'),
+            password=config_dict.get('password'),
+            path=config_dict.get('path'),
+            source_dialect=config_dict.get('source_dialect'),
+            target_dialect=config_dict.get('target_dialect'),
+            connection_timeout=config_dict.get('connection_timeout', 30),
+            query_timeout=config_dict.get('query_timeout', 300),
+            schema=config_dict.get('schema'),
+            warehouse=config_dict.get('warehouse'),
+            role=config_dict.get('role'),
+            project=config_dict.get('project'),
+            extra=config_dict.get('extra'),
+        )
     
     @abstractmethod
     def get_default_dialect(self) -> str:
@@ -229,15 +299,6 @@ class DatabaseAdapter(ABC):
             "supported_materializations": [m.value for m in self.get_supported_materializations()],
         }
     
-    def validate_config(self) -> None:
-        """Validate the adapter configuration."""
-        if not self.config.type:
-            raise ValueError("Database type is required")
-        
-        # Validate connection string if provided
-        if hasattr(self.config, 'connection_string') and self.config.connection_string:
-            if not self.validate_connection_string(self.config.connection_string):
-                raise ValueError("Invalid connection string format")
     
     def _get_dialect(self, dialect_name: Optional[str]) -> Optional[Dialect]:
         """Get SQLglot dialect object from name."""

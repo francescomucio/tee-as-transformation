@@ -48,6 +48,52 @@ class TestProjectParser:
         result = table_resolver.generate_full_table_name(sql_file, models_folder)
         assert result == "schema1.schema2.deep_table"
     
+    def test_generate_full_table_name_snowflake(self):
+        """Test _generate_full_table_name method for Snowflake connections."""
+        # Create a table resolver with Snowflake connection
+        table_resolver = TableResolver({"type": "snowflake"})
+        models_folder = Path("test_project/models")
+        
+        # Test case 1: SQL file in schema subfolder
+        sql_file = Path("test_project/models/my_schema/my_table.sql")
+        result = table_resolver.generate_full_table_name(sql_file, models_folder)
+        assert result == "my_schema.my_table"
+        
+        # Test case 2: Python file in schema subfolder (the bug we fixed)
+        python_file = Path("test_project/models/my_schema/my_auto_tables.py")
+        result = table_resolver.generate_full_table_name(python_file, models_folder)
+        assert result == "my_schema.my_auto_tables"  # Should NOT include .py extension
+        
+        # Test case 3: Python file directly in models folder
+        python_file = Path("test_project/models/direct_python_model.py")
+        result = table_resolver.generate_full_table_name(python_file, models_folder)
+        assert result == "direct_python_model"  # Should NOT include .py extension
+        
+        # Test case 4: File in nested schema folder
+        sql_file = Path("test_project/models/schema1/schema2/deep_table.sql")
+        result = table_resolver.generate_full_table_name(sql_file, models_folder)
+        assert result == "schema1.schema2.deep_table"
+    
+    def test_generate_full_table_name_python_files(self):
+        """Test _generate_full_table_name method with Python files for different database types."""
+        models_folder = Path("test_project/models")
+        
+        # Test DuckDB with Python files
+        duckdb_resolver = TableResolver({"type": "duckdb"})
+        python_file = Path("test_project/models/my_schema/my_auto_tables.py")
+        result = duckdb_resolver.generate_full_table_name(python_file, models_folder)
+        assert result == "my_schema.my_auto_tables"  # DuckDB uses .stem which removes all extensions
+        
+        # Test Snowflake with Python files
+        snowflake_resolver = TableResolver({"type": "snowflake"})
+        result = snowflake_resolver.generate_full_table_name(python_file, models_folder)
+        assert result == "my_schema.my_auto_tables"  # Should match DuckDB behavior after fix
+        
+        # Test PostgreSQL with Python files
+        postgresql_resolver = TableResolver({"type": "postgresql"})
+        result = postgresql_resolver.generate_full_table_name(python_file, models_folder)
+        assert result == "my_schema.my_auto_tables"  # Should match DuckDB behavior after fix
+    
     def test_generate_full_table_name_edge_cases(self):
         """Test _generate_full_table_name method with edge cases."""
         table_resolver = TableResolver({"type": "duckdb"})
@@ -67,6 +113,35 @@ class TestProjectParser:
         sql_file = Path("test_project/models/my_schema_name/my_table.sql")
         result = table_resolver.generate_full_table_name(sql_file, models_folder)
         assert result == "my_schema_name.my_table"
+    
+    def test_generate_full_table_name_extension_removal(self):
+        """Test that all file extensions are properly removed for non-DuckDB databases."""
+        models_folder = Path("test_project/models")
+        
+        # Test various file extensions with Snowflake
+        snowflake_resolver = TableResolver({"type": "snowflake"})
+        
+        test_cases = [
+            ("my_schema/my_table.sql", "my_schema.my_table"),
+            ("my_schema/my_table.py", "my_schema.my_table"),
+            ("my_schema/my_table.txt", "my_schema.my_table"),
+            ("my_schema/my_table.csv", "my_schema.my_table"),
+            ("my_schema/my_table.json", "my_schema.my_table"),
+            ("my_schema/my_table.yaml", "my_schema.my_table"),
+            ("my_schema/my_table.yml", "my_schema.my_table"),
+        ]
+        
+        for file_path, expected in test_cases:
+            sql_file = Path(f"test_project/models/{file_path}")
+            result = snowflake_resolver.generate_full_table_name(sql_file, models_folder)
+            assert result == expected, f"Failed for {file_path}: got {result}, expected {expected}"
+        
+        # Test that DuckDB behavior is unchanged (uses .stem)
+        duckdb_resolver = TableResolver({"type": "duckdb"})
+        for file_path, expected in test_cases:
+            sql_file = Path(f"test_project/models/{file_path}")
+            result = duckdb_resolver.generate_full_table_name(sql_file, models_folder)
+            assert result == expected, f"DuckDB failed for {file_path}: got {result}, expected {expected}"
     
     def test_generate_full_table_name_windows_paths(self):
         """Test _generate_full_table_name method with Windows-style paths."""

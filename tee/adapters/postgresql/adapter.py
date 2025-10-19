@@ -94,7 +94,7 @@ class PostgreSQLAdapter(DatabaseAdapter):
         
         # Extract schema and table name
         if '.' in table_name:
-            schema_name, table_only = table_name.split('.', 1)
+            schema_name, _ = table_name.split('.', 1)
             # Create schema if it doesn't exist
             try:
                 cursor = self.connection.cursor()
@@ -132,7 +132,7 @@ class PostgreSQLAdapter(DatabaseAdapter):
         
         # Extract schema and view name
         if '.' in view_name:
-            schema_name, view_only = view_name.split('.', 1)
+            schema_name, _ = view_name.split('.', 1)
             # Create schema if it doesn't exist
             try:
                 cursor = self.connection.cursor()
@@ -170,7 +170,7 @@ class PostgreSQLAdapter(DatabaseAdapter):
         
         # Extract schema and view name
         if '.' in view_name:
-            schema_name, view_only = view_name.split('.', 1)
+            schema_name, _ = view_name.split('.', 1)
             # Create schema if it doesn't exist
             try:
                 cursor = self.connection.cursor()

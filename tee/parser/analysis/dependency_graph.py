@@ -5,7 +5,7 @@ Dependency graph building and analysis functionality.
 from typing import Dict, Any, List
 from graphlib import TopologicalSorter
 
-from ..shared.types import ParsedModel, DependencyGraph, DependencyInfo, ExecutionOrder, GraphNodes, GraphEdges, GraphCycles
+from ..shared.types import ParsedModel, DependencyGraph, DependencyInfo, ExecutionOrder, GraphCycles
 from ..shared.exceptions import DependencyError
 
 

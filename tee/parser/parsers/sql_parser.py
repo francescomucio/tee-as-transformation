@@ -81,7 +81,7 @@ class SQLParser(BaseParser):
         
         return None
     
-    def parse(self, content: str, file_path: FilePath = None, table_name: str = None, **kwargs) -> ParsedModel:
+    def parse(self, content: str, file_path: FilePath = None, table_name: str = None) -> ParsedModel:
         """
         Parse SQL content with sqlglot and extract relevant arguments.
         
@@ -89,7 +89,6 @@ class SQLParser(BaseParser):
             content: The SQL content to parse
             file_path: Optional file path for context
             table_name: Name of the table for qualified SQL generation
-            **kwargs: Additional parsing options
             
         Returns:
             Dict containing parsed SQL arguments

@@ -43,14 +43,13 @@ class PythonParser(BaseParser):
         self._evaluation_cache.clear()
         logger.debug("Python parser caches cleared")
     
-    def parse(self, content: str, file_path: FilePath = None, **kwargs) -> ParsedModel:
+    def parse(self, content: str, file_path: FilePath = None) -> ParsedModel:
         """
         Parse Python content and extract SQL models using static analysis.
         
         Args:
             content: The Python content to parse
             file_path: Optional file path for context
-            **kwargs: Additional parsing options
             
         Returns:
             Dict mapping table_name to model registration data

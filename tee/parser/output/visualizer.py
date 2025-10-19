@@ -30,7 +30,7 @@ class DependencyVisualizer:
         tree = self._build_tree_structure(graph)
         
         # Print the tree
-        self._print_tree_recursive(tree, "", True, set())
+        self._print_tree_recursive(tree, "", set())
     
     def print_summary(self, graph: DependencyGraph) -> None:
         """
@@ -218,7 +218,7 @@ class DependencyVisualizer:
         return children
     
     def _print_tree_recursive(self, tree: Dict[str, Any], prefix: str, 
-                             is_last: bool, visited: set) -> None:
+                             visited: set) -> None:
         """
         Recursively print the tree structure.
         
@@ -251,5 +251,5 @@ class DependencyVisualizer:
             # Add to visited set and recurse
             visited.add(node)
             if children:
-                self._print_tree_recursive(children, next_prefix, is_last_item, visited.copy())
+                self._print_tree_recursive(children, next_prefix, visited.copy())
             visited.remove(node)

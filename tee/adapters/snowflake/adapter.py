@@ -13,10 +13,13 @@ import logging
 
 try:
     import snowflake.connector
-    from snowflake.connector import DictCursor
 except ImportError:
     snowflake = None
-    DictCursor = None
+
+try:
+    import sqlglot
+except ImportError:
+    sqlglot = None
 
 from ..base import DatabaseAdapter, AdapterConfig, MaterializationType
 from ..registry import register_adapter
@@ -25,11 +28,63 @@ from ..registry import register_adapter
 class SnowflakeAdapter(DatabaseAdapter):
     """Snowflake database adapter with SQLglot integration."""
     
-    def __init__(self, config: AdapterConfig):
+    # Snowflake-specific required and optional fields
+    REQUIRED_FIELDS = ['type', 'account', 'user', 'password', 'database']
+    OPTIONAL_FIELDS = ['host', 'warehouse', 'role', 'schema', 'connection_timeout', 'query_timeout', 'source_dialect']
+    
+    def __init__(self, config_dict: Dict[str, Any]):
         if snowflake is None:
             raise ImportError("Snowflake connector is not installed. Install it with: uv add snowflake-connector-python")
         
-        super().__init__(config)
+        super().__init__(config_dict)
+    
+    def _validate_field_values(self, config_dict: Dict[str, Any]) -> None:
+        """Validate Snowflake-specific field values."""
+        super()._validate_field_values(config_dict)
+        
+        # Validate account format
+        if 'account' in config_dict:
+            account = config_dict['account']
+            if not isinstance(account, str) or not account.strip():
+                raise ValueError("Snowflake account must be a non-empty string")
+        
+        # Validate warehouse if provided
+        if 'warehouse' in config_dict and config_dict['warehouse']:
+            if not isinstance(config_dict['warehouse'], str) or not config_dict['warehouse'].strip():
+                raise ValueError("Snowflake warehouse must be a non-empty string")
+        
+        # Validate role if provided
+        if 'role' in config_dict and config_dict['role']:
+            if not isinstance(config_dict['role'], str) or not config_dict['role'].strip():
+                raise ValueError("Snowflake role must be a non-empty string")
+    
+    def _create_adapter_config(self, config_dict: Dict[str, Any]) -> AdapterConfig:
+        """Create Snowflake-specific AdapterConfig."""
+        # Prepare extra fields for Snowflake-specific settings
+        extra_fields = {}
+        if config_dict.get("account"):
+            extra_fields["account"] = config_dict.get("account")
+        if config_dict.get("extra"):
+            extra_fields.update(config_dict.get("extra"))
+        
+        return AdapterConfig(
+            type=config_dict['type'],
+            host=config_dict.get('host'),
+            port=config_dict.get('port'),
+            database=config_dict.get('database'),
+            user=config_dict.get('user'),
+            password=config_dict.get('password'),
+            path=config_dict.get('path'),
+            source_dialect=config_dict.get('source_dialect'),
+            target_dialect=config_dict.get('target_dialect'),
+            connection_timeout=config_dict.get('connection_timeout', 30),
+            query_timeout=config_dict.get('query_timeout', 300),
+            schema=config_dict.get('schema'),
+            warehouse=config_dict.get('warehouse'),
+            role=config_dict.get('role'),
+            project=config_dict.get('project'),
+            extra=extra_fields if extra_fields else None,
+        )
     
     def get_default_dialect(self) -> str:
         """Get the default SQL dialect for Snowflake."""
@@ -49,8 +104,13 @@ class SnowflakeAdapter(DatabaseAdapter):
         if not all([self.config.host, self.config.user, self.config.password, self.config.database]):
             raise ValueError("Snowflake connection requires host, user, password, and database")
         
+        # Get account from extra fields or use host
+        account = self.config.host
+        if self.config.extra and "account" in self.config.extra:
+            account = self.config.extra["account"]
+        
         connection_params = {
-            "account": self.config.host,
+            "account": account,
             "user": self.config.user,
             "password": self.config.password,
             "database": self.config.database,
@@ -97,25 +157,27 @@ class SnowflakeAdapter(DatabaseAdapter):
         if not self.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
         
-        # Convert SQL if needed
-        converted_query = self.convert_sql_dialect(query)
-        
-        # Qualify table references if schema is specified
-        if self.config.schema:
-            converted_query = self.qualify_table_references(converted_query, self.config.schema)
-        
-        # Extract schema and table name
+        # Create schema if needed (use 3-part naming for Snowflake)
         if '.' in table_name:
-            schema_name, table_only = table_name.split('.', 1)
-            # Create schema if it doesn't exist
+            schema_name, _ = table_name.split('.', 1)
+            database_name = self.config.database
             try:
-                self.connection.execute(f"CREATE SCHEMA IF NOT EXISTS {schema_name}")
-                self.logger.debug(f"Created schema: {schema_name}")
+                cursor = self.connection.cursor()
+                cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {database_name}.{schema_name}")
+                cursor.close()
+                self.logger.debug(f"Created schema: {database_name}.{schema_name}")
             except Exception as e:
-                self.logger.warning(f"Could not create schema {schema_name}: {e}")
+                self.logger.warning(f"Could not create schema {database_name}.{schema_name}: {e}")
         
-        # Wrap the query in a CREATE TABLE statement
-        create_query = f"CREATE OR REPLACE TABLE {table_name} AS {converted_query}"
+        # Use 3-part naming for the table (DATABASE.SCHEMA.TABLE)
+        database_name = self.config.database
+        qualified_table_name = f"{database_name}.{table_name}"
+        create_query = f"CREATE OR REPLACE TABLE {qualified_table_name} AS {query}"
+        
+        # Log the SQL being executed at DEBUG level
+        self.logger.debug(f"Executing SQL for table {table_name}:")
+        self.logger.debug(f"  Original query: {query}")
+        self.logger.debug(f"  Full CREATE statement: {create_query}")
         
         try:
             cursor = self.connection.cursor()
@@ -131,25 +193,27 @@ class SnowflakeAdapter(DatabaseAdapter):
         if not self.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
         
-        # Convert SQL if needed
-        converted_query = self.convert_sql_dialect(query)
-        
-        # Qualify table references if schema is specified
-        if self.config.schema:
-            converted_query = self.qualify_table_references(converted_query, self.config.schema)
-        
-        # Extract schema and view name
+        # Create schema if needed (use 3-part naming for Snowflake)
         if '.' in view_name:
-            schema_name, view_only = view_name.split('.', 1)
-            # Create schema if it doesn't exist
+            schema_name, _ = view_name.split('.', 1)
+            database_name = self.config.database
             try:
-                self.connection.execute(f"CREATE SCHEMA IF NOT EXISTS {schema_name}")
-                self.logger.debug(f"Created schema: {schema_name}")
+                cursor = self.connection.cursor()
+                cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {database_name}.{schema_name}")
+                cursor.close()
+                self.logger.debug(f"Created schema: {database_name}.{schema_name}")
             except Exception as e:
-                self.logger.warning(f"Could not create schema {schema_name}: {e}")
+                self.logger.warning(f"Could not create schema {database_name}.{schema_name}: {e}")
         
-        # Wrap the query in a CREATE VIEW statement
-        create_query = f"CREATE OR REPLACE VIEW {view_name} AS {converted_query}"
+        # Use 3-part naming for the view (DATABASE.SCHEMA.VIEW)
+        database_name = self.config.database
+        qualified_view_name = f"{database_name}.{view_name}"
+        create_query = f"CREATE OR REPLACE VIEW {qualified_view_name} AS {query}"
+        
+        # Log the SQL being executed at DEBUG level
+        self.logger.debug(f"Executing SQL for view {view_name}:")
+        self.logger.debug(f"  Original query: {query}")
+        self.logger.debug(f"  Full CREATE statement: {create_query}")
         
         try:
             cursor = self.connection.cursor()
@@ -174,10 +238,12 @@ class SnowflakeAdapter(DatabaseAdapter):
         
         # Extract schema and view name
         if '.' in view_name:
-            schema_name, view_only = view_name.split('.', 1)
+            schema_name, _ = view_name.split('.', 1)
             # Create schema if it doesn't exist
             try:
-                self.connection.execute(f"CREATE SCHEMA IF NOT EXISTS {schema_name}")
+                cursor = self.connection.cursor()
+                cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {schema_name}")
+                cursor.close()
                 self.logger.debug(f"Created schema: {schema_name}")
             except Exception as e:
                 self.logger.warning(f"Could not create schema {schema_name}: {e}")
@@ -208,10 +274,12 @@ class SnowflakeAdapter(DatabaseAdapter):
         
         # Extract schema and table name
         if '.' in table_name:
-            schema_name, table_only = table_name.split('.', 1)
+            schema_name, _ = table_name.split('.', 1)
             # Create schema if it doesn't exist
             try:
-                self.connection.execute(f"CREATE SCHEMA IF NOT EXISTS {schema_name}")
+                cursor = self.connection.cursor()
+                cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {schema_name}")
+                cursor.close()
                 self.logger.debug(f"Created schema: {schema_name}")
             except Exception as e:
                 self.logger.warning(f"Could not create schema {schema_name}: {e}")
@@ -267,17 +335,29 @@ class SnowflakeAdapter(DatabaseAdapter):
         try:
             cursor = self.connection.cursor()
             
-            # Get table schema
+            # Use 3-part naming for Snowflake (DATABASE.SCHEMA.TABLE)
+            database_name = self.config.database
+            if '.' in table_name:
+                qualified_table_name = f"{database_name}.{table_name}"
+            else:
+                qualified_table_name = f"{database_name}.{table_name}"
+            
+            # Get table schema - extract just the table name for the query
+            if '.' in table_name:
+                _, table_name_only = table_name.split('.', 1)
+            else:
+                table_name_only = table_name
+                
             cursor.execute("""
                 SELECT column_name, data_type 
                 FROM information_schema.columns 
-                WHERE table_name = ?
+                WHERE table_name = %s
                 ORDER BY ordinal_position
-            """, [table_name])
+            """, (table_name_only,))
             schema_result = cursor.fetchall()
             
             # Get row count
-            cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
+            cursor.execute(f"SELECT COUNT(*) FROM {qualified_table_name}")
             count_result = cursor.fetchone()
             
             cursor.close()
@@ -299,6 +379,52 @@ class SnowflakeAdapter(DatabaseAdapter):
         # snowflake://user:password@account/database?warehouse=wh&role=role
         return connection_string.startswith("snowflake://")
     
+    def qualify_table_references(self, sql: str, schema: Optional[str] = None) -> str:
+        """
+        Qualify table references with schema names for Snowflake.
+        
+        Args:
+            sql: SQL query to qualify
+            schema: Schema name to use for qualification
+            
+        Returns:
+            SQL with qualified table references
+        """
+        if not sql or not sql.strip() or not schema:
+            return sql
+        
+        if sqlglot is None:
+            self.logger.warning("SQLglot not available, skipping table qualification")
+            return sql
+        
+        try:
+            # Parse the SQL
+            parsed = sqlglot.parse_one(sql, read=self.target_dialect)
+            
+            # For Snowflake, we need to manually qualify table references
+            # because the qualify optimizer quotes schema names incorrectly
+            qualified_tables = []
+            for table in parsed.find_all(sqlglot.exp.Table):
+                if not table.name.startswith(schema + '.'):
+                    # Create a new qualified table reference
+                    qualified_name = f"{schema.upper()}.{table.name}"
+                    # Replace the table name in the AST
+                    table.replace(sqlglot.exp.Table(this=qualified_name))
+                    qualified_tables.append(qualified_name)
+            
+            # Convert back to SQL
+            qualified_sql = parsed.sql(dialect=self.target_dialect)
+            
+            # Log qualification
+            if qualified_tables:
+                self.logger.debug(f"Qualified tables: {qualified_tables}")
+            
+            return qualified_sql
+            
+        except Exception as e:
+            self.logger.warning(f"Failed to qualify table references: {e}")
+            return sql
+
     def get_database_info(self) -> Dict[str, Any]:
         """Get Snowflake-specific database information."""
         base_info = super().get_database_info()

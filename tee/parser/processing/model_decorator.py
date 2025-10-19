@@ -4,7 +4,6 @@ Inspired by dlt's resource decorator pattern.
 """
 
 import logging
-from functools import wraps
 from typing import Dict, Any, Optional, Callable, List
 
 from ..shared.exceptions import ParserError
