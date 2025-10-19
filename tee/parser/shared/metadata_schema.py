@@ -42,6 +42,7 @@ class ColumnSchema:
 @dataclass
 class ModelMetadata:
     """Metadata definition for a SQL model."""
+    description: Optional[str] = None
     schema: Optional[List[ColumnSchema]] = None
     partitions: Optional[List[str]] = None
     materialization: Optional[MaterializationType] = None
@@ -109,6 +110,7 @@ def validate_metadata_dict(metadata_dict: ModelMetadataDict) -> ModelMetadata:
             raise ValueError("Tests must be a list")
         
         return ModelMetadata(
+            description=metadata_dict.get('description'),
             schema=schema,
             partitions=partitions,
             materialization=materialization,

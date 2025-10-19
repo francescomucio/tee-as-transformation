@@ -9,7 +9,6 @@ This adapter provides Snowflake-specific functionality including:
 """
 
 from typing import Dict, Any, List, Optional
-import logging
 
 try:
     import snowflake.connector
@@ -28,9 +27,8 @@ from ..registry import register_adapter
 class SnowflakeAdapter(DatabaseAdapter):
     """Snowflake database adapter with SQLglot integration."""
     
-    # Snowflake-specific required and optional fields
+    # Snowflake-specific required fields
     REQUIRED_FIELDS = ['type', 'account', 'user', 'password', 'database']
-    OPTIONAL_FIELDS = ['host', 'warehouse', 'role', 'schema', 'connection_timeout', 'query_timeout', 'source_dialect']
     
     def __init__(self, config_dict: Dict[str, Any]):
         if snowflake is None:
@@ -152,8 +150,8 @@ class SnowflakeAdapter(DatabaseAdapter):
             self.logger.error(f"Error executing query: {e}")
             raise
     
-    def create_table(self, table_name: str, query: str) -> None:
-        """Create a table from a qualified SQL query."""
+    def create_table(self, table_name: str, query: str, metadata: Optional[Dict[str, Any]] = None) -> None:
+        """Create a table from a qualified SQL query with optional column metadata."""
         if not self.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
         
@@ -184,6 +182,26 @@ class SnowflakeAdapter(DatabaseAdapter):
             cursor.execute(create_query)
             cursor.close()
             self.logger.info(f"Created table: {table_name}")
+            
+            # Add table and column comments if metadata is provided
+            if metadata:
+                try:
+                    # Add table comment if description is provided
+                    table_description = metadata.get('description')
+                    if table_description:
+                        self._add_table_comment(qualified_table_name, table_description)
+                    
+                    # Add column comments
+                    column_descriptions = self._validate_column_metadata(metadata)
+                    if column_descriptions:
+                        self._add_column_comments(qualified_table_name, column_descriptions)
+                except ValueError as e:
+                    self.logger.error(f"Invalid metadata for table {table_name}: {e}")
+                    raise
+                except Exception as e:
+                    self.logger.warning(f"Could not add comments for table {table_name}: {e}")
+                    # Don't raise here - table creation succeeded, comments are optional
+                    
         except Exception as e:
             self.logger.error(f"Failed to create table {table_name}: {e}")
             raise
@@ -370,14 +388,6 @@ class SnowflakeAdapter(DatabaseAdapter):
             self.logger.error(f"Error getting table info for {table_name}: {e}")
             raise
     
-    def validate_connection_string(self, connection_string: str) -> bool:
-        """Validate Snowflake connection string format."""
-        if not connection_string or not connection_string.strip():
-            return False
-        
-        # Snowflake connection strings should be in format:
-        # snowflake://user:password@account/database?warehouse=wh&role=role
-        return connection_string.startswith("snowflake://")
     
     def qualify_table_references(self, sql: str, schema: Optional[str] = None) -> str:
         """
@@ -454,6 +464,48 @@ class SnowflakeAdapter(DatabaseAdapter):
                 self.logger.warning(f"Could not get Snowflake-specific info: {e}")
         
         return base_info
+    
+    def _add_table_comment(self, table_name: str, description: str) -> None:
+        """
+        Add a comment to a table using Snowflake's COMMENT ON TABLE syntax.
+        
+        Args:
+            table_name: Fully qualified table name (DATABASE.SCHEMA.TABLE)
+            description: Description of the table
+        """
+        cursor = self.connection.cursor()
+        try:
+            # Snowflake uses COMMENT ON TABLE syntax
+            comment_query = f"COMMENT ON TABLE {table_name} IS '{description.replace("'", "''")}'"
+            cursor.execute(comment_query)
+            self.logger.debug(f"Added comment to table {table_name}")
+        except Exception as e:
+            self.logger.warning(f"Could not add comment to table {table_name}: {e}")
+            # Don't raise here - table creation succeeded, comments are optional
+        finally:
+            cursor.close()
+    
+    def _add_column_comments(self, table_name: str, column_descriptions: Dict[str, str]) -> None:
+        """
+        Add column comments to a table using Snowflake's COMMENT ON COLUMN syntax.
+        
+        Args:
+            table_name: Fully qualified table name (DATABASE.SCHEMA.TABLE)
+            column_descriptions: Dictionary mapping column names to descriptions
+        """
+        cursor = self.connection.cursor()
+        try:
+            for col_name, description in column_descriptions.items():
+                try:
+                    # Snowflake uses COMMENT ON COLUMN syntax
+                    comment_query = f"COMMENT ON COLUMN {table_name}.{col_name} IS '{description.replace("'", "''")}'"
+                    cursor.execute(comment_query)
+                    self.logger.debug(f"Added comment to column {table_name}.{col_name}")
+                except Exception as e:
+                    self.logger.warning(f"Could not add comment to column {table_name}.{col_name}: {e}")
+                    # Continue with other columns even if one fails
+        finally:
+            cursor.close()
 
 
 # Register the adapter

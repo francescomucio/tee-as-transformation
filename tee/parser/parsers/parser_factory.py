@@ -52,16 +52,6 @@ class ParserFactory:
         raise ParserError(f"No parser available for file type: {file_extension}")
     
     @classmethod
-    def get_supported_extensions(cls) -> list[str]:
-        """
-        Get list of supported file extensions.
-        
-        Returns:
-            List of supported file extensions
-        """
-        return list(cls._parsers.keys()) + SUPPORTED_PYTHON_EXTENSIONS
-    
-    @classmethod
     def is_supported(cls, file_path: Path) -> bool:
         """
         Check if a file type is supported.

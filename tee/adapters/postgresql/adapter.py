@@ -8,7 +8,7 @@ This module provides PostgreSQL-specific functionality including:
 - Materialization support
 """
 
-from typing import Any
+from typing import Any, Optional, Dict
 from ..base import DatabaseAdapter, AdapterConfig, MaterializationType
 from ..registry import register_adapter
 
@@ -80,7 +80,7 @@ class PostgreSQLAdapter(DatabaseAdapter):
             self.logger.error(f"Error executing query: {e}")
             raise
     
-    def create_table(self, table_name: str, query: str) -> None:
+    def create_table(self, table_name: str, query: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         """Create a table from a qualified SQL query."""
         if not self.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
@@ -257,14 +257,6 @@ class PostgreSQLAdapter(DatabaseAdapter):
             self.logger.error(f"Error getting table info for {table_name}: {e}")
             raise
     
-    def validate_connection_string(self, connection_string: str) -> bool:
-        """Validate PostgreSQL connection string format."""
-        if not connection_string or not connection_string.strip():
-            return False
-        
-        # PostgreSQL connection strings should be in format:
-        # postgresql://user:password@host:port/database
-        return connection_string.startswith("postgresql://")
 
 
 # Register the adapter

@@ -64,22 +64,6 @@ class ProjectParser:
         except Exception as e:
             raise ParserError(f"Failed to collect models: {e}")
     
-    def refresh_models(self) -> Dict[str, ParsedModel]:
-        """
-        Force refresh the parsed models by clearing the cache and re-parsing.
-        
-        Returns:
-            Dict mapping full_table_name to parsed SQL arguments
-        """
-        try:
-            # Clear orchestrator cache and re-parse
-            self.orchestrator._parsed_models = None
-            self.parsed_models = None
-            self.graph = None  # Also clear the cached graph
-            
-            return self.collect_models()
-        except Exception as e:
-            raise ParserError(f"Failed to refresh models: {e}")
     
     def build_dependency_graph(self) -> DependencyGraph:
         """
@@ -125,19 +109,6 @@ class ProjectParser:
                 self.parsed_models[table_name] = model_data
                 logger.debug(f"Updated parser cache for {table_name}")
     
-    def refresh_graph(self) -> DependencyGraph:
-        """
-        Force refresh the dependency graph by clearing the cache and re-building.
-        
-        Returns:
-            Dict containing dependency graph information
-        """
-        try:
-            self.graph = None
-            self.orchestrator._dependency_graph = None
-            return self.build_dependency_graph()
-        except Exception as e:
-            raise ParserError(f"Failed to refresh graph: {e}")
     
     def get_execution_order(self) -> list[str]:
         """Get the execution order for all tables based on dependencies."""

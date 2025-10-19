@@ -23,6 +23,7 @@
       "description": "SQL model for my_schema.my_first_table",
       "variables": [],
       "metadata": {
+        "description": "This is a description of the table",
         "schema": [
           {
             "name": "id",
@@ -99,6 +100,7 @@
       "description": "SQL model for my_schema.my_second_table",
       "variables": [],
       "metadata": {
+        "description": null,
         "schema": [
           {
             "name": "id",

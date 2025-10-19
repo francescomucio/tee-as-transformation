@@ -9,7 +9,6 @@ This adapter provides DuckDB-specific functionality including:
 """
 
 from typing import Dict, Any, List, Optional
-import logging
 
 try:
     import duckdb
@@ -67,8 +66,8 @@ class DuckDBAdapter(DatabaseAdapter):
             self.logger.error(f"Error executing query: {e}")
             raise
     
-    def create_table(self, table_name: str, query: str) -> None:
-        """Create a table from a qualified SQL query."""
+    def create_table(self, table_name: str, query: str, metadata: Optional[Dict[str, Any]] = None) -> None:
+        """Create a table from a qualified SQL query with optional column metadata."""
         if not self.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
         
@@ -95,6 +94,26 @@ class DuckDBAdapter(DatabaseAdapter):
         try:
             self.connection.execute(create_query)
             self.logger.info(f"Created table: {table_name}")
+            
+            # Add table and column comments if metadata is provided
+            if metadata:
+                try:
+                    # Add table comment if description is provided
+                    table_description = metadata.get('description')
+                    if table_description:
+                        self._add_table_comment(table_name, table_description)
+                    
+                    # Add column comments
+                    column_descriptions = self._validate_column_metadata(metadata)
+                    if column_descriptions:
+                        self._add_column_comments(table_name, column_descriptions)
+                except ValueError as e:
+                    self.logger.error(f"Invalid metadata for table {table_name}: {e}")
+                    raise
+                except Exception as e:
+                    self.logger.warning(f"Could not add comments for table {table_name}: {e}")
+                    # Don't raise here - table creation succeeded, comments are optional
+                    
         except Exception as e:
             self.logger.error(f"Failed to create table {table_name}: {e}")
             raise
@@ -212,16 +231,6 @@ class DuckDBAdapter(DatabaseAdapter):
             self.logger.error(f"Error getting table info for {table_name}: {e}")
             raise
     
-    def validate_connection_string(self, connection_string: str) -> bool:
-        """Validate DuckDB connection string format."""
-        if not connection_string or not connection_string.strip():
-            return False
-        
-        # DuckDB connection strings can be:
-        # - File path: "/path/to/database.db"
-        # - Memory: ":memory:"
-        # - Special: ":temp:" or other DuckDB special identifiers
-        return True  # DuckDB is very permissive with connection strings
     
     def get_database_info(self) -> Dict[str, Any]:
         """Get DuckDB-specific database information."""
@@ -240,6 +249,7 @@ class DuckDBAdapter(DatabaseAdapter):
                 self.logger.warning(f"Could not get DuckDB-specific info: {e}")
         
         return base_info
+    
 
 
 # Register the adapter

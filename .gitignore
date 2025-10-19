@@ -21,3 +21,13 @@ venv/
 *.db
 *.duckdb
 site/
+
+# Development/Test projects
+t_project/
+t_project_sno/
+test_project/
+test_execution.duckdb
+
+# Coverage reports
+htmlcov/
+.coverage

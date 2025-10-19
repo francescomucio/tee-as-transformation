@@ -123,20 +123,3 @@ class FileDiscovery:
         self._file_cache.clear()
         logger.debug("File discovery cache cleared")
     
-    def get_file_count(self) -> Dict[str, int]:
-        """
-        Get count of discovered files by type.
-        
-        Returns:
-            Dict with file counts by type
-        """
-        try:
-            files = self.discover_all_files()
-            return {
-                "sql": len(files["sql"]),
-                "python": len(files["python"]),
-                "total": len(files["sql"]) + len(files["python"])
-            }
-        except Exception as e:
-            logger.warning(f"Failed to get file count: {e}")
-            return {"sql": 0, "python": 0, "total": 0}

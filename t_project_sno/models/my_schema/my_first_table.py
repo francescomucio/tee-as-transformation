@@ -18,5 +18,6 @@ metadata: ModelMetadataDict = {
     ],
     "partitions": ["id"],
     "materialization": "table",
-    "tests": ["row_count_gt_0"]
+    "tests": ["row_count_gt_0"],
+    "description": "This is a description of the table",
 }

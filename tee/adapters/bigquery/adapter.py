@@ -98,7 +98,7 @@ class BigQueryAdapter(DatabaseAdapter):
             self.logger.error(f"Error executing query: {e}")
             raise
     
-    def create_table(self, table_name: str, query: str) -> None:
+    def create_table(self, table_name: str, query: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         """Create a table from a qualified SQL query."""
         if not self.client:
             raise RuntimeError("Not connected to database. Call connect() first.")
@@ -291,14 +291,6 @@ class BigQueryAdapter(DatabaseAdapter):
             self.logger.error(f"Error getting table info for {table_name}: {e}")
             raise
     
-    def validate_connection_string(self, connection_string: str) -> bool:
-        """Validate BigQuery connection string format."""
-        if not connection_string or not connection_string.strip():
-            return False
-        
-        # BigQuery connection strings should be in format:
-        # bigquery://project/dataset
-        return connection_string.startswith("bigquery://")
 
 
 # Register the adapter

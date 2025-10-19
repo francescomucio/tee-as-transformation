@@ -46,28 +46,6 @@ class DatabaseConfigManager:
         # Validate and create AdapterConfig
         return self._create_adapter_config(merged_config)
     
-    def list_available_configs(self) -> List[str]:
-        """List available configuration names from pyproject.toml."""
-        toml_file = self.project_root / "pyproject.toml"
-        if not toml_file.exists():
-            return []
-        
-        try:
-            with open(toml_file, 'r') as f:
-                data = toml.load(f)
-            
-            # Look for [tool.tee.database] or [tool.tee.databases]
-            tee_config = data.get("tool", {}).get("tee", {})
-            databases = tee_config.get("databases", {})
-            
-            if isinstance(databases, dict):
-                return list(databases.keys())
-            else:
-                return []
-                
-        except Exception as e:
-            self.logger.warning(f"Could not read pyproject.toml: {e}")
-            return []
     
     def _load_toml_config(self, config_name: str) -> Dict[str, Any]:
         """Load configuration from pyproject.toml."""

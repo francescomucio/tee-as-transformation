@@ -1,0 +1,3 @@
+"""
+Parser shared module tests.
+"""

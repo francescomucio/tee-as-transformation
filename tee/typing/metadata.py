@@ -53,6 +53,7 @@ class ColumnDefinition(TypedDict):
 
 class ModelMetadataDict(TypedDict):
     """Type definition for the raw metadata dictionary from Python files."""
+    description: NotRequired[Optional[str]]
     schema: NotRequired[Optional[List[ColumnDefinition]]]
     partitions: NotRequired[Optional[List[str]]]
     materialization: NotRequired[Optional[MaterializationType]]
@@ -61,12 +62,10 @@ class ModelMetadataDict(TypedDict):
 
 class ParsedModelMetadata(TypedDict):
     """Type definition for parsed and validated metadata."""
+    description: NotRequired[Optional[str]]
     schema: NotRequired[Optional[List[ColumnDefinition]]]
     partitions: NotRequired[List[str]]
     materialization: NotRequired[Optional[MaterializationType]]
     tests: NotRequired[List[ModelTestName]]
 
 
-# Type aliases for backward compatibility and convenience
-ColumnTest = ColumnTestName
-ModelTest = ModelTestName

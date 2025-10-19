@@ -113,7 +113,8 @@ class ExecutionEngine:
                 
                 # Execute based on materialization type
                 materialization = self._get_materialization_type(model_data)
-                self._execute_materialization(table_name, sql_query, materialization)
+                metadata = self._extract_metadata(model_data)
+                self._execute_materialization(table_name, sql_query, materialization, metadata)
                 
                 # Get table information
                 table_info = self.adapter.get_table_info(table_name)
@@ -145,42 +146,6 @@ class ExecutionEngine:
         self.logger.info(f"Execution completed. {len(results['executed_tables'])} successful, {len(results['failed_tables'])} failed")
         return results
     
-    def execute_single_model(self, table_name: str, sql_query: str, materialization: str = "table") -> Dict[str, Any]:
-        """
-        Execute a single SQL model.
-        
-        Args:
-            table_name: Name of the table to create
-            sql_query: SQL query to execute
-            materialization: Materialization type (table, view, materialized_view, etc.)
-            
-        Returns:
-            Dictionary with execution results
-        """
-        try:
-            self.logger.info(f"Executing single model: {table_name}")
-            
-            # Execute the materialization
-            self._execute_materialization(table_name, sql_query, materialization)
-            
-            # Get table information
-            table_info = self.adapter.get_table_info(table_name)
-            
-            return {
-                "status": "success",
-                "table": table_name,
-                "table_info": table_info,
-                "materialization": materialization
-            }
-            
-        except Exception as e:
-            error_msg = f"Error executing {table_name}: {str(e)}"
-            self.logger.error(error_msg)
-            return {
-                "status": "failed",
-                "table": table_name,
-                "error": str(e)
-            }
     
     def get_database_info(self) -> Dict[str, Any]:
         """Get information about the current database connection and adapter."""
@@ -231,7 +196,7 @@ class ExecutionEngine:
             self.logger.warning(f"Error extracting materialization type: {e}, defaulting to 'table'")
             return "table"
     
-    def _execute_materialization(self, table_name: str, sql_query: str, materialization: str) -> None:
+    def _execute_materialization(self, table_name: str, sql_query: str, materialization: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         """Execute the appropriate materialization based on type."""
         if materialization == "view":
             self.adapter.create_view(table_name, sql_query)
@@ -240,7 +205,7 @@ class ExecutionEngine:
                 self.adapter.create_materialized_view(table_name, sql_query)
             else:
                 self.logger.warning(f"Materialized views not supported by {self.adapter.__class__.__name__}, creating table instead")
-                self.adapter.create_table(table_name, sql_query)
+                self.adapter.create_table(table_name, sql_query, metadata)
         elif materialization == "external_table":
             if hasattr(self.adapter, 'create_external_table'):
                 # External tables need additional configuration
@@ -249,9 +214,62 @@ class ExecutionEngine:
                     self.adapter.create_external_table(table_name, sql_query, external_location)
                 else:
                     self.logger.warning("External table location not configured, creating table instead")
-                    self.adapter.create_table(table_name, sql_query)
+                    self.adapter.create_table(table_name, sql_query, metadata)
             else:
                 self.logger.warning(f"External tables not supported by {self.adapter.__class__.__name__}, creating table instead")
-                self.adapter.create_table(table_name, sql_query)
+                self.adapter.create_table(table_name, sql_query, metadata)
         else:  # Default to table for "table" or any other type
-            self.adapter.create_table(table_name, sql_query)
+            self.adapter.create_table(table_name, sql_query, metadata)
+    
+    def _extract_metadata(self, model_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Extract metadata from model data, prioritizing decorator metadata over file metadata.
+        
+        Args:
+            model_data: Dictionary containing model data
+            
+        Returns:
+            Metadata dictionary with column descriptions, or None if no metadata found
+        """
+        try:
+            # First, try to get metadata from model_metadata (from decorator)
+            model_metadata = model_data.get("model_metadata", {})
+            
+            if model_metadata and "metadata" in model_metadata:
+                decorator_metadata = model_metadata["metadata"]
+                if decorator_metadata and "schema" in decorator_metadata:
+                    self.logger.debug("Using metadata from model decorator")
+                    # Prioritize file metadata description over decorator description
+                    if "description" in decorator_metadata:
+                        # File metadata description takes priority
+                        self.logger.debug("Using file metadata description")
+                        pass
+                    elif "description" in model_metadata:
+                        # Fall back to decorator description if no file metadata description
+                        decorator_metadata["description"] = model_metadata["description"]
+                    return decorator_metadata
+                elif decorator_metadata and "metadata" in decorator_metadata and "schema" in decorator_metadata["metadata"]:
+                    # Handle nested metadata structure
+                    nested_metadata = decorator_metadata["metadata"]
+                    self.logger.debug("Using nested metadata from model decorator")
+                    # Include table description from decorator if available
+                    if "description" in model_metadata:
+                        nested_metadata["description"] = model_metadata["description"]
+                    return nested_metadata
+            
+            # Fallback to any other metadata in the model data
+            if "metadata" in model_data:
+                file_metadata = model_data["metadata"]
+                if file_metadata and "schema" in file_metadata:
+                    self.logger.debug("Using metadata from file")
+                    # Use file metadata description if available, decorator description takes priority
+                    if "description" in model_metadata:
+                        file_metadata["description"] = model_metadata["description"]
+                    # If no decorator description, file metadata description is already there
+                    return file_metadata
+            
+            return None
+            
+        except Exception as e:
+            self.logger.warning(f"Error extracting metadata: {e}")
+            return None

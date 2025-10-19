@@ -31,10 +31,15 @@ def create_model_metadata(
     Returns:
         Standardized model metadata dictionary
     """
+    # Prioritize file metadata description over parameter description
+    final_description = description
+    if metadata and hasattr(metadata, 'description') and metadata.description:
+        final_description = metadata.description
+    
     result = {
         "table_name": table_name,
         "function_name": function_name,
-        "description": description,
+        "description": final_description,
         "variables": variables or [],
         "metadata": metadata or {}
     }

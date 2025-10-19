@@ -1,0 +1,3 @@
+"""
+Adapters module tests.
+"""

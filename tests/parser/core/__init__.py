@@ -1,0 +1,3 @@
+"""
+Parser core module tests.
+"""

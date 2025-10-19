@@ -1,0 +1,3 @@
+"""
+Typing module tests.
+"""

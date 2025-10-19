@@ -86,24 +86,3 @@ class TableResolver:
         
         return None
     
-    def resolve_all_table_references(self, parsed_models: Dict[str, ParsedModel]) -> Dict[str, str]:
-        """
-        Resolve all table references in the parsed models.
-        
-        Args:
-            parsed_models: Parsed models dict
-            
-        Returns:
-            Dict mapping unresolved references to resolved full names
-        """
-        resolved = {}
-        
-        for table_name, model_info in parsed_models.items():
-            if "sqlglot" in model_info and model_info["sqlglot"] and "tables" in model_info["sqlglot"]:
-                for referenced_table in model_info["sqlglot"]["tables"]:
-                    if referenced_table not in resolved:
-                        resolved_ref = self.resolve_table_reference(referenced_table, parsed_models)
-                        if resolved_ref:
-                            resolved[referenced_table] = resolved_ref
-        
-        return resolved

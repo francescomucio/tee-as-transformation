@@ -6,7 +6,7 @@ for database adapters that handle SQL dialect conversion and database-specific f
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional, Union, Type
+from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 from enum import Enum
 import logging
@@ -52,19 +52,6 @@ class AdapterConfig:
     # Additional custom settings
     extra: Optional[Dict[str, Any]] = None
     
-    def to_connection_string(self) -> str:
-        """Convert configuration to connection string format."""
-        if self.type.lower() == "duckdb":
-            return self.path or ":memory:"
-        elif self.type.lower() == "snowflake":
-            return f"snowflake://{self.user}:{self.password}@{self.host}:{self.port}/{self.database}?warehouse={self.warehouse}&role={self.role}"
-        elif self.type.lower() == "postgresql":
-            return f"postgresql://{self.user}:{self.password}@{self.host}:{self.port}/{self.database}"
-        elif self.type.lower() == "bigquery":
-            return f"bigquery://{self.project}/{self.database}"
-        else:
-            # Generic connection string
-            return f"{self.type}://{self.user}:{self.password}@{self.host}:{self.port}/{self.database}"
 
 
 class DatabaseAdapter(ABC):
@@ -75,13 +62,10 @@ class DatabaseAdapter(ABC):
     including SQL dialect conversion, connection management, and database-specific features.
     """
     
-    # Override in subclasses to define required and optional fields
+    # Override in subclasses to define required fields
     REQUIRED_FIELDS = ['type']
-    OPTIONAL_FIELDS = ['host', 'user', 'password', 'database', 'port', 
-                      'schema', 'connection_timeout', 'query_timeout', 'source_dialect']
     
     def __init__(self, config_dict: Dict[str, Any]):
-        self._raw_config = config_dict
         self.connection = None
         self.logger = logging.getLogger(self.__class__.__name__)
         
@@ -157,6 +141,83 @@ class DatabaseAdapter(ABC):
             extra=config_dict.get('extra'),
         )
     
+    def _validate_column_metadata(self, metadata: Optional[Dict[str, Any]]) -> Dict[str, str]:
+        """
+        Validate and extract column descriptions from metadata.
+        
+        Args:
+            metadata: Model metadata dictionary
+            
+        Returns:
+            Dictionary mapping column names to descriptions
+            
+        Raises:
+            ValueError: If metadata is malformed or descriptions are too long
+        """
+        if not metadata:
+            return {}
+        
+        column_descriptions = {}
+        
+        # Extract schema from metadata
+        schema = metadata.get('schema', [])
+        if not isinstance(schema, list):
+            raise ValueError("Schema must be a list of column definitions")
+        
+        for col_def in schema:
+            if not isinstance(col_def, dict):
+                raise ValueError("Each column definition must be a dictionary")
+            
+            if 'name' not in col_def:
+                raise ValueError("Column definition must include 'name' field")
+            
+            col_name = col_def['name']
+            description = col_def.get('description')
+            
+            if description:
+                # Validate description length (most databases have limits around 4000 chars)
+                if len(description) > 4000:
+                    raise ValueError(f"Column description for '{col_name}' is too long (max 4000 characters, got {len(description)})")
+                
+                column_descriptions[col_name] = description
+        
+        return column_descriptions
+    
+    def _add_column_comments(self, table_name: str, column_descriptions: Dict[str, str]) -> None:
+        """
+        Add column comments to a table.
+        
+        Args:
+            table_name: Name of the table
+            column_descriptions: Dictionary mapping column names to descriptions
+        """
+        for col_name, description in column_descriptions.items():
+            try:
+                # Most databases use COMMENT ON COLUMN syntax
+                comment_query = f"COMMENT ON COLUMN {table_name}.{col_name} IS '{description.replace("'", "''")}'"
+                self.connection.execute(comment_query)
+                self.logger.debug(f"Added comment to column {table_name}.{col_name}")
+            except Exception as e:
+                self.logger.warning(f"Could not add comment to column {table_name}.{col_name}: {e}")
+                # Continue with other columns even if one fails
+    
+    def _add_table_comment(self, table_name: str, description: str) -> None:
+        """
+        Add a comment to a table.
+        
+        Args:
+            table_name: Name of the table
+            description: Description of the table
+        """
+        try:
+            # Most databases use COMMENT ON TABLE syntax
+            comment_query = f"COMMENT ON TABLE {table_name} IS '{description.replace("'", "''")}'"
+            self.connection.execute(comment_query)
+            self.logger.debug(f"Added comment to table {table_name}")
+        except Exception as e:
+            self.logger.warning(f"Could not add comment to table {table_name}: {e}")
+            # Don't raise here - table creation succeeded, comments are optional
+    
     @abstractmethod
     def get_default_dialect(self) -> str:
         """Get the default SQL dialect for this database."""
@@ -183,8 +244,14 @@ class DatabaseAdapter(ABC):
         pass
     
     @abstractmethod
-    def create_table(self, table_name: str, query: str) -> None:
-        """Create a table from a qualified SQL query."""
+    def create_table(self, table_name: str, query: str, metadata: Optional[Dict[str, Any]] = None) -> None:
+        """Create a table from a qualified SQL query with optional column metadata.
+        
+        Args:
+            table_name: Name of the table to create
+            query: SQL query to execute
+            metadata: Optional metadata containing column descriptions and other info
+        """
         pass
     
     @abstractmethod
@@ -207,18 +274,6 @@ class DatabaseAdapter(ABC):
         """Get information about a table."""
         pass
     
-    def validate_connection_string(self, connection_string: str) -> bool:
-        """
-        Validate a connection string format.
-        
-        Args:
-            connection_string: The connection string to validate
-            
-        Returns:
-            True if valid, False otherwise
-        """
-        # Default implementation - can be overridden by specific adapters
-        return bool(connection_string and connection_string.strip())
     
     def convert_sql_dialect(self, sql: str, source_dialect: Optional[str] = None) -> str:
         """
@@ -311,9 +366,3 @@ class DatabaseAdapter(ABC):
             self.logger.warning(f"Unknown dialect: {dialect_name}")
             return None
     
-    def _log_sql_conversion(self, original_sql: str, converted_sql: str, source_dialect: str) -> None:
-        """Log SQL conversion details for debugging."""
-        if original_sql != converted_sql:
-            self.logger.debug(f"SQL converted from {source_dialect}:")
-            self.logger.debug(f"Original: {original_sql[:200]}...")
-            self.logger.debug(f"Converted: {converted_sql[:200]}...")

@@ -256,7 +256,7 @@ def cmd_debug(args):
             # Get database info
             db_info = connection_manager.get_database_info()
             if db_info:
-                print(f"\nDatabase Information:")
+                print("\nDatabase Information:")
                 print(f"  Type: {db_info.get('database_type', 'Unknown')}")
                 print(f"  Adapter: {db_info.get('adapter_type', 'Unknown')}")
                 if 'version' in db_info:

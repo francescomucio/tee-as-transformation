@@ -4,7 +4,6 @@ Constants for the parser module.
 
 # Default folder names
 DEFAULT_MODELS_FOLDER = "models"
-DEFAULT_OUTPUT_FOLDER = "output"
 
 # Supported file extensions
 SUPPORTED_SQL_EXTENSIONS = [".sql"]
@@ -17,21 +16,7 @@ SQL_VARIABLE_PATTERNS = {
     "jinja_with_default": r"\{\{\s*(\w+(?:\.\w+)*)\s*\|\s*default\s*\(\s*([^)]+)\s*\)\s*\}\}",
 }
 
-# Connection types
-CONNECTION_TYPES = {
-    "duckdb": "duckdb",
-    "postgresql": "postgresql",
-    "mysql": "mysql",
-    "sqlite": "sqlite",
-}
 
-# Graph visualization
-GRAPH_COLORS = {
-    "node": "#e1f5fe",
-    "edge": "#01579b",
-    "cycle": "#ff5722",
-    "root": "#4caf50",
-}
 
 # Output file names
 OUTPUT_FILES = {

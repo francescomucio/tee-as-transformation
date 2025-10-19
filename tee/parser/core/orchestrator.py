@@ -225,30 +225,6 @@ class ParserOrchestrator:
         except Exception as e:
             logger.error(f"Error updating Python models with qualified SQL: {e}")
     
-    def refresh_all(self) -> Dict[str, Any]:
-        """
-        Force refresh all cached data and re-parse everything.
-        
-        Returns:
-            Dict containing both parsed models and dependency graph
-        """
-        try:
-            # Clear all caches
-            self._parsed_models = None
-            self._dependency_graph = None
-            self.file_discovery.clear_cache()
-            
-            # Re-discover and parse
-            parsed_models = self.discover_and_parse_models()
-            dependency_graph = self.build_dependency_graph()
-            
-            return {
-                "parsed_models": parsed_models,
-                "dependency_graph": dependency_graph
-            }
-            
-        except Exception as e:
-            raise ParserError(f"Failed to refresh all data: {e}")
     
     def get_execution_order(self) -> list[str]:
         """Get the execution order for all tables based on dependencies."""

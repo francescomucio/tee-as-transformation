@@ -66,6 +66,7 @@ class SQLParser(BaseParser):
                 # Validate the metadata
                 validated_metadata = validate_metadata_dict(raw_metadata)
                 return ParsedModelMetadata(
+                    description=validated_metadata.description,
                     schema=[{
                         'name': col.name,
                         'datatype': col.datatype,
