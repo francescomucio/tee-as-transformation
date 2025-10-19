@@ -30,13 +30,29 @@ class ModelExecutor:
         if config is None:
             self.config = load_database_config(config_name, project_folder)
         elif isinstance(config, dict):
-            # Convert dict to AdapterConfig, resolving paths relative to project folder
+            # Convert dict to AdapterConfig, handling adapter-specific fields
             from ..adapters.base import AdapterConfig
             from pathlib import Path
             
             # Resolve relative paths relative to project folder
             if 'path' in config and config['path'] and not Path(config['path']).is_absolute():
                 config['path'] = str(Path(project_folder) / config['path'])
+            
+            # Handle adapter-specific fields by moving them to 'extra'
+            extra_fields = {}
+            adapter_specific_fields = ['account']  # Add more as needed
+            
+            for field in adapter_specific_fields:
+                if field in config:
+                    extra_fields[field] = config.pop(field)
+            
+            # Add existing extra fields
+            if 'extra' in config and config['extra']:
+                extra_fields.update(config['extra'])
+            
+            # Set extra field if we have any
+            if extra_fields:
+                config['extra'] = extra_fields
             
             self.config = AdapterConfig(**config)
         else:
@@ -147,7 +163,7 @@ class ModelExecutor:
             True if connection is successful, False otherwise
         """
         try:
-            self.execution_engine = ExecutionEngine(self.config)
+            self.execution_engine = ExecutionEngine(self.config, project_folder=self.project_folder)
             self.execution_engine.connect()
             self.logger.info("Database connection test successful")
             return True
@@ -161,7 +177,7 @@ class ModelExecutor:
     def list_supported_materializations(self) -> List[str]:
         """Get list of supported materialization types for the current adapter."""
         try:
-            self.execution_engine = ExecutionEngine(self.config)
+            self.execution_engine = ExecutionEngine(self.config, project_folder=self.project_folder)
             return [m.value for m in self.execution_engine.adapter.get_supported_materializations()]
         except Exception as e:
             self.logger.error(f"Could not get supported materializations: {e}")

@@ -28,7 +28,7 @@ class SnowflakeAdapter(DatabaseAdapter):
     """Snowflake database adapter with SQLglot integration."""
     
     # Snowflake-specific required fields
-    REQUIRED_FIELDS = ['type', 'account', 'user', 'password', 'database']
+    REQUIRED_FIELDS = ['type', 'user', 'password', 'database']
     
     def __init__(self, config_dict: Dict[str, Any]):
         if snowflake is None:
@@ -102,10 +102,14 @@ class SnowflakeAdapter(DatabaseAdapter):
         if not all([self.config.host, self.config.user, self.config.password, self.config.database]):
             raise ValueError("Snowflake connection requires host, user, password, and database")
         
-        # Get account from extra fields or use host
+        # Get account from extra fields or extract from host
         account = self.config.host
         if self.config.extra and "account" in self.config.extra:
             account = self.config.extra["account"]
+        else:
+            # Extract account from host (e.g., "IZOMIWY-AM07852.snowflakecomputing.com" -> "IZOMIWY-AM07852")
+            if self.config.host and '.snowflakecomputing.com' in self.config.host:
+                account = self.config.host.replace('.snowflakecomputing.com', '')
         
         connection_params = {
             "account": account,

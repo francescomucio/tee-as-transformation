@@ -131,16 +131,19 @@ def cmd_run(args):
         if vars_dict:
             print(f"Using variables: {vars_dict}")
         
+        # Resolve project folder to absolute path
+        project_folder_path = Path(args.project_folder).resolve()
+        
         # Create unified connection manager
         connection_manager = ConnectionManager(
-            project_folder=config["project_folder"],
+            project_folder=str(project_folder_path),
             connection_config=config["connection"],
             variables=vars_dict
         )
         
         # Execute models using the unified connection manager
         results = execute_models(
-            project_folder=config["project_folder"],
+            project_folder=str(project_folder_path),
             connection_config=config["connection"],
             save_analysis=True,
             variables=vars_dict
@@ -197,9 +200,12 @@ def cmd_parse(args):
         if vars_dict:
             print(f"Using variables: {vars_dict}")
         
+        # Resolve project folder to absolute path
+        project_folder_path = Path(args.project_folder).resolve()
+        
         # Parse models only
         analysis = parse_models_only(
-            project_folder=config["project_folder"],
+            project_folder=str(project_folder_path),
             connection_config=config["connection"],
             variables=vars_dict
         )
@@ -238,9 +244,12 @@ def cmd_debug(args):
         if vars_dict:
             print(f"Using variables: {vars_dict}")
         
+        # Resolve project folder to absolute path
+        project_folder_path = Path(args.project_folder).resolve()
+        
         # Create unified connection manager
         connection_manager = ConnectionManager(
-            project_folder=config["project_folder"],
+            project_folder=str(project_folder_path),
             connection_config=config["connection"],
             variables=vars_dict
         )

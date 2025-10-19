@@ -24,8 +24,8 @@ graph TD
     my_schema_users_summary["my_schema.users_summary"]
     my_schema_my_first_table --> my_schema_my_forth_table
     my_schema_my_first_table --> my_schema_my_second_table
-    my_schema_my_second_table --> my_schema_my_third_table
     my_schema_my_first_table --> my_schema_my_third_table
+    my_schema_my_second_table --> my_schema_my_third_table
     my_schema_my_first_table --> my_schema_users_summary
     my_schema_my_first_table --> my_schema_recent_users
     my_schema_my_first_table --> my_schema_complex_join
@@ -87,7 +87,7 @@ graph TD
 
 ### `my_schema.my_third_table`
 
-**Depends on**: `my_schema.my_second_table`, `my_schema.my_first_table`
+**Depends on**: `my_schema.my_first_table`, `my_schema.my_second_table`
 
 **No dependents** (leaf table)
 

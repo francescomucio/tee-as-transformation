@@ -2,7 +2,6 @@ project_folder = "t_project_sno"
 
 [connection]
 type = "snowflake"
-account = "IZOMIWY-AM07852"
 user = "mucio"
 password = "PASSWORD"
 role = "ACCOUNTADMIN"

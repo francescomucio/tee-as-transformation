@@ -39,7 +39,7 @@
           }
         }
       },
-      "file_path": "t_project/models/my_schema/incremental_example.sql"
+      "file_path": "/home/mucio/tee/t_project/models/my_schema/incremental_example.sql"
     },
     "sqlglot_hash": "4f30123089bb25b04e26fbd59242b80845e89112e7106a50cabcf3e24296f119"
   },
@@ -96,7 +96,7 @@
         ],
         "incremental": null
       },
-      "file_path": "t_project/models/my_schema/my_first_table.sql"
+      "file_path": "/home/mucio/tee/t_project/models/my_schema/my_first_table.sql"
     },
     "sqlglot_hash": "cf5d755536438a4884a5d23ecd12700d0565d907f945ae4a48709a3258e1ea15"
   },
@@ -122,7 +122,7 @@
       "description": "SQL model for my_schema.my_forth_table",
       "variables": [],
       "metadata": {},
-      "file_path": "t_project/models/my_schema/my_forth_table.sql"
+      "file_path": "/home/mucio/tee/t_project/models/my_schema/my_forth_table.sql"
     },
     "sqlglot_hash": "3b1ecd8d945c471109194ea08d8bba1f485fcdb8e739a6fc97f49c063e92f90d"
   },
@@ -170,7 +170,7 @@
         ],
         "incremental": null
       },
-      "file_path": "t_project/models/my_schema/my_second_table.sql"
+      "file_path": "/home/mucio/tee/t_project/models/my_schema/my_second_table.sql"
     },
     "sqlglot_hash": "4bbc220872f45df14551e0a9d8dd12c0bfacd0fc9887fe362ce12f6362fa2b07"
   },
@@ -199,7 +199,7 @@
       "description": "SQL model for my_schema.my_third_table",
       "variables": [],
       "metadata": {},
-      "file_path": "t_project/models/my_schema/my_third_table.sql"
+      "file_path": "/home/mucio/tee/t_project/models/my_schema/my_third_table.sql"
     },
     "sqlglot_hash": "a06a906e28d9ae187d4f47471a7862f6c743cb784380996e41422a2720a953d9"
   },
@@ -222,7 +222,7 @@
       "description": "Summary of user data",
       "variables": [],
       "metadata": {},
-      "file_path": "t_project/models/my_schema/advanced_models.py"
+      "file_path": "/home/mucio/tee/t_project/models/my_schema/advanced_models.py"
     },
     "sqlglot_hash": "4bbc220872f45df14551e0a9d8dd12c0bfacd0fc9887fe362ce12f6362fa2b07",
     "needs_evaluation": false
@@ -246,7 +246,7 @@
       "description": null,
       "variables": [],
       "metadata": {},
-      "file_path": "t_project/models/my_schema/advanced_models.py"
+      "file_path": "/home/mucio/tee/t_project/models/my_schema/advanced_models.py"
     },
     "sqlglot_hash": "4bbc220872f45df14551e0a9d8dd12c0bfacd0fc9887fe362ce12f6362fa2b07",
     "needs_evaluation": false
@@ -270,7 +270,7 @@
       "description": null,
       "variables": [],
       "metadata": {},
-      "file_path": "t_project/models/my_schema/advanced_models.py"
+      "file_path": "/home/mucio/tee/t_project/models/my_schema/advanced_models.py"
     },
     "sqlglot_hash": "4bbc220872f45df14551e0a9d8dd12c0bfacd0fc9887fe362ce12f6362fa2b07",
     "needs_evaluation": false
@@ -294,7 +294,7 @@
       "description": null,
       "variables": [],
       "metadata": {},
-      "file_path": "t_project/models/my_schema/my_auto_tables.py"
+      "file_path": "/home/mucio/tee/t_project/models/my_schema/my_auto_tables.py"
     },
     "sqlglot_hash": "4bbc220872f45df14551e0a9d8dd12c0bfacd0fc9887fe362ce12f6362fa2b07",
     "needs_evaluation": false
