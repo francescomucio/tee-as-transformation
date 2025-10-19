@@ -26,6 +26,7 @@ executor = ModelExecutor('.', config)
 - **Multi-Database Support**: DuckDB, Snowflake, PostgreSQL, and more
 - **SQL Dialect Conversion**: Write in PostgreSQL, run on any database
 - **Dependency-Aware Execution**: Automatic model dependency resolution
+- **Incremental Materialization**: Efficient data processing with append, merge, and delete+insert strategies
 - **Pluggable Architecture**: Easy to add new database adapters
 - **Configuration Management**: Flexible configuration via `pyproject.toml`
 
@@ -37,6 +38,7 @@ executor = ModelExecutor('.', config)
 - [Installation](docs/getting-started/installation.md)
 - [Quick Start Guide](docs/getting-started/quick-start.md)
 - [Configuration](docs/getting-started/configuration.md)
+- [Incremental Materialization](docs/user-guide/incremental-materialization.md)
 - [Database Adapters](docs/user-guide/database-adapters.md)
 - [Examples](docs/user-guide/examples/)
 

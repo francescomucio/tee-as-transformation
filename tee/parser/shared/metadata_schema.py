@@ -15,7 +15,12 @@ from ...typing.metadata import (
     MaterializationType,
     DataType,
     ColumnTestName,
-    ModelTestName
+    ModelTestName,
+    IncrementalStrategy,
+    IncrementalConfig,
+    IncrementalAppendConfig,
+    IncrementalMergeConfig,
+    IncrementalDeleteInsertConfig
 )
 
 logger = logging.getLogger(__name__)
@@ -47,6 +52,7 @@ class ModelMetadata:
     partitions: Optional[List[str]] = None
     materialization: Optional[MaterializationType] = None
     tests: Optional[List[ModelTestName]] = None
+    incremental: Optional[IncrementalConfig] = None
     
     def __post_init__(self):
         """Validate metadata after initialization."""
@@ -56,6 +62,48 @@ class ModelMetadata:
             self.tests = []
         if self.partitions is None:
             self.partitions = []
+        
+        # Validate incremental configuration if present
+        if self.incremental:
+            self._validate_incremental_config()
+    
+    def _validate_incremental_config(self):
+        """Validate incremental configuration."""
+        if not self.incremental:
+            return
+            
+        strategy = self.incremental.get('strategy')
+        if not strategy:
+            raise ValueError("Incremental strategy is required when incremental config is provided")
+        
+        if strategy not in ['append', 'merge', 'delete_insert']:
+            raise ValueError(f"Invalid incremental strategy: {strategy}. Must be one of: append, merge, delete_insert")
+        
+        # Validate strategy-specific configuration
+        if strategy == 'append':
+            if 'append' not in self.incremental or not self.incremental['append']:
+                raise ValueError("Append strategy requires 'append' configuration")
+            append_config = self.incremental['append']
+            if 'time_column' not in append_config:
+                raise ValueError("Append strategy requires 'time_column' in append configuration")
+        
+        elif strategy == 'merge':
+            if 'merge' not in self.incremental or not self.incremental['merge']:
+                raise ValueError("Merge strategy requires 'merge' configuration")
+            merge_config = self.incremental['merge']
+            if 'unique_key' not in merge_config or not merge_config['unique_key']:
+                raise ValueError("Merge strategy requires 'unique_key' in merge configuration")
+            if 'time_column' not in merge_config:
+                raise ValueError("Merge strategy requires 'time_column' in merge configuration")
+        
+        elif strategy == 'delete_insert':
+            if 'delete_insert' not in self.incremental or not self.incremental['delete_insert']:
+                raise ValueError("Delete+insert strategy requires 'delete_insert' configuration")
+            delete_insert_config = self.incremental['delete_insert']
+            if 'where_condition' not in delete_insert_config:
+                raise ValueError("Delete+insert strategy requires 'where_condition' in delete_insert configuration")
+            if 'time_column' not in delete_insert_config:
+                raise ValueError("Delete+insert strategy requires 'time_column' in delete_insert configuration")
 
 
 def validate_metadata_dict(metadata_dict: ModelMetadataDict) -> ModelMetadata:
@@ -109,12 +157,18 @@ def validate_metadata_dict(metadata_dict: ModelMetadataDict) -> ModelMetadata:
         if tests is not None and not isinstance(tests, list):
             raise ValueError("Tests must be a list")
         
+        # Validate incremental configuration if present
+        incremental = metadata_dict.get('incremental')
+        if incremental is not None and not isinstance(incremental, dict):
+            raise ValueError("Incremental configuration must be a dictionary")
+        
         return ModelMetadata(
             description=metadata_dict.get('description'),
             schema=schema,
             partitions=partitions,
             materialization=materialization,
-            tests=tests
+            tests=tests,
+            incremental=incremental
         )
         
     except Exception as e:
@@ -150,7 +204,9 @@ def parse_metadata_from_python_file(file_path: str) -> Optional[ModelMetadataDic
             # Add the typing classes to the namespace
             from ...typing.metadata import (
                 ModelMetadataDict, ColumnDefinition, ParsedModelMetadata,
-                DataType, MaterializationType, ColumnTestName, ModelTestName
+                DataType, MaterializationType, ColumnTestName, ModelTestName,
+                IncrementalStrategy, IncrementalConfig, IncrementalAppendConfig,
+                IncrementalMergeConfig, IncrementalDeleteInsertConfig
             )
             namespace.update({
                 'ModelMetadataDict': ModelMetadataDict,
@@ -160,6 +216,11 @@ def parse_metadata_from_python_file(file_path: str) -> Optional[ModelMetadataDic
                 'MaterializationType': MaterializationType,
                 'ColumnTestName': ColumnTestName,
                 'ModelTestName': ModelTestName,
+                'IncrementalStrategy': IncrementalStrategy,
+                'IncrementalConfig': IncrementalConfig,
+                'IncrementalAppendConfig': IncrementalAppendConfig,
+                'IncrementalMergeConfig': IncrementalMergeConfig,
+                'IncrementalDeleteInsertConfig': IncrementalDeleteInsertConfig,
             })
             
             # Execute the file

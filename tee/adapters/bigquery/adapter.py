@@ -127,7 +127,7 @@ class BigQueryAdapter(DatabaseAdapter):
             self.logger.error(f"Failed to create table {full_table_name}: {e}")
             raise
     
-    def create_view(self, view_name: str, query: str) -> None:
+    def create_view(self, view_name: str, query: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         """Create a view from a qualified SQL query."""
         if not self.client:
             raise RuntimeError("Not connected to database. Call connect() first.")
@@ -152,6 +152,19 @@ class BigQueryAdapter(DatabaseAdapter):
             query_job = self.client.query(create_query)
             query_job.result()  # Wait for completion
             self.logger.info(f"Created view: {full_view_name}")
+            
+            # Add view and column comments if metadata is provided
+            if metadata:
+                # Add view description
+                if "description" in metadata and metadata["description"]:
+                    self._add_table_comment(full_view_name, metadata["description"])
+                
+                # Add column comments
+                if "schema" in metadata and metadata["schema"]:
+                    column_descriptions = self._validate_column_metadata(metadata)
+                    if column_descriptions:
+                        self._add_column_comments(full_view_name, column_descriptions)
+                        
         except Exception as e:
             self.logger.error(f"Failed to create view {full_view_name}: {e}")
             raise

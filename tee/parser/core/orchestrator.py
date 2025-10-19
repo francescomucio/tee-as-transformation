@@ -113,9 +113,15 @@ class ParserOrchestrator:
                     
                     # Add each model to the result with proper table naming
                     for table_name, model_data in python_models.items():
-                        # Generate full table name for Python models
-                        fake_file_path = python_file.parent / f"{table_name}.py"
-                        full_table_name = self.table_resolver.generate_full_table_name(fake_file_path, self.models_folder)
+                        # For Python models, use the table_name from the decorator directly
+                        # Only generate full table name if it doesn't already contain a schema
+                        if '.' in table_name:
+                            # Table name already includes schema (e.g., "my_schema.incremental_example")
+                            full_table_name = table_name
+                        else:
+                            # Generate full table name for unqualified table names
+                            fake_file_path = python_file.parent / f"{table_name}.py"
+                            full_table_name = self.table_resolver.generate_full_table_name(fake_file_path, self.models_folder)
                         
                         parsed_models[full_table_name] = model_data
                         logger.debug(f"Successfully parsed Python model: {full_table_name}")
@@ -220,7 +226,7 @@ class ParserOrchestrator:
             updated_models: Updated model data with qualified SQL
         """
         try:
-            python_parser = ParserFactory.create_parser("py")
+            python_parser = ParserFactory.create_parser(Path("dummy.py"))
             python_parser.update_models_with_qualified_sql(updated_models)
         except Exception as e:
             logger.error(f"Error updating Python models with qualified SQL: {e}")

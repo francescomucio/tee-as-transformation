@@ -9,12 +9,13 @@ metadata: ModelMetadataDict = {
             "description": "Foreign key reference to my_first_table"
         },
         {
-            "name": "additional_data",
+            "name": "name",
             "datatype": "string",
             "description": "Additional information",
             "tests": ["not_null"]
         }
     ],
     "materialization": "view",
-    "tests": ["row_count_gt_0", "no_duplicates"]
+    "tests": ["row_count_gt_0", "no_duplicates"],
+    "description": "This is a description of the view"
 }

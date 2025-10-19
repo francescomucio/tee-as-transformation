@@ -25,7 +25,23 @@ class ModelExecutor:
             config_name: Configuration name to load (if config is None)
         """
         self.project_folder = project_folder
-        self.config = config or load_database_config(config_name)
+        
+        # Handle configuration
+        if config is None:
+            self.config = load_database_config(config_name, project_folder)
+        elif isinstance(config, dict):
+            # Convert dict to AdapterConfig, resolving paths relative to project folder
+            from ..adapters.base import AdapterConfig
+            from pathlib import Path
+            
+            # Resolve relative paths relative to project folder
+            if 'path' in config and config['path'] and not Path(config['path']).is_absolute():
+                config['path'] = str(Path(project_folder) / config['path'])
+            
+            self.config = AdapterConfig(**config)
+        else:
+            self.config = config
+            
         self.execution_engine = None
         self.logger = logging.getLogger(self.__class__.__name__)
     
@@ -43,7 +59,7 @@ class ModelExecutor:
         self.logger.info("Starting model execution with enhanced adapter system")
         
         # Create execution engine
-        self.execution_engine = ExecutionEngine(self.config)
+        self.execution_engine = ExecutionEngine(self.config, project_folder=self.project_folder, variables=variables)
         
         try:
             # Connect to database

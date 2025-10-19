@@ -48,7 +48,7 @@ class SQLParser(BaseParser):
     
     def _parse_metadata(self, sql_file_path: str) -> Optional[ParsedModelMetadata]:
         """
-        Parse metadata from companion Python file.
+        Parse metadata from companion Python file or SQL comments.
         
         Args:
             sql_file_path: Path to the SQL file
@@ -56,15 +56,14 @@ class SQLParser(BaseParser):
         Returns:
             Parsed metadata dictionary or None if not found
         """
+        # First try companion Python file
         metadata_file = self._find_metadata_file(sql_file_path)
-        if not metadata_file:
-            return None
-        
-        try:
-            raw_metadata = parse_metadata_from_python_file(metadata_file)
-            if raw_metadata:
-                # Validate the metadata
-                validated_metadata = validate_metadata_dict(raw_metadata)
+        if metadata_file:
+            try:
+                raw_metadata = parse_metadata_from_python_file(metadata_file)
+                if raw_metadata:
+                    # Validate the metadata
+                    validated_metadata = validate_metadata_dict(raw_metadata)
                 return ParsedModelMetadata(
                     description=validated_metadata.description,
                     schema=[{
@@ -75,10 +74,47 @@ class SQLParser(BaseParser):
                     } for col in validated_metadata.schema] if validated_metadata.schema else None,
                     partitions=validated_metadata.partitions or [],
                     materialization=validated_metadata.materialization,
-                    tests=validated_metadata.tests or []
+                    tests=validated_metadata.tests or [],
+                    incremental=validated_metadata.incremental
                 )
+            except Exception as e:
+                logger.warning(f"Failed to parse metadata from {metadata_file}: {str(e)}")
+        
+        # If no Python file, try to extract metadata from SQL comments
+        try:
+            logger.info(f"Trying to extract metadata from SQL comments in {sql_file_path}")
+            with open(sql_file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Look for metadata comment: -- metadata: {...}
+            import re
+            import json
+            metadata_match = re.search(r'--\s*metadata:\s*(\{.*\})', content, re.DOTALL)
+            if metadata_match:
+                metadata_json = metadata_match.group(1)
+                logger.info(f"Found metadata JSON in SQL comments: {metadata_json}")
+                raw_metadata = json.loads(metadata_json)
+                if raw_metadata:
+                    logger.info(f"Parsed metadata from SQL comments: {raw_metadata}")
+                    # Validate the metadata
+                    validated_metadata = validate_metadata_dict(raw_metadata)
+                    return ParsedModelMetadata(
+                        description=validated_metadata.description,
+                        schema=[{
+                            'name': col.name,
+                            'datatype': col.datatype,
+                            'description': col.description,
+                            'tests': col.tests
+                        } for col in validated_metadata.schema] if validated_metadata.schema else None,
+                        partitions=validated_metadata.partitions or [],
+                        materialization=validated_metadata.materialization,
+                        tests=validated_metadata.tests or [],
+                        incremental=validated_metadata.incremental
+                    )
+            else:
+                logger.info(f"No metadata found in SQL comments for {sql_file_path}")
         except Exception as e:
-            logger.warning(f"Failed to parse metadata from {metadata_file}: {str(e)}")
+            logger.warning(f"Failed to parse metadata from SQL comments in {sql_file_path}: {str(e)}")
         
         return None
     

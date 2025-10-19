@@ -12,9 +12,10 @@ Welcome to the TEE (Transform, Extract, Execute) documentation. TEE is a powerfu
 ### 📖 User Guide
 - [Overview](user-guide/overview.md) - Core concepts and architecture
 - [Execution Engine](user-guide/execution-engine.md) - Running SQL models
+- [Incremental Materialization](user-guide/incremental-materialization.md) - Efficient data processing
 - [Database Adapters](user-guide/database-adapters.md) - Multi-database support
 - [SQL Dialect Conversion](user-guide/sql-dialect-conversion.md) - Write once, run anywhere
-- [Examples](user-guide/examples/) - Practical usage examples
+- [Examples](user-guide/examples/) - Practical usage examples and tutorials
 
 ### 🔧 API Reference
 - [Engine API](api-reference/engine/) - Execution engine classes and methods
@@ -31,6 +32,7 @@ Welcome to the TEE (Transform, Extract, Execute) documentation. TEE is a powerfu
 - **Multi-Database Support**: DuckDB, Snowflake, PostgreSQL, and more
 - **SQL Dialect Conversion**: Write in PostgreSQL, run on any database
 - **Dependency-Aware Execution**: Automatic model dependency resolution
+- **Incremental Materialization**: Efficient data processing with append, merge, and delete+insert strategies
 - **Pluggable Architecture**: Easy to add new database adapters
 - **Configuration Management**: Flexible configuration via `pyproject.toml`
 

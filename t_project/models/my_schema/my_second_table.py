@@ -9,7 +9,7 @@ metadata: ModelMetadataDict = {
             "description": "Foreign key reference to my_first_table"
         },
         {
-            "name": "additional_data",
+            "name": "name",
             "datatype": "string",
             "description": "Additional information",
             "tests": ["not_null"]

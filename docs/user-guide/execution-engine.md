@@ -6,8 +6,10 @@ The Execution Engine is a powerful component that can execute parsed SQL models 
 
 - **Multi-Database Support**: Currently supports DuckDB, SQLite, and PostgreSQL
 - **Dependency-Aware Execution**: Executes models in the correct order based on dependencies
+- **Incremental Materialization**: Support for append, merge, and delete+insert strategies
 - **Table Reference Resolution**: Automatically resolves table references and aliases
 - **Schema Management**: Automatically creates schemas and handles table creation
+- **State Management**: Tracks incremental model state and execution history
 - **Comprehensive Logging**: Detailed logging for debugging and monitoring
 - **Error Handling**: Robust error handling with detailed error messages
 
@@ -83,6 +85,58 @@ if result["status"] == "success":
     print(f"Table created with {result['table_info']['row_count']} rows")
 ```
 
+## Incremental Materialization
+
+TEE supports three incremental materialization strategies for efficient data processing:
+
+### Append Strategy
+Adds new records to existing tables without modifying existing data.
+
+```python
+# Configuration
+"incremental": {
+    "strategy": "append",
+    "append": {
+        "time_column": "created_at",
+        "start_date": "2024-01-01",
+        "lookback": "7 days"
+    }
+}
+```
+
+### Merge Strategy
+Performs upsert operations, updating existing records and inserting new ones.
+
+```python
+# Configuration
+"incremental": {
+    "strategy": "merge",
+    "merge": {
+        "unique_key": ["id"],
+        "time_column": "updated_at",
+        "start_date": "auto",
+        "lookback": "3 hours"
+    }
+}
+```
+
+### Delete+Insert Strategy
+Removes old data and inserts fresh data for a specific time range.
+
+```python
+# Configuration
+"incremental": {
+    "strategy": "delete_insert",
+    "delete_insert": {
+        "where_condition": "updated_at >= @start_date",
+        "time_column": "updated_at",
+        "start_date": "@start_date"
+    }
+}
+```
+
+For detailed information, see the [Incremental Materialization Guide](incremental-materialization.md).
+
 ## Architecture
 
 ### Core Components
@@ -92,6 +146,8 @@ if result["status"] == "success":
 3. **SQLiteConnection**: SQLite-specific implementation  
 4. **PostgreSQLConnection**: PostgreSQL-specific implementation
 5. **ExecutionEngine**: Main orchestrator that manages execution
+6. **IncrementalExecutor**: Handles incremental materialization strategies
+7. **ModelStateManager**: Tracks incremental model state and execution history
 
 ### Key Features
 

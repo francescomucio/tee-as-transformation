@@ -7,7 +7,7 @@ and environment variables with proper precedence and validation.
 
 import os
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 from pathlib import Path
 import toml
 
@@ -48,29 +48,46 @@ class DatabaseConfigManager:
     
     
     def _load_toml_config(self, config_name: str) -> Dict[str, Any]:
-        """Load configuration from pyproject.toml."""
+        """Load configuration from pyproject.toml or project.toml."""
+        # Try pyproject.toml first
         toml_file = self.project_root / "pyproject.toml"
         if not toml_file.exists():
-            self.logger.debug("No pyproject.toml found")
-            return {}
+            # Fall back to project.toml
+            toml_file = self.project_root / "project.toml"
+            if not toml_file.exists():
+                self.logger.debug("No pyproject.toml or project.toml found")
+                return {}
         
         try:
             with open(toml_file, 'r') as f:
                 data = toml.load(f)
             
-            # Look for [tool.tee.database] or [tool.tee.databases]
+            # Look for [tool.tee.database], [tool.tee.databases], or [connection]
             tee_config = data.get("tool", {}).get("tee", {})
             
-            # Check for single database config
-            if "database" in tee_config:
-                return tee_config["database"]
+            # Start with flags if they exist
+            config = {}
+            if "flags" in data:
+                config["extra"] = {"flags": data["flags"]}
             
-            # Check for multiple database configs
+            # Check for single database config in tool.tee.database
+            if "database" in tee_config:
+                config.update(tee_config["database"])
+                return config
+            
+            # Check for multiple database configs in tool.tee.databases
             databases = tee_config.get("databases", {})
             if isinstance(databases, dict) and config_name in databases:
-                return databases[config_name]
+                config.update(databases[config_name])
+                return config
             
-            self.logger.debug(f"No database configuration '{config_name}' found in pyproject.toml")
+            # Check for legacy [connection] section
+            if "connection" in data:
+                self.logger.debug("Using legacy [connection] section")
+                config.update(data["connection"])
+                return config
+            
+            self.logger.debug(f"No database configuration '{config_name}' found in TOML file")
             return {}
             
         except Exception as e:

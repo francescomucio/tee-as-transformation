@@ -2,4 +2,7 @@ project_folder = "t_project"
 
 [connection]
 type = "duckdb"
-path = "t_project/data/t_project.duckdb"
+path = "data/t_project.duckdb"
+
+[flags]
+materialization_change_behavior = "warn"  # Options: "warn", "error", "ignore"

@@ -1,4 +1,48 @@
 {
+  "my_schema.incremental_example": {
+    "sqlglot": {
+      "sql_content": "SELECT id, name, created_at, updated_at, status FROM t_project.source_table WHERE status = 'active'",
+      "parsed_ast": "SELECT id, name, created_at, updated_at, status FROM t_project.source_table WHERE status = 'active'",
+      "sql_type": "select",
+      "tables": [
+        "source_table"
+      ],
+      "qualified_sql": "SELECT id, name, created_at, updated_at, status FROM t_project.source_table WHERE status = 'active'",
+      "columns": [
+        "id",
+        "name",
+        "created_at",
+        "updated_at",
+        "status",
+        "status"
+      ],
+      "functions": [],
+      "aliases": []
+    },
+    "model_metadata": {
+      "table_name": "my_schema.incremental_example",
+      "function_name": null,
+      "description": "SQL model for my_schema.incremental_example",
+      "variables": [],
+      "metadata": {
+        "description": "Incremental table using delete+insert strategy",
+        "schema": null,
+        "partitions": [],
+        "materialization": "incremental",
+        "tests": [],
+        "incremental": {
+          "strategy": "delete_insert",
+          "delete_insert": {
+            "where_condition": "updated_at >= @start_date",
+            "time_column": "updated_at",
+            "start_date": "@start_date"
+          }
+        }
+      },
+      "file_path": "t_project/models/my_schema/incremental_example.sql"
+    },
+    "sqlglot_hash": "4f30123089bb25b04e26fbd59242b80845e89112e7106a50cabcf3e24296f119"
+  },
   "my_schema.my_first_table": {
     "sqlglot": {
       "sql_content": "SELECT 1 AS id, 'first test' AS name UNION ALL SELECT 2 AS id, 'second test' AS name UNION ALL SELECT 3 AS id, 'third test' AS name",
@@ -23,6 +67,7 @@
       "description": "SQL model for my_schema.my_first_table",
       "variables": [],
       "metadata": {
+        "description": null,
         "schema": [
           {
             "name": "id",
@@ -48,7 +93,8 @@
         "materialization": "table",
         "tests": [
           "row_count_gt_0"
-        ]
+        ],
+        "incremental": null
       },
       "file_path": "t_project/models/my_schema/my_first_table.sql"
     },
@@ -99,6 +145,7 @@
       "description": "SQL model for my_schema.my_second_table",
       "variables": [],
       "metadata": {
+        "description": null,
         "schema": [
           {
             "name": "id",
@@ -107,7 +154,7 @@
             "tests": []
           },
           {
-            "name": "additional_data",
+            "name": "name",
             "datatype": "string",
             "description": "Additional information",
             "tests": [
@@ -120,7 +167,8 @@
         "tests": [
           "row_count_gt_0",
           "no_duplicates"
-        ]
+        ],
+        "incremental": null
       },
       "file_path": "t_project/models/my_schema/my_second_table.sql"
     },

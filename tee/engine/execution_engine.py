@@ -7,9 +7,11 @@ for database-agnostic SQL model execution with automatic dialect conversion.
 
 from typing import Dict, Any, List, Optional, Union
 import logging
+from datetime import datetime
 
 from ..adapters import get_adapter, AdapterConfig
 from .config import load_database_config
+from .model_state import ModelStateManager
 
 
 class ExecutionEngine:
@@ -23,17 +25,24 @@ class ExecutionEngine:
     - Database-specific optimizations and features
     """
     
-    def __init__(self, config: Optional[Union[AdapterConfig, Dict[str, Any]]] = None, config_name: str = "default"):
+    def __init__(self, config: Optional[Union[AdapterConfig, Dict[str, Any]]] = None, config_name: str = "default", project_folder: str = ".", variables: Optional[Dict[str, Any]] = None):
         """
         Initialize the execution engine.
         
         Args:
             config: Database adapter configuration (AdapterConfig or dict, if None, loads from config files)
             config_name: Configuration name to load (if config is None)
+            project_folder: Project folder path for state management
+            variables: Optional dictionary of variables for model execution
         """
         self.config = config or load_database_config(config_name)
         self.adapter = get_adapter(self.config)
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.project_folder = project_folder
+        self.variables = variables or {}
+        
+        # Initialize state manager
+        self.state_manager = ModelStateManager(project_folder=project_folder)
     
     def connect(self) -> None:
         """Establish connection to the database."""
@@ -42,6 +51,93 @@ class ExecutionEngine:
     def disconnect(self) -> None:
         """Close the database connection."""
         self.adapter.disconnect()
+        self.state_manager.close()
+    
+    def _generate_sql_hash(self, sql_query: str) -> str:
+        """Generate a hash for SQL content using the centralized state manager."""
+        return self.state_manager.compute_sql_hash(sql_query)
+    
+    def _generate_config_hash(self, metadata: Optional[Dict[str, Any]]) -> str:
+        """Generate a hash for model configuration using the centralized state manager."""
+        if not metadata:
+            return self.state_manager.compute_config_hash({})
+        return self.state_manager.compute_config_hash(metadata)
+    
+    def _load_flags(self) -> Dict[str, Any]:
+        """Load flags from project configuration."""
+        try:
+            from .config import load_database_config
+            config = load_database_config("default", self.project_folder)
+            if hasattr(config, 'extra') and config.extra:
+                return config.extra.get('flags', {})
+        except Exception as e:
+            self.logger.debug(f"Could not load flags: {e}")
+        
+        return {}
+    
+    def _check_model_state(self, table_name: str, materialization: str, metadata: Optional[Dict[str, Any]]) -> None:
+        """
+        Check model state for materialization changes and database existence.
+        
+        Args:
+            table_name: Name of the model
+            materialization: Materialization type
+            metadata: Model metadata
+        """
+        # Check if model exists in state
+        state = self.state_manager.get_model_state(table_name)
+        
+        if state is None:
+            # Model doesn't exist in state, check if it exists in database
+            if self.state_manager.check_database_existence(self.adapter, table_name):
+                self.logger.warning(f"Model {table_name} exists in database but not in state. Rebuilding state...")
+                self.state_manager.rebuild_state_from_database(self.adapter, table_name)
+        else:
+            # Check for materialization changes
+            flags = self._load_flags()
+            behavior = flags.get('materialization_change_behavior', 'warn')
+            self.state_manager.check_materialization_change(table_name, materialization, behavior)
+    
+    def _save_model_state(self, table_name: str, materialization: str, sql_query: str, metadata: Optional[Dict[str, Any]]) -> None:
+        """
+        Save model state after successful execution.
+        
+        Args:
+            table_name: Name of the model
+            materialization: Materialization type
+            sql_query: SQL query content
+            metadata: Model metadata
+        """
+        sql_hash = self._generate_sql_hash(sql_query)
+        
+        # Extract incremental-specific data if applicable
+        last_processed_value = None
+        strategy = None
+        config_hash = None
+        
+        if materialization == "incremental" and metadata:
+            incremental_config = metadata.get('incremental', {})
+            if incremental_config:
+                strategy = incremental_config.get('strategy')
+                # For incremental models, compute config hash from incremental config only
+                config_hash = self._generate_config_hash(incremental_config)
+                # For incremental models, we might want to track the last processed value
+                # This would be set by the incremental executor
+            else:
+                config_hash = self._generate_config_hash(metadata)
+        else:
+            config_hash = self._generate_config_hash(metadata)
+        
+        self.state_manager.save_model_state(
+            model_name=table_name,
+            materialization=materialization,
+            sql_hash=sql_hash,
+            config_hash=config_hash,
+            last_processed_value=last_processed_value,
+            strategy=strategy
+        )
+        
+        self.logger.debug(f"Saved state for model: {table_name}")
     
     def execute_models(self, parsed_models: Dict[str, Any], execution_order: List[str]) -> Dict[str, Any]:
         """
@@ -78,7 +174,6 @@ class ExecutionEngine:
                             table_mapping[table] = full_name
                             break
         
-        self.logger.debug(f"Table mapping: {table_mapping}")
         
         for table_name in execution_order:
             try:
@@ -114,7 +209,15 @@ class ExecutionEngine:
                 # Execute based on materialization type
                 materialization = self._get_materialization_type(model_data)
                 metadata = self._extract_metadata(model_data)
+                
+                # Check for materialization changes and database existence
+                self._check_model_state(table_name, materialization, metadata)
+                
+                # Execute the model
                 self._execute_materialization(table_name, sql_query, materialization, metadata)
+                
+                # Save model state after successful execution
+                self._save_model_state(table_name, materialization, sql_query, metadata)
                 
                 # Get table information
                 table_info = self.adapter.get_table_info(table_name)
@@ -199,7 +302,7 @@ class ExecutionEngine:
     def _execute_materialization(self, table_name: str, sql_query: str, materialization: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         """Execute the appropriate materialization based on type."""
         if materialization == "view":
-            self.adapter.create_view(table_name, sql_query)
+            self.adapter.create_view(table_name, sql_query, metadata)
         elif materialization == "materialized_view":
             if hasattr(self.adapter, 'create_materialized_view'):
                 self.adapter.create_materialized_view(table_name, sql_query)
@@ -218,8 +321,97 @@ class ExecutionEngine:
             else:
                 self.logger.warning(f"External tables not supported by {self.adapter.__class__.__name__}, creating table instead")
                 self.adapter.create_table(table_name, sql_query, metadata)
+        elif materialization == "incremental":
+            self._execute_incremental_materialization(table_name, sql_query, metadata)
         else:  # Default to table for "table" or any other type
             self.adapter.create_table(table_name, sql_query, metadata)
+    
+    def _execute_incremental_materialization(self, table_name: str, sql_query: str, metadata: Optional[Dict[str, Any]] = None) -> None:
+        """Execute incremental materialization using the universal state manager."""
+        from .incremental_executor import IncrementalExecutor
+        
+        # Use the universal state manager
+        executor = IncrementalExecutor(self.state_manager)
+        
+        try:
+            # Extract incremental configuration
+            incremental_config = metadata.get('incremental') if metadata else None
+            
+            # If incremental config is not found, check if the metadata itself contains incremental info
+            if not incremental_config and metadata and metadata.get('materialization') == 'incremental':
+                # This is a flat metadata structure from SQL files, need to restructure it
+                strategy = metadata.get('strategy', 'append')  # Default to append if not specified
+                incremental_config = {
+                    'strategy': strategy,
+                    strategy: {
+                        'time_column': metadata.get('time_column'),
+                        'start_date': metadata.get('start_date'),
+                        'lookback': metadata.get('lookback'),
+                        'unique_key': metadata.get('unique_key'),
+                        'where_condition': metadata.get('where_condition')
+                    }
+                }
+                # Remove None values
+                incremental_config[strategy] = {k: v for k, v in incremental_config[strategy].items() if v is not None}
+            
+            if not incremental_config:
+                self.logger.error("Incremental materialization requires incremental configuration")
+                # Fallback to table
+                self.adapter.create_table(table_name, sql_query, metadata)
+                return
+            
+            strategy = incremental_config.get('strategy')
+            if not strategy:
+                self.logger.error("Incremental strategy is required")
+                # Fallback to table
+                self.adapter.create_table(table_name, sql_query, metadata)
+                return
+            
+            # Check if we should run incrementally
+            should_run_incremental = executor.should_run_incremental(table_name, sql_query, incremental_config)
+            if not should_run_incremental:
+                # Run as full load (create/replace table)
+                self.adapter.create_table(table_name, sql_query, metadata)
+                
+                # Update state after full load to enable incremental runs
+                current_time = datetime.utcnow().isoformat()
+                strategy = incremental_config.get('strategy') if incremental_config else None
+                self.state_manager.update_processed_value(table_name, current_time, strategy)
+            else:
+                # Run incremental strategy
+                if strategy == "append":
+                    append_config = incremental_config.get('append')
+                    if not append_config:
+                        self.logger.error("Append strategy requires append configuration")
+                        return
+                    executor.execute_append_strategy(table_name, sql_query, append_config, self.adapter, table_name, self.variables)
+                
+                elif strategy == "merge":
+                    merge_config = incremental_config.get('merge')
+                    if not merge_config:
+                        self.logger.error("Merge strategy requires merge configuration")
+                        return
+                    executor.execute_merge_strategy(table_name, sql_query, merge_config, self.adapter, table_name, self.variables)
+                
+                elif strategy == "delete_insert":
+                    delete_insert_config = incremental_config.get('delete_insert')
+                    if not delete_insert_config:
+                        self.logger.error("Delete+insert strategy requires delete_insert configuration")
+                        return
+                    executor.execute_delete_insert_strategy(table_name, sql_query, delete_insert_config, self.adapter, table_name, self.variables)
+                
+                else:
+                    self.logger.error(f"Unknown incremental strategy: {strategy}")
+                    return
+            
+            # State is already saved by individual strategy methods
+            
+        except Exception as e:
+            self.logger.error(f"Error executing incremental materialization: {e}")
+            # Fallback to table creation
+            self.adapter.create_table(table_name, sql_query, metadata)
+        finally:
+            pass  # State manager is managed by the execution engine
     
     def _extract_metadata(self, model_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
@@ -232,27 +424,25 @@ class ExecutionEngine:
             Metadata dictionary with column descriptions, or None if no metadata found
         """
         try:
+            # Debug: Log the entire model_data structure
+            
             # First, try to get metadata from model_metadata (from decorator)
             model_metadata = model_data.get("model_metadata", {})
-            
             if model_metadata and "metadata" in model_metadata:
                 decorator_metadata = model_metadata["metadata"]
+                
+                # Check if this is incremental materialization
+                if "materialization" in decorator_metadata and decorator_metadata["materialization"] == "incremental":
+                    return decorator_metadata
+                
                 if decorator_metadata and "schema" in decorator_metadata:
-                    self.logger.debug("Using metadata from model decorator")
                     # Prioritize file metadata description over decorator description
-                    if "description" in decorator_metadata:
-                        # File metadata description takes priority
-                        self.logger.debug("Using file metadata description")
-                        pass
-                    elif "description" in model_metadata:
-                        # Fall back to decorator description if no file metadata description
+                    if "description" in model_metadata and "description" not in decorator_metadata:
                         decorator_metadata["description"] = model_metadata["description"]
                     return decorator_metadata
                 elif decorator_metadata and "metadata" in decorator_metadata and "schema" in decorator_metadata["metadata"]:
                     # Handle nested metadata structure
                     nested_metadata = decorator_metadata["metadata"]
-                    self.logger.debug("Using nested metadata from model decorator")
-                    # Include table description from decorator if available
                     if "description" in model_metadata:
                         nested_metadata["description"] = model_metadata["description"]
                     return nested_metadata
@@ -261,8 +451,7 @@ class ExecutionEngine:
             if "metadata" in model_data:
                 file_metadata = model_data["metadata"]
                 if file_metadata and "schema" in file_metadata:
-                    self.logger.debug("Using metadata from file")
-                    # Use file metadata description if available, decorator description takes priority
+                    # Use file metadata description if available
                     if "description" in model_metadata:
                         file_metadata["description"] = model_metadata["description"]
                     # If no decorator description, file metadata description is already there

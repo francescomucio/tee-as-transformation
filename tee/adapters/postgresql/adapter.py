@@ -118,7 +118,7 @@ class PostgreSQLAdapter(DatabaseAdapter):
             self.logger.error(f"Failed to create table {table_name}: {e}")
             raise
     
-    def create_view(self, view_name: str, query: str) -> None:
+    def create_view(self, view_name: str, query: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         """Create a view from a qualified SQL query."""
         if not self.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
@@ -152,6 +152,19 @@ class PostgreSQLAdapter(DatabaseAdapter):
             self.connection.commit()
             cursor.close()
             self.logger.info(f"Created view: {view_name}")
+            
+            # Add view and column comments if metadata is provided
+            if metadata:
+                # Add view description
+                if "description" in metadata and metadata["description"]:
+                    self._add_table_comment(view_name, metadata["description"])
+                
+                # Add column comments
+                if "schema" in metadata and metadata["schema"]:
+                    column_descriptions = self._validate_column_metadata(metadata)
+                    if column_descriptions:
+                        self._add_column_comments(view_name, column_descriptions)
+                        
         except Exception as e:
             self.logger.error(f"Failed to create view {view_name}: {e}")
             raise

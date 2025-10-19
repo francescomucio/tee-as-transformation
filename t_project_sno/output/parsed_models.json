@@ -100,7 +100,7 @@
       "description": "SQL model for my_schema.my_second_table",
       "variables": [],
       "metadata": {
-        "description": null,
+        "description": "This is a description of the view",
         "schema": [
           {
             "name": "id",
@@ -109,7 +109,7 @@
             "tests": []
           },
           {
-            "name": "additional_data",
+            "name": "name",
             "datatype": "string",
             "description": "Additional information",
             "tests": [

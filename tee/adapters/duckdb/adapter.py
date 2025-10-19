@@ -38,6 +38,7 @@ class DuckDBAdapter(DatabaseAdapter):
             MaterializationType.TABLE,
             MaterializationType.VIEW,
             MaterializationType.MATERIALIZED_VIEW,
+            MaterializationType.INCREMENTAL,
         ]
     
     def connect(self) -> None:
@@ -118,7 +119,7 @@ class DuckDBAdapter(DatabaseAdapter):
             self.logger.error(f"Failed to create table {table_name}: {e}")
             raise
     
-    def create_view(self, view_name: str, query: str) -> None:
+    def create_view(self, view_name: str, query: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         """Create a view from a qualified SQL query."""
         if not self.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
@@ -146,6 +147,19 @@ class DuckDBAdapter(DatabaseAdapter):
         try:
             self.connection.execute(create_query)
             self.logger.info(f"Created view: {view_name}")
+            
+            # Add view and column comments if metadata is provided
+            if metadata:
+                # Add view description
+                if "description" in metadata and metadata["description"]:
+                    self._add_table_comment(view_name, metadata["description"])
+                
+                # Add column comments
+                if "schema" in metadata and metadata["schema"]:
+                    column_descriptions = self._validate_column_metadata(metadata)
+                    if column_descriptions:
+                        self._add_column_comments(view_name, column_descriptions)
+                        
         except Exception as e:
             self.logger.error(f"Failed to create view {view_name}: {e}")
             raise
@@ -250,6 +264,132 @@ class DuckDBAdapter(DatabaseAdapter):
         
         return base_info
     
+    def execute_incremental_append(self, table_name: str, sql_query: str) -> None:
+        """Execute incremental append operation."""
+        if not self.connection:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+        
+        # Convert SQL if needed
+        converted_query = self.convert_sql_dialect(sql_query)
+        
+        # Qualify table references if schema is specified
+        if self.config.schema:
+            converted_query = self.qualify_table_references(converted_query, self.config.schema)
+        
+        # Insert into existing table
+        insert_query = f"INSERT INTO {table_name} {converted_query}"
+        
+        try:
+            self.connection.execute(insert_query)
+            self.logger.info(f"Executed incremental append for table: {table_name}")
+        except Exception as e:
+            self.logger.error(f"Error executing incremental append for {table_name}: {e}")
+            raise
+    
+    def get_table_columns(self, table_name: str) -> List[str]:
+        """Get column names for a table."""
+        if not self.connection:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+        
+        try:
+            # Use DESCRIBE to get column information
+            result = self.connection.execute(f"DESCRIBE {table_name}").fetchall()
+            return [row[0] for row in result]  # First column is the column name
+        except Exception as e:
+            self.logger.error(f"Error getting columns for table {table_name}: {e}")
+            # Fallback to a default set of columns
+            return ["id", "name", "created_at", "updated_at", "status"]
+    
+    def _generate_merge_sql(self, table_name: str, source_sql: str, unique_key: List[str], columns: List[str]) -> str:
+        """Generate DuckDB-specific MERGE SQL statement."""
+        key_conditions = []
+        for key in unique_key:
+            key_conditions.append(f"target.{key} = source.{key}")
+        
+        key_condition = " AND ".join(key_conditions)
+        
+        # Generate UPDATE SET clause (exclude unique key columns)
+        update_clauses = []
+        for col in columns:
+            if col not in unique_key:
+                update_clauses.append(f"{col} = source.{col}")
+        
+        update_set = ", ".join(update_clauses) if update_clauses else f"{unique_key[0]} = source.{unique_key[0]}"
+        
+        # Generate INSERT clause
+        insert_columns = ", ".join(columns)
+        insert_values = ", ".join([f"source.{col}" for col in columns])
+        
+        merge_sql = f"""
+        MERGE INTO {table_name} AS target
+        USING ({source_sql}) AS source
+        ON {key_condition}
+        WHEN MATCHED THEN UPDATE SET {update_set}
+        WHEN NOT MATCHED THEN INSERT ({insert_columns}) VALUES ({insert_values})
+        """
+        
+        return merge_sql.strip()
+    
+    def execute_incremental_merge(self, table_name: str, source_sql: str, config: Dict[str, Any]) -> None:
+        """Execute incremental merge operation."""
+        if not self.connection:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+        
+        # Get table columns dynamically
+        columns = self.get_table_columns(table_name)
+        unique_key = config['unique_key']
+        
+        # Generate DuckDB-specific merge SQL
+        merge_sql = self._generate_merge_sql(table_name, source_sql, unique_key, columns)
+        
+        # Convert SQL if needed
+        converted_query = self.convert_sql_dialect(merge_sql)
+        
+        # Qualify table references if schema is specified
+        if self.config.schema:
+            converted_query = self.qualify_table_references(converted_query, self.config.schema)
+        
+        # Log the generated SQL (debug level for cleaner output)
+        self.logger.debug(f"Generated DuckDB merge SQL for {table_name}: {converted_query}")
+        
+        try:
+            self.connection.execute(converted_query)
+            self.logger.info("Executed incremental merge")
+        except Exception as e:
+            self.logger.error(f"Error executing incremental merge: {e}")
+            raise
+    
+    def execute_incremental_delete_insert(self, table_name: str, delete_sql: str, insert_sql: str) -> None:
+        """Execute incremental delete+insert operation."""
+        if not self.connection:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+        
+        # Convert SQL if needed
+        converted_delete = self.convert_sql_dialect(delete_sql)
+        converted_insert = self.convert_sql_dialect(insert_sql)
+        
+        # Qualify table references if schema is specified
+        if self.config.schema:
+            converted_delete = self.qualify_table_references(converted_delete, self.config.schema)
+            converted_insert = self.qualify_table_references(converted_insert, self.config.schema)
+        
+        # Log the generated SQL (debug level for cleaner output)
+        self.logger.debug(f"Generated DuckDB delete+insert SQL for {table_name}:")
+        self.logger.debug(f"DELETE: {converted_delete}")
+        self.logger.debug(f"INSERT: {converted_insert}")
+        
+        try:
+            # Execute delete
+            self.connection.execute(converted_delete)
+            self.logger.info(f"Executed delete for table: {table_name}")
+            
+            # Execute insert
+            insert_query = f"INSERT INTO {table_name} {converted_insert}"
+            self.connection.execute(insert_query)
+            self.logger.info(f"Executed insert for table: {table_name}")
+        except Exception as e:
+            self.logger.error(f"Error executing incremental delete+insert for {table_name}: {e}")
+            raise
 
 
 # Register the adapter

@@ -20,6 +20,7 @@ class MaterializationType(Enum):
     VIEW = "view"
     MATERIALIZED_VIEW = "materialized_view"
     EXTERNAL_TABLE = "external_table"
+    INCREMENTAL = "incremental"
 
 
 @dataclass
@@ -161,6 +162,9 @@ class DatabaseAdapter(ABC):
         
         # Extract schema from metadata
         schema = metadata.get('schema', [])
+        if schema is None:
+            # For incremental materialization, schema might be None
+            return {}
         if not isinstance(schema, list):
             raise ValueError("Schema must be a list of column definitions")
         
@@ -255,7 +259,7 @@ class DatabaseAdapter(ABC):
         pass
     
     @abstractmethod
-    def create_view(self, view_name: str, query: str) -> None:
+    def create_view(self, view_name: str, query: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         """Create a view from a qualified SQL query."""
         pass
     
@@ -273,6 +277,35 @@ class DatabaseAdapter(ABC):
     def get_table_info(self, table_name: str) -> Dict[str, Any]:
         """Get information about a table."""
         pass
+    
+    # Incremental materialization methods
+    def execute_incremental_append(self, table_name: str, source_sql: str) -> None:
+        """Execute incremental append operation.
+        
+        This method can be overridden by adapters that support incremental append.
+        By default, it falls back to regular table creation.
+        """
+        self.logger.warning(f"Adapter {self.__class__.__name__} does not support incremental append, falling back to regular table creation")
+        self.create_table(table_name, source_sql)
+    
+    def execute_incremental_merge(self, table_name: str, source_sql: str, config: Dict[str, Any]) -> None:
+        """Execute incremental merge operation.
+        
+        This method can be overridden by adapters that support incremental merge.
+        By default, it falls back to regular query execution.
+        """
+        self.logger.warning(f"Adapter {self.__class__.__name__} does not support incremental merge, falling back to regular execution")
+        self.execute_query(source_sql)
+    
+    def execute_incremental_delete_insert(self, table_name: str, delete_sql: str, insert_sql: str) -> None:
+        """Execute incremental delete+insert operation.
+        
+        This method can be overridden by adapters that support incremental delete+insert.
+        By default, it falls back to regular query execution.
+        """
+        self.logger.warning(f"Adapter {self.__class__.__name__} does not support incremental delete+insert, falling back to regular execution")
+        self.execute_query(delete_sql)
+        self.execute_query(insert_sql)
     
     
     def convert_sql_dialect(self, sql: str, source_dialect: Optional[str] = None) -> str:
