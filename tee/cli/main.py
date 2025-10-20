@@ -313,17 +313,17 @@ def main():
     global parser
     
     parser = argparse.ArgumentParser(
-        description="Tee - SQL Model Execution Framework",
+        description="Tee - Transform, Extract, Execute (and t-shirts!)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  tee run ./my_project                    # Run models in ./my_project
-  tee parse ./my_project                  # Parse models in ./my_project
-  tee debug ./my_project                  # Test database connectivity
-  tee run ./my_project -v                 # Run with verbose output
-  tee run ./my_project --vars '{"env": "prod"}'  # Run with variables (JSON)
-  tee run ./my_project --vars 'env=prod,debug=true'  # Run with variables (key=value)
-  tee help                                # Show this help message
+  tcli run ./my_project                    # Run models in ./my_project
+  tcli parse ./my_project                  # Parse models in ./my_project
+  tcli debug ./my_project                  # Test database connectivity
+  tcli run ./my_project -v                 # Run with verbose output
+  tcli run ./my_project --vars '{"env": "prod"}'  # Run with variables (JSON)
+  tcli run ./my_project --vars 'env=prod,debug=true'  # Run with variables (key=value)
+  tcli help                                # Show this help message
         """
     )
     

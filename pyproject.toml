@@ -1,7 +1,7 @@
 [project]
 name = "tee"
 version = "0.1.0"
-description = "SQL Model Execution Framework"
+description = "Tee - Transform, Extract, Execute (and t-shirts!)"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
@@ -14,7 +14,15 @@ dependencies = [
 ]
 
 [project.scripts]
-tee = "tee.cli.main:main"
+tcli = "tee.cli.main:main"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["tee*"]
+exclude = ["tests*", "t_project*", "test_project*", "site*"]
 
 [dependency-groups]
 dev = [

@@ -1,6 +1,6 @@
-# TEE Test Suite
+# Tee Test Suite
 
-This directory contains comprehensive tests for the TEE framework, with a focus on incremental materialization functionality.
+This directory contains comprehensive tests for the Tee framework, with a focus on incremental materialization functionality.
 
 ## Test Structure
 
@@ -12,8 +12,11 @@ tests/
 ├── engine/                               # Core engine tests
 │   ├── test_incremental_executor.py      # Incremental executor unit tests
 │   └── test_incremental_adapter_interface.py  # Adapter interface tests
-└── adapters/                             # Database adapter tests
-    └── test_duckdb_incremental.py        # DuckDB-specific tests
+├── adapters/                             # Database adapter tests
+│   ├── test_duckdb_incremental.py        # DuckDB-specific tests
+│   └── test_metadata_propagation.py     # Metadata propagation tests
+├── parser/                               # Parser tests
+└── typing/                               # Type system tests
 ```
 
 ## Test Categories
@@ -55,25 +58,25 @@ Tests specific to DuckDB implementation (template for other adapters):
 
 ```bash
 # Run all incremental tests
-python tests/run_incremental_tests.py all
+uv run python tests/run_incremental_tests.py all
 
 # Run unit tests only
-python tests/run_incremental_tests.py unit
+uv run python tests/run_incremental_tests.py unit
 
 # Run adapter interface tests
-python tests/run_incremental_tests.py adapter
+uv run python tests/run_incremental_tests.py adapter
 
 # Run DuckDB integration tests
-python tests/run_incremental_tests.py duckdb
+uv run python tests/run_incremental_tests.py duckdb
 
 # Run performance tests
-python tests/run_incremental_tests.py performance
+uv run python tests/run_incremental_tests.py performance
 
 # Run with coverage
-python tests/run_incremental_tests.py coverage
+uv run python tests/run_incremental_tests.py coverage
 
 # Run specific test
-python tests/run_incremental_tests.py specific --test-path tests/engine/test_incremental_executor.py::TestShouldRunIncremental
+uv run python tests/run_incremental_tests.py specific --test-path tests/engine/test_incremental_executor.py::TestShouldRunIncremental
 ```
 
 ### Using pytest directly
@@ -92,7 +95,7 @@ uv run pytest tests/engine/test_incremental_executor.py::TestShouldRunIncrementa
 uv run pytest tests/engine/test_incremental_executor.py::TestShouldRunIncremental::test_no_state_exists_runs_full_load -v
 
 # Run with coverage
-uv run pytest tests/ --cov=tee.engine.incremental_executor --cov-report=html
+uv run pytest tests/ --cov=tcli.engine.incremental_executor --cov-report=html
 
 # Run only unit tests
 uv run pytest tests/ -m unit -v

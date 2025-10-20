@@ -415,7 +415,7 @@ class ExecutionEngine:
     
     def _extract_metadata(self, model_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
-        Extract metadata from model data, prioritizing decorator metadata over file metadata.
+        Extract metadata from model data, prioritizing nested metadata over file metadata.
         
         Args:
             model_data: Dictionary containing model data
@@ -426,26 +426,26 @@ class ExecutionEngine:
         try:
             # Debug: Log the entire model_data structure
             
-            # First, try to get metadata from model_metadata (from decorator)
+            # First, try to get metadata from model_metadata
             model_metadata = model_data.get("model_metadata", {})
             if model_metadata and "metadata" in model_metadata:
-                decorator_metadata = model_metadata["metadata"]
+                nested_metadata = model_metadata["metadata"]
                 
                 # Check if this is incremental materialization
-                if "materialization" in decorator_metadata and decorator_metadata["materialization"] == "incremental":
-                    return decorator_metadata
+                if "materialization" in nested_metadata and nested_metadata["materialization"] == "incremental":
+                    return nested_metadata
                 
-                if decorator_metadata and "schema" in decorator_metadata:
-                    # Prioritize file metadata description over decorator description
-                    if "description" in model_metadata and "description" not in decorator_metadata:
-                        decorator_metadata["description"] = model_metadata["description"]
-                    return decorator_metadata
-                elif decorator_metadata and "metadata" in decorator_metadata and "schema" in decorator_metadata["metadata"]:
-                    # Handle nested metadata structure
-                    nested_metadata = decorator_metadata["metadata"]
-                    if "description" in model_metadata:
+                if nested_metadata and "schema" in nested_metadata:
+                    # Prioritize file metadata description over nested description
+                    if "description" in model_metadata and "description" not in nested_metadata:
                         nested_metadata["description"] = model_metadata["description"]
                     return nested_metadata
+                elif nested_metadata and "metadata" in nested_metadata and "schema" in nested_metadata["metadata"]:
+                    # Handle deeply nested metadata structure
+                    deep_nested_metadata = nested_metadata["metadata"]
+                    if "description" in model_metadata:
+                        deep_nested_metadata["description"] = model_metadata["description"]
+                    return deep_nested_metadata
             
             # Fallback to any other metadata in the model data
             if "metadata" in model_data:

@@ -147,36 +147,24 @@ class IncrementalExecutor:
         """Parse lookback string to SQL interval format."""
         lookback = lookback.lower().strip()
         
-        if 'minute' in lookback:
-            try:
-                minutes = int(lookback.split()[0])
-                return f"'{minutes} minutes'"
-            except (ValueError, IndexError):
-                pass
-        elif 'hour' in lookback:
-            try:
-                hours = int(lookback.split()[0])
-                return f"'{hours} hours'"
-            except (ValueError, IndexError):
-                pass
-        elif 'day' in lookback:
-            try:
-                days = int(lookback.split()[0])
-                return f"'{days} days'"
-            except (ValueError, IndexError):
-                pass
-        elif 'week' in lookback:
-            try:
-                weeks = int(lookback.split()[0])
-                return f"'{weeks * 7} days'"
-            except (ValueError, IndexError):
-                pass
-        elif 'month' in lookback:
-            try:
-                months = int(lookback.split()[0])
-                return f"'{months * 30} days'"  # Approximate
-            except (ValueError, IndexError):
-                pass
+        # Define time unit mappings
+        time_units = {
+            'minute': ('minutes', 1),
+            'hour': ('hours', 1),
+            'day': ('days', 1),
+            'week': ('days', 7),  # Convert weeks to days
+            'month': ('days', 30)  # Approximate months as 30 days
+        }
+        
+        # Find matching time unit and extract value
+        for unit, (sql_unit, multiplier) in time_units.items():
+            if unit in lookback:
+                try:
+                    value = int(lookback.split()[0])
+                    converted_value = value * multiplier
+                    return f"'{converted_value} {sql_unit}'"
+                except (ValueError, IndexError):
+                    continue
         
         return None
     

@@ -3,7 +3,7 @@ project_folder = "t_project_sno"
 [connection]
 type = "snowflake"
 user = "mucio"
-password = "PASSWORD"
+password = "DN_ZA@$x5Jm9#Jv"
 role = "ACCOUNTADMIN"
 warehouse = "SNOWFLAKE_LEARNING_WH"
 database = "TEST_TEE"
