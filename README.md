@@ -46,7 +46,6 @@ uv run tcli run .
 ## ✨ Key Features
 
 - **Multi-Database Support**: DuckDB, Snowflake, PostgreSQL, and more
-- **SQL Dialect Conversion**: Write in PostgreSQL, run on any database
 - **Dependency-Aware Execution**: Automatic model dependency resolution
 - **Incremental Materialization**: Efficient data processing with append, merge, and delete+insert strategies
 - **Rich Metadata Support**: Python-based metadata configuration with full type safety

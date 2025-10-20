@@ -15,6 +15,7 @@ dependencies = [
 
 [project.scripts]
 tcli = "tee.cli.main:main"
+t4t = "tee.cli.main:main"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
