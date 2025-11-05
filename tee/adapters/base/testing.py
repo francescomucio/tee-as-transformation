@@ -1,0 +1,229 @@
+"""
+Test SQL generation methods for database adapters.
+
+These methods are mixed into DatabaseAdapter via multiple inheritance.
+"""
+
+from typing import List, Optional, Any
+
+
+class TestQueryGenerator:
+    """Mixin class for generating test SQL queries."""
+
+    def generate_not_null_test_query(self, table_name: str, column_name: str) -> str:
+        """
+        Generate SQL query for not_null test.
+
+        Returns count of rows where column is NULL (test fails if count > 0).
+        Query should return 0 if test passes.
+
+        Uses COUNT(*) for better performance instead of returning all rows.
+        Adapters can override this method for database-specific optimizations or syntax.
+
+        Args:
+            table_name: Fully qualified table name (e.g., "my_schema.my_table")
+            column_name: Column name to test (e.g., "user_id")
+
+        Returns:
+            SQL query string
+        """
+        # Default implementation - adapters can override for optimizations
+        # Note: table_name and column_name are expected to be simple identifiers
+        # (no spaces, no special chars) from validated metadata
+        # Using COUNT(*) for better performance on large tables
+        return f"SELECT COUNT(*) FROM {table_name} WHERE {column_name} IS NULL"
+
+    def generate_unique_test_query(self, table_name: str, columns: List[str]) -> str:
+        """
+        Generate SQL query for unique test.
+
+        Returns count of duplicate groups (test fails if count > 0).
+        Query should return 0 if test passes (no duplicates).
+
+        Uses COUNT(*) for better performance instead of returning all duplicate rows.
+        Adapters can override this method for database-specific optimizations or syntax.
+
+        Args:
+            table_name: Fully qualified table name (e.g., "my_schema.my_table")
+            columns: List of column names to check for uniqueness (e.g., ["col1", "col2"])
+
+        Returns:
+            SQL query string
+        """
+        # Default implementation - adapters can override for optimizations
+        # Note: table_name and columns are expected to be simple identifiers
+        # (no spaces, no special chars) from validated metadata
+        # Using COUNT(*) for better performance on large tables
+        column_list = ", ".join(columns)
+        return f"""
+            SELECT COUNT(*) 
+            FROM (
+                SELECT {column_list}, COUNT(*) as duplicate_count
+                FROM {table_name}
+                GROUP BY {column_list}
+                HAVING COUNT(*) > 1
+            ) AS duplicate_groups
+        """
+
+    def generate_no_duplicates_test_query(
+        self, table_name: str, columns: Optional[List[str]] = None
+    ) -> str:
+        """
+        Generate SQL query for no_duplicates test.
+
+        Returns count of duplicate row groups (test fails if count > 0).
+        Query should return 0 if test passes (no duplicate rows).
+
+        This is a default implementation using standard SQL.
+        Adapters can override this method for database-specific optimizations or syntax.
+
+        Args:
+            table_name: Fully qualified table name (e.g., "my_schema.my_table")
+            columns: Optional list of column names. If None, will try to get from adapter
+                    or use metadata. If provided, groups by these columns.
+
+        Returns:
+            SQL query string
+        """
+        # If columns provided, use them
+        if columns and len(columns) > 0:
+            column_list = ", ".join(columns)
+            return f"""
+                SELECT COUNT(*) 
+                FROM (
+                    SELECT {column_list}, COUNT(*) as row_count
+                    FROM {table_name}
+                    GROUP BY {column_list}
+                    HAVING COUNT(*) > 1
+                ) AS duplicate_groups
+            """
+
+        # Default: Try to use a query that works for most databases
+        # This approach uses a subquery to find duplicate groups
+        # Note: Some databases may need adapter-specific implementation
+        # For DuckDB, we can use GROUP BY *, but that's not standard SQL
+        return f"""
+            SELECT COUNT(*) 
+            FROM (
+                SELECT *, COUNT(*) as row_count
+                FROM {table_name}
+                GROUP BY *
+                HAVING COUNT(*) > 1
+            ) AS duplicate_groups
+        """
+
+    def generate_row_count_gt_0_test_query(self, table_name: str) -> str:
+        """
+        Generate SQL query for row_count_gt_0 test.
+
+        Returns count of rows in table (test passes if count > 0).
+        Query returns the row count, not violations.
+
+        This is a default implementation using standard SQL.
+        Adapters can override this method for database-specific optimizations or syntax.
+
+        Args:
+            table_name: Fully qualified table name (e.g., "my_schema.my_table")
+
+        Returns:
+            SQL query string
+        """
+        # Simple COUNT(*) query - returns the number of rows
+        return f"SELECT COUNT(*) FROM {table_name}"
+
+    def generate_accepted_values_test_query(
+        self, table_name: str, column_name: str, values: List[Any]
+    ) -> str:
+        """
+        Generate SQL query for accepted_values test.
+
+        Returns count of rows where column value is not in the accepted values list.
+        Query should return 0 if test passes (all values are accepted).
+
+        Uses COUNT(*) for better performance instead of returning all rows.
+        Adapters can override this method for database-specific optimizations or syntax.
+
+        Args:
+            table_name: Fully qualified table name (e.g., "my_schema.my_table")
+            column_name: Column name to test (e.g., "status")
+            values: List of accepted values (e.g., ["active", "inactive", "pending"])
+
+        Returns:
+            SQL query string
+        """
+        if not values:
+            raise ValueError(
+                "accepted_values test requires at least one value in 'values' parameter"
+            )
+
+        # Format values for SQL - handle strings, numbers, and other types
+        formatted_values = []
+        for val in values:
+            if isinstance(val, str):
+                # Escape single quotes in strings
+                escaped_val = val.replace("'", "''")
+                formatted_values.append(f"'{escaped_val}'")
+            elif isinstance(val, (int, float)):
+                formatted_values.append(str(val))
+            elif val is None:
+                formatted_values.append("NULL")
+            else:
+                # Convert other types to string and quote
+                escaped_val = str(val).replace("'", "''")
+                formatted_values.append(f"'{escaped_val}'")
+
+        values_list = ", ".join(formatted_values)
+        return f"SELECT COUNT(*) FROM {table_name} WHERE {column_name} NOT IN ({values_list})"
+
+    def generate_relationships_test_query(
+        self,
+        source_table: str,
+        source_columns: List[str],
+        target_table: str,
+        target_columns: List[str],
+    ) -> str:
+        """
+        Generate SQL query for relationships test.
+
+        Returns count of rows where source column(s) value(s) don't exist in target table.
+        Query should return 0 if test passes (all source values exist in target).
+        Supports both single-column and composite key relationships.
+
+        Uses COUNT(*) for better performance instead of returning all rows.
+        Adapters can override this method for database-specific optimizations or syntax.
+
+        Args:
+            source_table: Fully qualified source table name (e.g., "my_schema.source_table")
+            source_columns: List of column names in source table (e.g., ["user_id"] or ["region_id", "country_id"])
+            target_table: Fully qualified target table name (e.g., "my_schema.users")
+            target_columns: List of column names in target table (e.g., ["id"] or ["region_id", "country_id"])
+
+        Returns:
+            SQL query string
+        """
+        if len(source_columns) != len(target_columns):
+            raise ValueError(
+                f"relationships test: source_columns ({len(source_columns)}) and "
+                f"target_columns ({len(target_columns)}) must have the same length"
+            )
+
+        # Build JOIN conditions for all columns
+        join_conditions = []
+        for source_col, target_col in zip(source_columns, target_columns):
+            join_conditions.append(f"source.{source_col} = target.{target_col}")
+
+        join_clause = " AND ".join(join_conditions)
+
+        # For WHERE clause, check if ANY of the target columns is NULL (indicating no match)
+        # This handles composite keys correctly
+        null_conditions = [f"target.{col} IS NULL" for col in target_columns]
+        where_clause = " OR ".join(null_conditions)
+
+        # LEFT JOIN to find orphaned rows (rows in source that don't exist in target)
+        return f"""
+            SELECT COUNT(*) 
+            FROM {source_table} AS source
+            LEFT JOIN {target_table} AS target 
+                ON {join_clause}
+            WHERE {where_clause}
+        """

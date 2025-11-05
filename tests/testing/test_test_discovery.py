@@ -1,0 +1,256 @@
+"""
+Unit tests for TestDiscovery class.
+"""
+
+import pytest
+import tempfile
+from pathlib import Path
+from unittest.mock import Mock, patch, MagicMock
+
+from tee.testing.test_discovery import TestDiscovery
+from tee.testing.sql_test import SqlTest
+from tee.testing.base import TestRegistry, TestSeverity
+
+
+class TestTestDiscovery:
+    """Test cases for TestDiscovery class."""
+
+    @pytest.fixture(autouse=True)
+    def clear_registry(self):
+        """Clear test registry before and after each test."""
+        TestRegistry.clear()
+        yield
+        TestRegistry.clear()
+
+    @pytest.fixture
+    def temp_dir(self):
+        """Create a temporary directory for test files."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield Path(tmpdir)
+
+    @pytest.fixture
+    def discovery(self, temp_dir):
+        """Create a TestDiscovery instance."""
+        return TestDiscovery(temp_dir)
+
+    def test_init(self, temp_dir):
+        """Test TestDiscovery initialization."""
+        discovery = TestDiscovery(temp_dir)
+
+        assert discovery.project_folder == Path(temp_dir)
+        assert discovery.tests_folder == Path(temp_dir) / "tests"
+        assert discovery._discovered_tests == {}
+
+    def test_discover_tests_no_tests_folder(self, temp_dir):
+        """Test discovery when tests/ folder doesn't exist."""
+        discovery = TestDiscovery(temp_dir)
+        tests = discovery.discover_tests()
+
+        assert tests == {}
+
+    def test_discover_tests_empty_folder(self, temp_dir):
+        """Test discovery when tests/ folder is empty."""
+        tests_folder = temp_dir / "tests"
+        tests_folder.mkdir()
+
+        discovery = TestDiscovery(temp_dir)
+        tests = discovery.discover_tests()
+
+        assert tests == {}
+
+    def test_discover_tests_single_file(self, temp_dir):
+        """Test discovering a single SQL test file."""
+        tests_folder = temp_dir / "tests"
+        tests_folder.mkdir()
+
+        sql_file = tests_folder / "my_test.sql"
+        sql_file.write_text("SELECT 1 FROM {{ table_name }}")
+
+        discovery = TestDiscovery(temp_dir)
+        tests = discovery.discover_tests()
+
+        assert len(tests) == 1
+        assert "my_test" in tests
+        assert isinstance(tests["my_test"], SqlTest)
+        assert tests["my_test"].name == "my_test"
+        assert tests["my_test"].sql_file_path == sql_file
+
+    def test_discover_tests_multiple_files(self, temp_dir):
+        """Test discovering multiple SQL test files."""
+        tests_folder = temp_dir / "tests"
+        tests_folder.mkdir()
+
+        # Create multiple test files
+        (tests_folder / "test1.sql").write_text("SELECT 1 FROM {{ table_name }}")
+        (tests_folder / "test2.sql").write_text("SELECT 2 FROM {{ table_name }}")
+        (tests_folder / "test3.sql").write_text("SELECT 3 FROM {{ table_name }}")
+
+        discovery = TestDiscovery(temp_dir)
+        tests = discovery.discover_tests()
+
+        assert len(tests) == 3
+        assert "test1" in tests
+        assert "test2" in tests
+        assert "test3" in tests
+        assert all(isinstance(t, SqlTest) for t in tests.values())
+
+    def test_discover_tests_subdirectories(self, temp_dir):
+        """Test discovering SQL files in subdirectories."""
+        tests_folder = temp_dir / "tests"
+        tests_folder.mkdir()
+
+        subfolder = tests_folder / "subfolder"
+        subfolder.mkdir()
+
+        (tests_folder / "test1.sql").write_text("SELECT 1")
+        (subfolder / "test2.sql").write_text("SELECT 2")
+
+        discovery = TestDiscovery(temp_dir)
+        tests = discovery.discover_tests()
+
+        # Should find both files (rglob searches recursively)
+        assert len(tests) == 2
+        assert "test1" in tests
+        assert "test2" in tests
+
+    def test_discover_tests_duplicate_names(self, temp_dir, caplog):
+        """Test handling duplicate test names in subdirectories."""
+        tests_folder = temp_dir / "tests"
+        tests_folder.mkdir()
+
+        subfolder = tests_folder / "subfolder"
+        subfolder.mkdir()
+
+        (tests_folder / "my_test.sql").write_text("SELECT 1")
+        (subfolder / "my_test.sql").write_text("SELECT 2")
+
+        discovery = TestDiscovery(temp_dir)
+        tests = discovery.discover_tests()
+
+        # Should warn about duplicate and use one of them
+        assert len(tests) == 1
+        assert "my_test" in tests
+        assert "Duplicate test name" in caplog.text
+
+    def test_discover_tests_ignores_non_sql_files(self, temp_dir):
+        """Test that non-SQL files are ignored."""
+        tests_folder = temp_dir / "tests"
+        tests_folder.mkdir()
+
+        (tests_folder / "test.sql").write_text("SELECT 1")
+        (tests_folder / "test.txt").write_text("Not a SQL file")
+        (tests_folder / "test.py").write_text("print('not sql')")
+
+        discovery = TestDiscovery(temp_dir)
+        tests = discovery.discover_tests()
+
+        assert len(tests) == 1
+        assert "test" in tests
+        assert tests["test"].sql_file_path.suffix == ".sql"
+
+    def test_discover_tests_caching(self, temp_dir):
+        """Test that discovered tests are cached."""
+        tests_folder = temp_dir / "tests"
+        tests_folder.mkdir()
+        (tests_folder / "test.sql").write_text("SELECT 1")
+
+        discovery = TestDiscovery(temp_dir)
+        tests1 = discovery.discover_tests()
+
+        # Add another file
+        (tests_folder / "test2.sql").write_text("SELECT 2")
+
+        # Should return cached results
+        tests2 = discovery.discover_tests()
+
+        assert len(tests2) == 1  # Still only 1, not 2
+        assert tests1 is tests2  # Same object
+
+    def test_discover_tests_invalid_sql_file(self, temp_dir, caplog):
+        """Test handling of invalid SQL files (should skip gracefully)."""
+        tests_folder = temp_dir / "tests"
+        tests_folder.mkdir()
+
+        # Create a valid file
+        (tests_folder / "valid.sql").write_text("SELECT 1 FROM {{ table_name }}")
+
+        # Create a file that will cause an error when loading
+        # (e.g., permission denied or corrupted)
+        invalid_file = tests_folder / "invalid.sql"
+        invalid_file.write_text("SELECT 1")
+
+        # Mock SqlTest to raise an error for invalid file
+        with patch("tee.testing.test_discovery.SqlTest") as mock_sql_test:
+            mock_sql_test.side_effect = Exception("Failed to load")
+
+            discovery = TestDiscovery(temp_dir)
+            tests = discovery.discover_tests()
+
+            # Should skip invalid file but continue
+            assert "Failed to load SQL test from" in caplog.text
+
+    def test_register_discovered_tests(self, temp_dir):
+        """Test registering discovered tests with TestRegistry."""
+        tests_folder = temp_dir / "tests"
+        tests_folder.mkdir()
+
+        (tests_folder / "test1.sql").write_text("SELECT 1 FROM {{ table_name }}")
+        (tests_folder / "test2.sql").write_text("SELECT 2 FROM {{ table_name }}")
+
+        discovery = TestDiscovery(temp_dir)
+        discovery.register_discovered_tests()
+
+        # Verify tests are registered
+        assert TestRegistry.get("test1") is not None
+        assert TestRegistry.get("test2") is not None
+        assert isinstance(TestRegistry.get("test1"), SqlTest)
+        assert isinstance(TestRegistry.get("test2"), SqlTest)
+
+    def test_register_discovered_tests_no_tests(self, temp_dir):
+        """Test registering when no tests are found."""
+        discovery = TestDiscovery(temp_dir)
+        discovery.register_discovered_tests()
+
+        # Should not raise any errors
+        assert TestRegistry.get("nonexistent") is None
+
+    def test_register_discovered_tests_duplicate_registration(self, temp_dir):
+        """Test registering tests that already exist in registry."""
+        tests_folder = temp_dir / "tests"
+        tests_folder.mkdir()
+
+        (tests_folder / "test1.sql").write_text("SELECT 1 FROM {{ table_name }}")
+
+        # Register a standard test with same name first
+        from tee.testing.standard_tests import NotNullTest
+
+        standard_test = NotNullTest()
+        TestRegistry.register(standard_test)
+
+        # Now try to register SQL test with same name
+        discovery = TestDiscovery(temp_dir)
+        discovery.register_discovered_tests()
+
+        # Should still register (TestRegistry will handle conflict)
+        # The SQL test should be registered
+        registered_test = TestRegistry.get("test1")
+        assert registered_test is not None
+
+    def test_discover_tests_file_encoding(self, temp_dir):
+        """Test that SQL files with UTF-8 encoding are handled correctly."""
+        tests_folder = temp_dir / "tests"
+        tests_folder.mkdir()
+
+        sql_file = tests_folder / "test.sql"
+        sql_file.write_text(
+            "-- Test with émojis 🎉\nSELECT 1 FROM {{ table_name }}", encoding="utf-8"
+        )
+
+        discovery = TestDiscovery(temp_dir)
+        tests = discovery.discover_tests()
+
+        assert len(tests) == 1
+        assert "test" in tests
+        # Verify SQL content includes the emoji
+        content = tests["test"]._load_sql_content()
+        assert "🎉" in content or "émojis" in content

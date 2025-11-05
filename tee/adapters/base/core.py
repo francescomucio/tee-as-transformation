@@ -1,0 +1,235 @@
+"""
+Core database adapter base class.
+"""
+
+from abc import ABC, abstractmethod
+from typing import Dict, Any, List, Optional
+import logging
+
+from .config import AdapterConfig, MaterializationType
+from .sql import SQLProcessor
+from .metadata import MetadataHandler
+from .testing import TestQueryGenerator
+
+
+class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
+    """
+    Abstract base class for database adapters.
+
+    This class defines the interface that all database adapters must implement,
+    including SQL dialect conversion, connection management, and database-specific features.
+    """
+
+    # Override in subclasses to define required fields
+    REQUIRED_FIELDS = ["type"]
+
+    def __init__(self, config_dict: Dict[str, Any]):
+        self.connection = None
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+        # Validate configuration first
+        self._validate_config(config_dict)
+
+        # Create adapter config
+        self.config = self._create_adapter_config(config_dict)
+
+        # Initialize SQLglot dialect objects (needed for SQL processing)
+        # We need to do this after config is created but before we can use SQL methods
+        # The dialect objects will be set up in _init_dialects
+        self._init_dialects()
+
+    def _init_dialects(self) -> None:
+        """Initialize SQLglot dialect objects."""
+        from sqlglot.dialects import Dialect
+        import sqlglot
+
+        self.source_dialect = self._get_dialect(self.config.source_dialect)
+        self.target_dialect = self._get_dialect(
+            self.config.target_dialect or self.get_default_dialect()
+        )
+
+    def _validate_config(self, config_dict: Dict[str, Any]) -> None:
+        """Validate configuration against adapter requirements."""
+        # Check required fields
+        missing = set(self.REQUIRED_FIELDS) - set(config_dict.keys())
+        if missing:
+            raise ValueError(f"Missing required fields for {self.__class__.__name__}: {missing}")
+
+        # Validate field types
+        self._validate_field_types(config_dict)
+
+        # Validate field values
+        self._validate_field_values(config_dict)
+
+    def _validate_field_types(self, config_dict: Dict[str, Any]) -> None:
+        """Validate field types."""
+        if "port" in config_dict and config_dict["port"] is not None:
+            if not isinstance(config_dict["port"], int):
+                raise ValueError("Port must be an integer")
+
+        if "connection_timeout" in config_dict and config_dict["connection_timeout"] is not None:
+            if not isinstance(config_dict["connection_timeout"], int):
+                raise ValueError("Connection timeout must be an integer")
+
+        if "query_timeout" in config_dict and config_dict["query_timeout"] is not None:
+            if not isinstance(config_dict["query_timeout"], int):
+                raise ValueError("Query timeout must be an integer")
+
+    def _validate_field_values(self, config_dict: Dict[str, Any]) -> None:
+        """Validate field values."""
+        if "port" in config_dict and config_dict["port"] is not None:
+            if not (1 <= config_dict["port"] <= 65535):
+                raise ValueError("Port must be between 1 and 65535")
+
+        if "connection_timeout" in config_dict and config_dict["connection_timeout"] is not None:
+            if config_dict["connection_timeout"] <= 0:
+                raise ValueError("Connection timeout must be positive")
+
+        if "query_timeout" in config_dict and config_dict["query_timeout"] is not None:
+            if config_dict["query_timeout"] <= 0:
+                raise ValueError("Query timeout must be positive")
+
+    def _create_adapter_config(self, config_dict: Dict[str, Any]) -> AdapterConfig:
+        """Create AdapterConfig from validated dictionary."""
+        return AdapterConfig(
+            type=config_dict["type"],
+            host=config_dict.get("host"),
+            port=config_dict.get("port"),
+            database=config_dict.get("database"),
+            user=config_dict.get("user"),
+            password=config_dict.get("password"),
+            path=config_dict.get("path"),
+            source_dialect=config_dict.get("source_dialect"),
+            target_dialect=config_dict.get("target_dialect"),
+            connection_timeout=config_dict.get("connection_timeout", 30),
+            query_timeout=config_dict.get("query_timeout", 300),
+            schema=config_dict.get("schema"),
+            warehouse=config_dict.get("warehouse"),
+            role=config_dict.get("role"),
+            project=config_dict.get("project"),
+            extra=config_dict.get("extra"),
+        )
+
+    @abstractmethod
+    def get_default_dialect(self) -> str:
+        """Get the default SQL dialect for this database."""
+        pass
+
+    @abstractmethod
+    def get_supported_materializations(self) -> List[MaterializationType]:
+        """Get list of supported materialization types for this database."""
+        pass
+
+    @abstractmethod
+    def connect(self) -> None:
+        """Establish connection to the database."""
+        pass
+
+    @abstractmethod
+    def disconnect(self) -> None:
+        """Close the database connection."""
+        pass
+
+    @abstractmethod
+    def execute_query(self, query: str) -> Any:
+        """Execute a SQL query and return results."""
+        pass
+
+    @abstractmethod
+    def create_table(
+        self, table_name: str, query: str, metadata: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """Create a table from a qualified SQL query with optional column metadata.
+
+        Args:
+            table_name: Name of the table to create
+            query: SQL query to execute
+            metadata: Optional metadata containing column descriptions and other info
+        """
+        pass
+
+    @abstractmethod
+    def create_view(
+        self, view_name: str, query: str, metadata: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """Create a view from a qualified SQL query."""
+        pass
+
+    @abstractmethod
+    def table_exists(self, table_name: str) -> bool:
+        """Check if a table exists in the database."""
+        pass
+
+    @abstractmethod
+    def drop_table(self, table_name: str) -> None:
+        """Drop a table from the database."""
+        pass
+
+    @abstractmethod
+    def get_table_info(self, table_name: str) -> Dict[str, Any]:
+        """Get information about a table."""
+        pass
+
+    # Incremental materialization methods
+    def execute_incremental_append(self, table_name: str, source_sql: str) -> None:
+        """Execute incremental append operation.
+
+        This method can be overridden by adapters that support incremental append.
+        By default, it falls back to regular table creation.
+        """
+        self.logger.warning(
+            f"Adapter {self.__class__.__name__} does not support incremental append, falling back to regular table creation"
+        )
+        self.create_table(table_name, source_sql)
+
+    def execute_incremental_merge(
+        self, table_name: str, source_sql: str, config: Dict[str, Any]
+    ) -> None:
+        """Execute incremental merge operation.
+
+        This method can be overridden by adapters that support incremental merge.
+        By default, it falls back to regular query execution.
+        """
+        self.logger.warning(
+            f"Adapter {self.__class__.__name__} does not support incremental merge, falling back to regular execution"
+        )
+        self.execute_query(source_sql)
+
+    def execute_incremental_delete_insert(
+        self, table_name: str, delete_sql: str, insert_sql: str
+    ) -> None:
+        """Execute incremental delete+insert operation.
+
+        This method can be overridden by adapters that support incremental delete+insert.
+        By default, it falls back to regular query execution.
+        """
+        self.logger.warning(
+            f"Adapter {self.__class__.__name__} does not support incremental delete+insert, falling back to regular execution"
+        )
+        self.execute_query(delete_sql)
+        self.execute_query(insert_sql)
+
+    def get_database_info(self) -> Dict[str, Any]:
+        """Get information about the current database connection."""
+        return {
+            "adapter_type": self.__class__.__name__,
+            "database_type": self.config.type,
+            "source_dialect": self.config.source_dialect,
+            "target_dialect": self.get_default_dialect(),
+            "is_connected": self.connection is not None,
+            "supported_materializations": [m.value for m in self.get_supported_materializations()],
+        }
+
+    def _get_dialect(self, dialect_name: Optional[str]):
+        """Get SQLglot dialect object from name."""
+        from sqlglot.dialects import Dialect
+        import sqlglot
+
+        if not dialect_name:
+            return None
+
+        try:
+            return sqlglot.dialects.Dialect.get(dialect_name)
+        except Exception:
+            self.logger.warning(f"Unknown dialect: {dialect_name}")
+            return None
