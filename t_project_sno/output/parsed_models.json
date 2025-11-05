@@ -1,4 +1,51 @@
 {
+  "my_schema.incremental_example": {
+    "sqlglot": {
+      "sql_content": "SELECT id, name, CURRENT_TIMESTAMP() AS created_at, CURRENT_TIMESTAMP() AS updated_at, 'active' AS status FROM my_schema.my_first_table",
+      "parsed_ast": "SELECT id, name, CURRENT_TIMESTAMP() AS created_at, CURRENT_TIMESTAMP() AS updated_at, 'active' AS status FROM my_schema.my_first_table",
+      "sql_type": "select",
+      "tables": [
+        "my_first_table"
+      ],
+      "qualified_sql": "SELECT id, name, CURRENT_TIMESTAMP() AS created_at, CURRENT_TIMESTAMP() AS updated_at, 'active' AS status FROM my_schema.my_first_table",
+      "columns": [
+        "id",
+        "name"
+      ],
+      "functions": [
+        "",
+        ""
+      ],
+      "aliases": [
+        "created_at",
+        "updated_at",
+        "status"
+      ]
+    },
+    "model_metadata": {
+      "table_name": "my_schema.incremental_example",
+      "function_name": null,
+      "description": "SQL model for my_schema.incremental_example",
+      "variables": [],
+      "metadata": {
+        "description": "Incremental table using delete+insert strategy",
+        "schema": null,
+        "partitions": [],
+        "materialization": "incremental",
+        "tests": [],
+        "incremental": {
+          "strategy": "delete_insert",
+          "delete_insert": {
+            "where_condition": "updated_at >= '@start_date'",
+            "time_column": "updated_at",
+            "start_date": "@start_date"
+          }
+        }
+      },
+      "file_path": "/home/mucio/tee/t_project_sno/models/my_schema/incremental_example.sql"
+    },
+    "sqlglot_hash": "6ebcae06c0159a43b565b7abca98663d044bc0b1704a17d7645be0581020c1a2"
+  },
   "my_schema.my_first_table": {
     "sqlglot": {
       "sql_content": "SELECT 1 AS id, 'first test' AS name UNION ALL SELECT 2 AS id, 'second test' AS name UNION ALL SELECT 3 AS id, 'third test' AS name",

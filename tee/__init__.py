@@ -15,14 +15,14 @@ from .cli import main as cli_main
 from .adapters import DuckDBAdapter, SnowflakeAdapter, PostgreSQLAdapter, BigQueryAdapter
 
 __all__ = [
-    'ProjectParser', 
-    'ModelExecutor', 
-    'ExecutionEngine', 
-    'DuckDBAdapter',
-    'SnowflakeAdapter', 
-    'PostgreSQLAdapter',
-    'BigQueryAdapter',
-    'execute_models',
-    'parse_models_only',
-    'cli_main'
+    "ProjectParser",
+    "ModelExecutor",
+    "ExecutionEngine",
+    "DuckDBAdapter",
+    "SnowflakeAdapter",
+    "PostgreSQLAdapter",
+    "BigQueryAdapter",
+    "execute_models",
+    "parse_models_only",
+    "cli_main",
 ]

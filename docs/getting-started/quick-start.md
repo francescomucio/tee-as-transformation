@@ -82,9 +82,50 @@ uv run python run_models.py
 2. **Configuration**: Database settings were loaded from `pyproject.toml`
 3. **Execution**: Your model was executed in the correct order
 4. **Results**: The model was materialized as a table in DuckDB
+5. **Testing**: Tests (if defined) were automatically executed
+
+## Adding Tests
+
+### Standard Tests
+
+Add tests to your model metadata:
+
+```python
+# models/users.py
+metadata: ModelMetadataDict = {
+    "schema": [
+        {
+            "name": "id",
+            "datatype": "integer",
+            "tests": ["not_null", "unique"]
+        }
+    ],
+    "tests": ["row_count_gt_0"]
+}
+```
+
+### Custom SQL Tests
+
+Create SQL files in `tests/` folder:
+
+```sql
+-- tests/check_minimum_rows.sql
+SELECT 1 as violation
+FROM {{ table_name }}
+GROUP BY 1
+HAVING COUNT(*) < 5
+```
+
+Reference in metadata:
+```python
+"tests": ["check_minimum_rows"]
+```
+
+See [Data Quality Tests](user-guide/data-quality-tests.md) for more information.
 
 ## Next Steps
 
 - [Configuration](configuration.md) - Learn about advanced configuration options
 - [Database Adapters](user-guide/database-adapters.md) - Explore multi-database support
+- [Data Quality Tests](user-guide/data-quality-tests.md) - Comprehensive testing guide
 - [Examples](user-guide/examples/) - See more complex examples

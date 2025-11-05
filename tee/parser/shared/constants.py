@@ -17,7 +17,6 @@ SQL_VARIABLE_PATTERNS = {
 }
 
 
-
 # Output file names
 OUTPUT_FILES = {
     "parsed_models": "parsed_models.json",

@@ -18,5 +18,9 @@ metadata: ModelMetadataDict = {
     ],
     "partitions": ["id"],
     "materialization": "table",
-    "tests": ["row_count_gt_0"]
+    "tests": [
+        "row_count_gt_0"
+        # Example: "example_custom_test" - Custom SQL test (requires table to have 5+ rows)
+        # Example: {"name": "check_minimum_rows", "params": {"min_rows": 3}}
+    ]
 }

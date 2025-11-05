@@ -16,7 +16,7 @@ from ..adapters import get_adapter, AdapterConfig, AdapterRegistry
 __all__ = [
     # Main system
     "ExecutionEngine",
-    "ModelExecutor", 
+    "ModelExecutor",
     "load_database_config",
     "DatabaseConfigManager",
     "get_adapter",

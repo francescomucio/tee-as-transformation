@@ -11,7 +11,13 @@ Each adapter is organized in its own subpackage for better maintainability.
 """
 
 from .base import DatabaseAdapter, AdapterConfig, MaterializationType
-from .registry import AdapterRegistry, get_adapter, register_adapter, list_available_adapters, is_adapter_supported
+from .registry import (
+    AdapterRegistry,
+    get_adapter,
+    register_adapter,
+    list_available_adapters,
+    is_adapter_supported,
+)
 from .testing import AdapterTester, test_adapter, benchmark_adapter
 
 # Import adapters to register them
@@ -23,21 +29,18 @@ from .bigquery import BigQueryAdapter
 __all__ = [
     # Base classes and configuration
     "DatabaseAdapter",
-    "AdapterConfig", 
+    "AdapterConfig",
     "MaterializationType",
-    
     # Registry and factory functions
     "AdapterRegistry",
     "get_adapter",
     "register_adapter",
     "list_available_adapters",
     "is_adapter_supported",
-    
     # Testing utilities
     "AdapterTester",
     "test_adapter",
     "benchmark_adapter",
-    
     # Available adapters
     "DuckDBAdapter",
     "SnowflakeAdapter",

@@ -16,37 +16,36 @@ from ..adapters.base import AdapterConfig
 
 class DatabaseConfigManager:
     """Manages database configurations from multiple sources."""
-    
+
     def __init__(self, project_root: Optional[str] = None):
         self.project_root = Path(project_root) if project_root else Path.cwd()
         self.logger = logging.getLogger(self.__class__.__name__)
-    
+
     def load_config(self, config_name: str = "default") -> AdapterConfig:
         """
         Load database configuration from pyproject.toml and environment variables.
-        
+
         Args:
             config_name: Name of the configuration to load (default: "default")
-            
+
         Returns:
             AdapterConfig object with merged configuration
-            
+
         Raises:
             ValueError: If configuration is invalid or missing
         """
         # Load from pyproject.toml
         toml_config = self._load_toml_config(config_name)
-        
+
         # Load from environment variables
         env_config = self._load_env_config()
-        
+
         # Merge configurations (env vars override toml)
         merged_config = self._merge_configs(toml_config, env_config)
-        
+
         # Validate and create AdapterConfig
         return self._create_adapter_config(merged_config)
-    
-    
+
     def _load_toml_config(self, config_name: str) -> Dict[str, Any]:
         """Load configuration from pyproject.toml or project.toml."""
         # Try pyproject.toml first
@@ -57,47 +56,47 @@ class DatabaseConfigManager:
             if not toml_file.exists():
                 self.logger.debug("No pyproject.toml or project.toml found")
                 return {}
-        
+
         try:
-            with open(toml_file, 'r') as f:
+            with open(toml_file, "r") as f:
                 data = toml.load(f)
-            
+
             # Look for [tool.tee.database], [tool.tee.databases], or [connection]
             tee_config = data.get("tool", {}).get("tee", {})
-            
+
             # Start with flags if they exist
             config = {}
             if "flags" in data:
                 config["extra"] = {"flags": data["flags"]}
-            
+
             # Check for single database config in tool.tee.database
             if "database" in tee_config:
                 config.update(tee_config["database"])
                 return config
-            
+
             # Check for multiple database configs in tool.tee.databases
             databases = tee_config.get("databases", {})
             if isinstance(databases, dict) and config_name in databases:
                 config.update(databases[config_name])
                 return config
-            
+
             # Check for legacy [connection] section
             if "connection" in data:
                 self.logger.debug("Using legacy [connection] section")
                 config.update(data["connection"])
                 return config
-            
+
             self.logger.debug(f"No database configuration '{config_name}' found in TOML file")
             return {}
-            
+
         except Exception as e:
             self.logger.warning(f"Could not read pyproject.toml: {e}")
             return {}
-    
+
     def _load_env_config(self) -> Dict[str, Any]:
         """Load configuration from environment variables."""
         env_config = {}
-        
+
         # Map environment variables to config keys
         env_mappings = {
             "TEE_DB_TYPE": "type",
@@ -114,7 +113,7 @@ class DatabaseConfigManager:
             "TEE_DB_SOURCE_DIALECT": "source_dialect",
             "TEE_DB_TARGET_DIALECT": "target_dialect",
         }
-        
+
         for env_var, config_key in env_mappings.items():
             value = os.getenv(env_var)
             if value is not None:
@@ -123,25 +122,27 @@ class DatabaseConfigManager:
                     env_config[config_key] = int(value)
                 else:
                     env_config[config_key] = value
-        
+
         return env_config
-    
-    def _merge_configs(self, toml_config: Dict[str, Any], env_config: Dict[str, Any]) -> Dict[str, Any]:
+
+    def _merge_configs(
+        self, toml_config: Dict[str, Any], env_config: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Merge TOML and environment configurations."""
         merged = toml_config.copy()
         merged.update(env_config)
         return merged
-    
+
     def _create_adapter_config(self, config_dict: Dict[str, Any]) -> AdapterConfig:
         """Create AdapterConfig from dictionary."""
         if not config_dict:
             raise ValueError("No database configuration found")
-        
+
         # Extract required fields
         db_type = config_dict.get("type")
         if not db_type:
             raise ValueError("Database type is required")
-        
+
         # Create AdapterConfig
         return AdapterConfig(
             type=db_type,
@@ -163,14 +164,16 @@ class DatabaseConfigManager:
         )
 
 
-def load_database_config(config_name: str = "default", project_root: Optional[str] = None) -> AdapterConfig:
+def load_database_config(
+    config_name: str = "default", project_root: Optional[str] = None
+) -> AdapterConfig:
     """
     Convenience function to load database configuration.
-    
+
     Args:
         config_name: Name of the configuration to load
         project_root: Project root directory (defaults to current directory)
-        
+
     Returns:
         AdapterConfig object
     """

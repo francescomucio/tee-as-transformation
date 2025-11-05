@@ -6,8 +6,8 @@ This report provides a comprehensive analysis of the SQL model dependencies.
 
 ## Statistics
 
-- **Total Tables**: 8
-- **Total Dependencies**: 8
+- **Total Tables**: 9
+- **Total Dependencies**: 9
 - **Circular Dependencies**: 0
 
 ## Visual Diagram
@@ -15,6 +15,7 @@ This report provides a comprehensive analysis of the SQL model dependencies.
 ```mermaid
 graph TD
     my_schema_complex_join["my_schema.complex_join"]
+    my_schema_incremental_example["my_schema.incremental_example"]
     my_schema_my_auto_table_one["my_schema.my_auto_table_one"]
     my_schema_my_first_table["my_schema.my_first_table"]
     my_schema_my_forth_table["my_schema.my_forth_table"]
@@ -22,6 +23,7 @@ graph TD
     my_schema_my_third_table["my_schema.my_third_table"]
     my_schema_recent_users["my_schema.recent_users"]
     my_schema_users_summary["my_schema.users_summary"]
+    my_schema_my_first_table --> my_schema_incremental_example
     my_schema_my_first_table --> my_schema_my_forth_table
     my_schema_my_first_table --> my_schema_my_second_table
     my_schema_my_second_table --> my_schema_my_third_table
@@ -33,29 +35,37 @@ graph TD
 
     %% Execution Order:
     %% 1. my_schema.my_first_table
-    %% 2. my_schema.my_forth_table
-    %% 3. my_schema.my_second_table
-    %% 4. my_schema.users_summary
-    %% 5. my_schema.recent_users
-    %% 6. my_schema.complex_join
-    %% 7. my_schema.my_auto_table_one
-    %% 8. my_schema.my_third_table
+    %% 2. my_schema.incremental_example
+    %% 3. my_schema.my_forth_table
+    %% 4. my_schema.my_second_table
+    %% 5. my_schema.users_summary
+    %% 6. my_schema.recent_users
+    %% 7. my_schema.complex_join
+    %% 8. my_schema.my_auto_table_one
+    %% 9. my_schema.my_third_table
 ```
 
 ## Execution Order
 
 1. `my_schema.my_first_table`
-2. `my_schema.my_forth_table`
-3. `my_schema.my_second_table`
-4. `my_schema.users_summary`
-5. `my_schema.recent_users`
-6. `my_schema.complex_join`
-7. `my_schema.my_auto_table_one`
-8. `my_schema.my_third_table`
+2. `my_schema.incremental_example`
+3. `my_schema.my_forth_table`
+4. `my_schema.my_second_table`
+5. `my_schema.users_summary`
+6. `my_schema.recent_users`
+7. `my_schema.complex_join`
+8. `my_schema.my_auto_table_one`
+9. `my_schema.my_third_table`
 
 ## Table Details
 
 ### `my_schema.complex_join`
+
+**Depends on**: `my_schema.my_first_table`
+
+**No dependents** (leaf table)
+
+### `my_schema.incremental_example`
 
 **Depends on**: `my_schema.my_first_table`
 
@@ -71,7 +81,7 @@ graph TD
 
 **No dependencies** (base table)
 
-**Used by**: `my_schema.my_forth_table`, `my_schema.my_second_table`, `my_schema.my_third_table`, `my_schema.users_summary`, `my_schema.recent_users`, `my_schema.complex_join`, `my_schema.my_auto_table_one`
+**Used by**: `my_schema.incremental_example`, `my_schema.my_forth_table`, `my_schema.my_second_table`, `my_schema.my_third_table`, `my_schema.users_summary`, `my_schema.recent_users`, `my_schema.complex_join`, `my_schema.my_auto_table_one`
 
 ### `my_schema.my_forth_table`
 

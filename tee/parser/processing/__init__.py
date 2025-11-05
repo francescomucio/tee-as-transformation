@@ -7,8 +7,8 @@ from .model_decorator import model
 from .file_discovery import FileDiscovery
 
 __all__ = [
-    'substitute_sql_variables',
-    'validate_sql_variables',
-    'model',
-    'FileDiscovery',
+    "substitute_sql_variables",
+    "validate_sql_variables",
+    "model",
+    "FileDiscovery",
 ]

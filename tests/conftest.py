@@ -15,7 +15,7 @@ from tee.adapters.duckdb.adapter import DuckDBAdapter
 @pytest.fixture
 def temp_db_path():
     """Create a temporary database file."""
-    with tempfile.NamedTemporaryFile(suffix='.duckdb', delete=False) as f:
+    with tempfile.NamedTemporaryFile(suffix=".duckdb", delete=False) as f:
         temp_path = f.name
     yield temp_path
     # Cleanup
@@ -26,7 +26,7 @@ def temp_db_path():
 @pytest.fixture
 def temp_state_db_path():
     """Create a temporary state database file."""
-    with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as f:
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
         temp_path = f.name
     yield temp_path
     # Cleanup
@@ -37,11 +37,7 @@ def temp_state_db_path():
 @pytest.fixture
 def duckdb_config():
     """Create DuckDB configuration."""
-    return {
-        "type": "duckdb",
-        "path": ":memory:",
-        "schema": "test_schema"
-    }
+    return {"type": "duckdb", "path": ":memory:", "schema": "test_schema"}
 
 
 @pytest.fixture
@@ -64,11 +60,7 @@ def state_manager(temp_state_db_path):
 @pytest.fixture
 def sample_append_config() -> Dict[str, Any]:
     """Sample append configuration."""
-    return {
-        "time_column": "created_at",
-        "start_date": "2024-01-01",
-        "lookback": "7 days"
-    }
+    return {"time_column": "created_at", "start_date": "2024-01-01", "lookback": "7 days"}
 
 
 @pytest.fixture
@@ -78,7 +70,7 @@ def sample_merge_config() -> Dict[str, Any]:
         "unique_key": ["id"],
         "time_column": "updated_at",
         "start_date": "auto",
-        "lookback": "3 hours"
+        "lookback": "3 hours",
     }
 
 
@@ -88,7 +80,7 @@ def sample_delete_insert_config() -> Dict[str, Any]:
     return {
         "where_condition": "updated_at >= @start_date",
         "time_column": "updated_at",
-        "start_date": "@start_date"
+        "start_date": "@start_date",
     }
 
 
@@ -97,11 +89,7 @@ def sample_incremental_config() -> Dict[str, Any]:
     """Sample incremental configuration."""
     return {
         "strategy": "append",
-        "append": {
-            "time_column": "created_at",
-            "start_date": "2024-01-01",
-            "lookback": "7 days"
-        }
+        "append": {"time_column": "created_at", "start_date": "2024-01-01", "lookback": "7 days"},
     }
 
 
@@ -153,12 +141,8 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
     )
-    config.addinivalue_line(
-        "markers", "integration: marks tests as integration tests"
-    )
-    config.addinivalue_line(
-        "markers", "unit: marks tests as unit tests"
-    )
+    config.addinivalue_line("markers", "integration: marks tests as integration tests")
+    config.addinivalue_line("markers", "unit: marks tests as unit tests")
 
 
 def pytest_collection_modifyitems(config, items):
@@ -167,11 +151,11 @@ def pytest_collection_modifyitems(config, items):
         # Add unit marker to tests in test_incremental_executor.py
         if "test_incremental_executor.py" in str(item.fspath):
             item.add_marker(pytest.mark.unit)
-        
+
         # Add integration marker to tests in test_duckdb_incremental.py
         if "test_duckdb_incremental.py" in str(item.fspath):
             item.add_marker(pytest.mark.integration)
-        
+
         # Add slow marker to performance tests
         if "performance" in item.name or "large_dataset" in item.name:
             item.add_marker(pytest.mark.slow)

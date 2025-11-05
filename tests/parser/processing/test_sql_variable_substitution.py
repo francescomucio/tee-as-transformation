@@ -7,7 +7,7 @@ from tee.parser.processing.variable_substitution import (
     substitute_sql_variables,
     validate_sql_variables,
     get_nested_value,
-    _format_sql_value
+    _format_sql_value,
 )
 from tee.parser.shared.exceptions import VariableSubstitutionError
 
@@ -139,10 +139,10 @@ class TestSQLVariableSubstitution:
             "debug": True,
             "start_date": "2024-01-01",
             "config": {"database": {"host": "localhost"}},
-            "status": "inactive"
+            "status": "inactive",
         }
         result = substitute_sql_variables(sql, variables)
-        
+
         # Check that all variables were substituted
         assert "@env" not in result
         assert "@debug" not in result
@@ -150,7 +150,7 @@ class TestSQLVariableSubstitution:
         assert "@config.database.host" not in result
         assert "{{ status:active }}" not in result
         assert "@version:1.0.0" not in result
-        
+
         # Check that values are properly formatted
         assert "'prod'" in result
         assert "TRUE" in result
@@ -162,7 +162,7 @@ class TestSQLVariableSubstitution:
         """Test that missing variable without default returns original SQL."""
         sql = "SELECT * FROM users WHERE name = @name"
         variables = {"age": 25}
-        
+
         result = substitute_sql_variables(sql, variables)
         # Should return original SQL unchanged when variable is missing and no default
         assert result == sql
@@ -205,7 +205,7 @@ class TestSQLVariableSubstitution:
         """Test validation with missing variables."""
         sql = "SELECT * FROM users WHERE name = @name AND age = @age"
         variables = {"name": "John"}
-        
+
         with pytest.raises(VariableSubstitutionError, match="Missing variables"):
             validate_sql_variables(sql, variables)
 
@@ -257,7 +257,9 @@ class TestSQLVariableSubstitution:
         sql = "SELECT * FROM users WHERE description = @desc"
         variables = {"desc": "User with 'quotes' and \"double quotes\""}
         result = substitute_sql_variables(sql, variables)
-        expected = "SELECT * FROM users WHERE description = 'User with ''quotes'' and \"double quotes\"'"
+        expected = (
+            "SELECT * FROM users WHERE description = 'User with ''quotes'' and \"double quotes\"'"
+        )
         assert result == expected
 
     def test_boolean_values_in_sql(self):
@@ -287,7 +289,9 @@ class TestSQLVariableSubstitution:
     def test_complex_nested_objects(self):
         """Test complex nested objects in variables."""
         sql = "SELECT * FROM users WHERE config = @config"
-        variables = {"config": {"database": {"host": "localhost", "port": 5432}, "cache": {"enabled": True}}}
+        variables = {
+            "config": {"database": {"host": "localhost", "port": 5432}, "cache": {"enabled": True}}
+        }
         result = substitute_sql_variables(sql, variables)
         # Should convert complex object to string and quote it
         assert result.startswith("SELECT * FROM users WHERE config = '")

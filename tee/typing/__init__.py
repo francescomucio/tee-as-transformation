@@ -12,7 +12,7 @@ from .metadata import (
 
 __all__ = [
     "ColumnDefinition",
-    "ModelMetadataDict", 
+    "ModelMetadataDict",
     "ParsedModelMetadata",
     "MaterializationType",
     "DataType",

@@ -6,6 +6,7 @@ This section contains practical examples demonstrating TEE's capabilities.
 
 - [Basic Usage](basic-usage.md) - Common usage patterns and workflows
 - [Incremental Example](incremental-example.md) - Complete incremental materialization example
+- [Testing Example](testing-example.md) - Data quality testing with standard and custom SQL tests
 
 ## Quick Start Examples
 
@@ -88,6 +89,9 @@ t_project/
 │       ├── my_table.py
 │       ├── incremental_table.sql
 │       └── incremental_table.py
+├── tests/
+│   ├── my_custom_test.sql
+│   └── check_minimum_rows.sql
 ├── data/
 │   ├── t_project.duckdb
 │   └── tee_state.db
@@ -113,4 +117,5 @@ materialization_change_behavior = "warn"
 
 - Explore the [Basic Usage Examples](basic-usage.md) for common patterns
 - Try the [Incremental Example](incremental-example.md) for advanced data processing
+- Learn about [Testing](testing-example.md) with standard and custom SQL tests
 - Check the [Incremental Materialization Guide](../incremental-materialization.md) for detailed configuration options

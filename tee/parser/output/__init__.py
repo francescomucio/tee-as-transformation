@@ -7,7 +7,7 @@ from .json_exporter import JSONExporter
 from .report_generator import ReportGenerator
 
 __all__ = [
-    'DependencyVisualizer',
-    'JSONExporter',
-    'ReportGenerator',
+    "DependencyVisualizer",
+    "JSONExporter",
+    "ReportGenerator",
 ]

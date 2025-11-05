@@ -77,10 +77,13 @@ nav:
   - User Guide:
     - user-guide/overview.md
     - user-guide/execution-engine.md
+    - user-guide/data-quality-tests.md
     - user-guide/database-adapters.md
     - user-guide/sql-dialect-conversion.md
     - Examples:
       - user-guide/examples/basic-usage.md
+      - user-guide/examples/incremental-example.md
+      - user-guide/examples/testing-example.md
       - user-guide/examples/multi-database.md
       - user-guide/examples/custom-adapters.md
   - API Reference:

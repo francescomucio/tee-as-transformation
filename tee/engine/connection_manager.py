@@ -13,18 +13,23 @@ from .executor import ModelExecutor
 class ConnectionManager:
     """
     Unified connection manager for database operations.
-    
+
     This class provides a single interface for:
     - Loading project configurations
     - Creating database connections
     - Testing connectivity
     - Managing adapters
     """
-    
-    def __init__(self, project_folder: str, connection_config: Dict[str, Any], variables: Optional[Dict[str, Any]] = None):
+
+    def __init__(
+        self,
+        project_folder: str,
+        connection_config: Dict[str, Any],
+        variables: Optional[Dict[str, Any]] = None,
+    ):
         """
         Initialize the connection manager.
-        
+
         Args:
             project_folder: Path to the project folder
             connection_config: Database connection configuration
@@ -35,17 +40,17 @@ class ConnectionManager:
         self.variables = variables or {}
         self.executor = None
         self.logger = logging.getLogger(self.__class__.__name__)
-    
+
     def create_executor(self) -> ModelExecutor:
         """Create a ModelExecutor instance."""
         if self.executor is None:
             self.executor = ModelExecutor(self.project_folder, self.connection_config)
         return self.executor
-    
+
     def test_connection(self) -> bool:
         """
         Test database connectivity.
-        
+
         Returns:
             True if connection successful, False otherwise
         """
@@ -55,7 +60,7 @@ class ConnectionManager:
         except Exception as e:
             self.logger.error(f"Connection test failed: {e}")
             return False
-    
+
     def get_database_info(self) -> Optional[Dict[str, Any]]:
         """Get database information."""
         try:
@@ -64,7 +69,7 @@ class ConnectionManager:
         except Exception as e:
             self.logger.error(f"Failed to get database info: {e}")
             return None
-    
+
     def get_supported_materializations(self) -> List[str]:
         """Get list of supported materializations."""
         try:
@@ -73,15 +78,15 @@ class ConnectionManager:
         except Exception as e:
             self.logger.error(f"Failed to get materializations: {e}")
             return []
-    
+
     def execute_models(self, parser, save_analysis: bool = True) -> Dict[str, Any]:
         """
         Execute SQL models.
-        
+
         Args:
             parser: Parser instance with models and execution order
             save_analysis: Whether to save analysis files
-            
+
         Returns:
             Execution results
         """
@@ -91,7 +96,7 @@ class ConnectionManager:
         except Exception as e:
             self.logger.error(f"Model execution failed: {e}")
             raise
-    
+
     def cleanup(self):
         """Clean up resources."""
         if self.executor:

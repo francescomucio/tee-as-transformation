@@ -41,6 +41,7 @@ def clean_docs():
     site_dir = Path("site")
     if site_dir.exists():
         import shutil
+
         shutil.rmtree(site_dir)
         print("✅ Cleaned documentation build directory")
     else:
@@ -56,9 +57,9 @@ def main():
         print("  serve  - Serve the documentation locally")
         print("  clean  - Clean the build directory")
         sys.exit(1)
-    
+
     command = sys.argv[1].lower()
-    
+
     if command == "build":
         build_docs()
     elif command == "serve":
