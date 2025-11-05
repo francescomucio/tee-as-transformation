@@ -1,6 +1,6 @@
 # Tee Test Suite
 
-This directory contains comprehensive tests for the Tee framework, with a focus on incremental materialization functionality.
+This directory contains comprehensive tests for the Tee framework, covering incremental materialization, parsing, testing framework, and database adapters.
 
 ## Test Structure
 
@@ -16,12 +16,27 @@ tests/
 │   ├── test_duckdb_incremental.py        # DuckDB-specific tests
 │   └── test_metadata_propagation.py     # Metadata propagation tests
 ├── parser/                               # Parser tests
+│   ├── core/                             # Core parser tests
+│   │   └── test_project_parser.py
+│   ├── parsers/                          # Parser implementation tests
+│   │   └── test_python_variable_support.py
+│   ├── processing/                      # Processing tests
+│   │   └── test_sql_variable_substitution.py
+│   └── shared/                          # Shared utilities tests
+│       └── test_metadata_schema.py
+├── testing/                              # Testing framework tests
+│   ├── test_base.py                      # Base test classes
+│   ├── test_executor.py                  # Test executor
+│   ├── test_query_generation.py          # Query generation
+│   ├── test_sql_test.py                  # SQL test support
+│   ├── test_standard_tests.py           # Standard test implementations
+│   └── test_test_discovery.py           # Test discovery
 └── typing/                               # Type system tests
 ```
 
 ## Test Categories
 
-### 1. Unit Tests (`test_incremental_executor.py`)
+### 1. Engine Tests (`engine/`)
 
 Tests the core incremental logic independently of database implementations:
 
@@ -42,7 +57,27 @@ Tests that verify adapters correctly implement the incremental interface:
 - **Data Types**: Tests for proper parameter type handling
 - **Performance**: Tests for performance characteristics
 
-### 3. Database-Specific Tests (`test_duckdb_incremental.py`)
+### 3. Parser Tests (`parser/`)
+
+Tests for the SQL model parsing system:
+
+- **Project Parsing**: Tests for project-wide model discovery and parsing
+- **Python Variable Support**: Tests for Python metadata files with variable substitution
+- **SQL Variable Substitution**: Tests for SQL variable replacement (`{{ variable }}`)
+- **Metadata Schema**: Tests for metadata schema validation and type checking
+
+### 4. Testing Framework Tests (`testing/`)
+
+Tests for the data quality testing framework itself:
+
+- **Base Classes**: Tests for `TestResult`, `TestSeverity`, `StandardTest`, `TestRegistry`
+- **Test Executor**: Tests for test execution and result collection
+- **Query Generation**: Tests for database-specific SQL query generation
+- **SQL Tests**: Tests for custom SQL test support (dbt-style)
+- **Standard Tests**: Tests for built-in test implementations (not_null, unique, etc.)
+- **Test Discovery**: Tests for automatic test discovery from SQL files
+
+### 5. Database-Specific Tests (`adapters/`)
 
 Tests specific to DuckDB implementation (template for other adapters):
 
@@ -163,9 +198,24 @@ def test_new_adapter_behavior(mock_adapter):
     assert result == expected_value
 ```
 
+### For Parser Features
+
+Add tests to the appropriate parser subdirectory:
+- `parser/core/` for project parsing
+- `parser/parsers/` for parser implementations
+- `parser/processing/` for processing logic
+- `parser/shared/` for shared utilities
+
+### For Testing Framework Features
+
+Add tests to `testing/` directory:
+- `test_base.py` for base class tests
+- `test_executor.py` for executor tests
+- `test_standard_tests.py` for new standard test implementations
+
 ### For Database-Specific Features
 
-Add tests to `test_duckdb_incremental.py` (or create new adapter test file):
+Add tests to `adapters/` directory (or create new adapter test file):
 
 ```python
 def test_duckdb_specific_feature(duckdb_adapter, sample_table_sql):

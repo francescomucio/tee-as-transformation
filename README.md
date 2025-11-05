@@ -110,6 +110,28 @@ Test database connectivity and configuration:
 uv run tcli debug ./my_project
 ```
 
+### Run Tests
+Execute data quality tests on models:
+
+```bash
+# Run all tests defined in model metadata
+uv run tcli test ./my_project
+
+# Run tests with variables
+uv run tcli test ./my_project --vars 'env=prod'
+
+# Override test severity (make specific tests warnings instead of errors)
+uv run tcli test ./my_project --severity not_null=warning
+
+# Override severity for specific table/column/test
+uv run tcli test ./my_project --severity my_table.id.unique=warning
+
+# Multiple severity overrides
+uv run tcli test ./my_project --severity not_null=warning --severity unique=error
+```
+
+Tests are automatically executed after model runs, but you can also run them independently using the `test` command. See [Data Quality Tests](docs/user-guide/data-quality-tests.md) for more information.
+
 ### Help
 Show help information:
 
@@ -121,6 +143,7 @@ uv run tcli help
 uv run tcli run --help
 uv run tcli parse --help
 uv run tcli debug --help
+uv run tcli test --help
 ```
 
 ## 📚 Documentation
@@ -133,6 +156,7 @@ uv run tcli debug --help
 - [Configuration](docs/getting-started/configuration.md)
 - [Incremental Materialization](docs/user-guide/incremental-materialization.md)
 - [Database Adapters](docs/user-guide/database-adapters.md)
+- [Data Quality Tests](docs/user-guide/data-quality-tests.md)
 - [Examples](docs/user-guide/examples/)
 
 ## 🛠️ Development
