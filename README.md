@@ -1,4 +1,4 @@
-# Tee - Transform, Extract, Execute
+# Tee for Transform
 
 <img src="https://upload.wikimedia.org/wikipedia/commons/f/f7/Rpb_clothing_icon.svg" alt="Tee Logo" width="80" height="80" align="left" style="margin-right: 15px; margin-bottom: 10px;">
 
