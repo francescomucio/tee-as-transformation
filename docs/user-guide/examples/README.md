@@ -68,13 +68,13 @@ WHERE status = 'active'
 
 ```bash
 # Run all models
-uv run python -m tee.cli.main run t_project
+uv run tcli run ./t_project
 
-# Run with variables
-uv run python -m tee.cli.main run t_project --vars 'start_date=2024-01-01'
+# Run with variables (JSON format)
+uv run tcli run ./t_project --vars '{"start_date": "2024-01-01"}'
 
 # Run specific model
-uv run python -m tee.cli.main run t_project --models my_schema.my_table
+uv run tcli run ./t_project --select my_schema.my_table
 ```
 
 ## Example Projects

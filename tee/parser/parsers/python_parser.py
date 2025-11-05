@@ -311,8 +311,6 @@ class PythonParser(BaseParser):
         """Extract string literal from AST node."""
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
             return node.value
-        elif hasattr(ast, "Str") and isinstance(node, ast.Str):  # Python < 3.8 compatibility
-            return node.s
         return str(node)
 
     def _extract_literal(self, node: ast.AST) -> Any:
@@ -326,14 +324,6 @@ class PythonParser(BaseParser):
                 self._extract_literal(k): self._extract_literal(v)
                 for k, v in zip(node.keys, node.values)
             }
-        elif hasattr(ast, "Str") and isinstance(node, ast.Str):  # Python < 3.8 compatibility
-            return node.s
-        elif hasattr(ast, "Num") and isinstance(node, ast.Num):  # Python < 3.8 compatibility
-            return node.n
-        elif hasattr(ast, "NameConstant") and isinstance(
-            node, ast.NameConstant
-        ):  # Python < 3.8 compatibility
-            return node.value
         return str(node)
 
     def _execute_function(

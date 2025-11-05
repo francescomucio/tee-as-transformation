@@ -9,7 +9,7 @@ import os
 import logging
 from typing import Dict, Any, Optional
 from pathlib import Path
-import toml
+import tomllib
 
 from ..adapters.base import AdapterConfig
 
@@ -58,8 +58,8 @@ class DatabaseConfigManager:
                 return {}
 
         try:
-            with open(toml_file, "r") as f:
-                data = toml.load(f)
+            with open(toml_file, "rb") as f:
+                data = tomllib.load(f)
 
             # Look for [tool.tee.database], [tool.tee.databases], or [connection]
             tee_config = data.get("tool", {}).get("tee", {})

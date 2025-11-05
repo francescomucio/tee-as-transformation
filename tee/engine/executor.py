@@ -66,13 +66,21 @@ class ModelExecutor:
         self.execution_engine = None
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    def execute_models(self, parser, variables: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def execute_models(
+        self,
+        parser,
+        variables: Optional[Dict[str, Any]] = None,
+        parsed_models: Optional[Dict[str, Any]] = None,
+        execution_order: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
         """
         Execute the parsed SQL models using the enhanced execution engine.
 
         Args:
             parser: Parser instance that has collected models and execution order
             variables: Optional dictionary of variables to inject into Python model functions
+            parsed_models: Optional pre-filtered models dict (overrides parser.collect_models())
+            execution_order: Optional pre-filtered execution order (overrides parser.get_execution_order())
 
         Returns:
             Dictionary containing execution results
@@ -89,9 +97,11 @@ class ModelExecutor:
             self.execution_engine.connect()
             self.logger.info("Connected to database successfully")
 
-            # Get parsed models and execution order from parser
-            parsed_models = parser.collect_models()
-            execution_order = parser.get_execution_order()
+            # Get parsed models and execution order from parser (or use provided filtered versions)
+            if parsed_models is None:
+                parsed_models = parser.collect_models()
+            if execution_order is None:
+                execution_order = parser.get_execution_order()
 
             # Evaluate Python models before SQL execution
             # This ensures all Python models have their SQLGlot expressions ready

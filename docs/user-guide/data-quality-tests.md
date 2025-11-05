@@ -326,8 +326,8 @@ tcli test t_project --verbose
 # Override test severity
 tcli test t_project --severity not_null=warning
 
-# Run with variables
-tcli test t_project --vars 'start_date=2024-01-01'
+# Run with variables (JSON format)
+tcli test ./t_project --vars '{"start_date": "2024-01-01"}'
 ```
 
 ### Test Execution Order

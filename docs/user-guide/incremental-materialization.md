@@ -249,11 +249,11 @@ The `lookback` option adds a buffer period to handle late-arriving data:
 You can pass variables via the command line:
 
 ```bash
-# Using @variable syntax
-uv run python -m tee.cli.main run t_project --vars 'start_date=2024-01-01'
+# Using @variable syntax (JSON format)
+uv run tcli run ./t_project --vars '{"start_date": "2024-01-01"}'
 
-# Using {{ variable }} syntax
-uv run python -m tee.cli.main run t_project --vars 'start_date=2024-01-01'
+# Using {{ variable }} syntax (JSON format)
+uv run tcli run ./t_project --vars '{"start_date": "2024-01-01"}'
 ```
 
 Variables are resolved in the configuration:
@@ -401,7 +401,7 @@ WHERE event_timestamp >= '2024-01-01'
 
 Run with:
 ```bash
-uv run python -m tee.cli.main run t_project
+uv run tcli run ./t_project
 ```
 
 This will create an incremental table that:

@@ -86,9 +86,6 @@ uv run tcli run ./my_project
 
 # Run with variables (JSON format)
 uv run tcli run ./my_project --vars '{"env": "prod", "start_date": "2024-01-01"}'
-
-# Run with variables (key=value format)
-uv run tcli run ./my_project --vars 'env=prod,start_date=2024-01-01'
 ```
 
 ### Parse Models
@@ -98,8 +95,8 @@ Parse and analyze SQL models without execution:
 # Parse models and show dependency analysis
 uv run tcli parse ./my_project
 
-# Parse with variables
-uv run tcli parse ./my_project --vars 'env=dev'
+# Parse with variables (JSON format)
+uv run tcli parse ./my_project --vars '{"env": "dev"}'
 ```
 
 ### Debug Connection
@@ -117,8 +114,8 @@ Execute data quality tests on models:
 # Run all tests defined in model metadata
 uv run tcli test ./my_project
 
-# Run tests with variables
-uv run tcli test ./my_project --vars 'env=prod'
+# Run tests with variables (JSON format)
+uv run tcli test ./my_project --vars '{"env": "prod"}'
 
 # Override test severity (make specific tests warnings instead of errors)
 uv run tcli test ./my_project --severity not_null=warning

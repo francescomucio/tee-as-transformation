@@ -7,7 +7,7 @@ Handles the complete workflow of parsing and executing SQL models based on proje
 from __future__ import annotations
 
 import logging
-from typing import Dict, Any, Optional, Union, TYPE_CHECKING
+from typing import Dict, Any, Optional, Union, List, TYPE_CHECKING
 from .parser import ProjectParser
 from .engine import ModelExecutor
 from .testing import TestExecutor
@@ -21,6 +21,8 @@ def execute_models(
     connection_config: Union[Dict[str, Any], AdapterConfig],
     save_analysis: bool = True,
     variables: Optional[Dict[str, Any]] = None,
+    select_patterns: Optional[List[str]] = None,
+    exclude_patterns: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """
     Execute SQL models by parsing them and running them in dependency order.
@@ -63,6 +65,36 @@ def execute_models(
     print(f"Found {len(graph['nodes'])} tables")
     print(f"Execution order: {' -> '.join(execution_order)}")
 
+    # Step 2.5: Apply selection filtering if specified
+    filtered_parsed_models = None
+    filtered_execution_order = None
+    
+    if select_patterns or exclude_patterns:
+        from .cli.selection import ModelSelector
+        
+        selector = ModelSelector(select_patterns=select_patterns, exclude_patterns=exclude_patterns)
+        original_count = len(parsed_models)
+        filtered_parsed_models, filtered_execution_order = selector.filter_models(parsed_models, execution_order)
+        filtered_count = len(filtered_parsed_models)
+        
+        print(f"\nFiltered to {filtered_count} models (from {original_count} total)")
+        if filtered_count > 0:
+            print(f"Filtered execution order: {' -> '.join(filtered_execution_order)}")
+        else:
+            print("⚠️  No models matched the selection criteria!")
+            return {
+                "executed_tables": [],
+                "failed_tables": [],
+                "warnings": ["No models matched the selection criteria"],
+                "table_info": {},
+                "analysis": {
+                    "total_models": 0,
+                    "total_tables": 0,
+                    "execution_order": [],
+                    "dependency_graph": graph,
+                },
+            }
+
     # Step 3: Execute models
     print("\n" + "=" * 50)
     print("EXECUTING SQL MODELS")
@@ -71,8 +103,10 @@ def execute_models(
     model_executor = ModelExecutor(project_folder, connection_config)
 
     try:
-        # Execute models using the executor
-        results = model_executor.execute_models(parser, variables)
+        # Execute models using the executor (pass filtered models if selection was applied)
+        results = model_executor.execute_models(
+            parser, variables, parsed_models=filtered_parsed_models, execution_order=filtered_execution_order
+        )
 
         # Step 4: Save analysis files if requested (after execution to include qualified SQL)
         if save_analysis:
@@ -101,9 +135,11 @@ def execute_models(
                     model_executor.execution_engine.adapter, project_folder=project_folder
                 )
 
-                # Execute all tests
+                # Execute all tests (use filtered models if selection was applied)
+                test_models = filtered_parsed_models if filtered_parsed_models else parser.collect_models()
+                test_order = filtered_execution_order if filtered_execution_order else execution_order
                 test_results = test_executor.execute_all_tests(
-                    parsed_models=parser.collect_models(), execution_order=execution_order
+                    parsed_models=test_models, execution_order=test_order
                 )
 
                 # Print test results
@@ -162,11 +198,13 @@ def execute_models(
         except Exception as e:
             print(f"\nDatabase Info: Error getting info - {e}")
 
-        # Add analysis info to results
+        # Add analysis info to results (use filtered data if filtering was applied)
+        final_models = filtered_parsed_models if filtered_parsed_models else parsed_models
+        final_order = filtered_execution_order if filtered_execution_order else execution_order
         results["analysis"] = {
-            "total_models": len(parsed_models),
-            "total_tables": len(graph["nodes"]),
-            "execution_order": execution_order,
+            "total_models": len(final_models),
+            "total_tables": len(final_models),
+            "execution_order": final_order,
             "dependency_graph": graph,
         }
 

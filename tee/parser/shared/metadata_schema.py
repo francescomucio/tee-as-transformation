@@ -278,10 +278,6 @@ def parse_metadata_from_python_file(file_path: str) -> Optional[ModelMetadataDic
                             for key, value in zip(node.value.keys, node.value.values):
                                 if isinstance(key, ast.Constant):
                                     key_name = key.value
-                                elif hasattr(ast, "Str") and isinstance(
-                                    key, ast.Str
-                                ):  # Python < 3.8 compatibility
-                                    key_name = key.s
                                 else:
                                     continue
 
@@ -291,10 +287,6 @@ def parse_metadata_from_python_file(file_path: str) -> Optional[ModelMetadataDic
                         elif isinstance(node.value, ast.Constant):
                             # Direct constant assignment
                             return node.value.value
-                        elif hasattr(ast, "Str") and isinstance(
-                            node.value, ast.Str
-                        ):  # Python < 3.8 compatibility
-                            return node.value.s
 
         return None
 
@@ -315,14 +307,6 @@ def _ast_to_python_value(node: ast.AST) -> Any:
     """
     if isinstance(node, ast.Constant):
         return node.value
-    elif hasattr(ast, "Str") and isinstance(node, ast.Str):  # Python < 3.8 compatibility
-        return node.s
-    elif hasattr(ast, "Num") and isinstance(node, ast.Num):  # Python < 3.8 compatibility
-        return node.n
-    elif hasattr(ast, "NameConstant") and isinstance(
-        node, ast.NameConstant
-    ):  # Python < 3.8 compatibility
-        return node.value
     elif isinstance(node, ast.List):
         return [_ast_to_python_value(item) for item in node.elts]
     elif isinstance(node, ast.Dict):
@@ -330,8 +314,6 @@ def _ast_to_python_value(node: ast.AST) -> Any:
         for key, value in zip(node.keys, node.values):
             if isinstance(key, ast.Constant):
                 key_name = key.value
-            elif hasattr(ast, "Str") and isinstance(key, ast.Str):  # Python < 3.8 compatibility
-                key_name = key.s
             else:
                 continue
             result[key_name] = _ast_to_python_value(value)

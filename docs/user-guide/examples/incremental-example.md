@@ -105,8 +105,7 @@ WHERE status = 'active'
 ### First Run (Full Load)
 
 ```bash
-cd /home/mucio/tee
-uv run python -m tee.cli.main run t_project
+uv run tcli run ./t_project
 ```
 
 **Output:**
@@ -119,7 +118,7 @@ INFO - ExecutionEngine - Successfully executed my_schema.incremental_example wit
 ### Subsequent Runs (Incremental)
 
 ```bash
-uv run python -m tee.cli.main run t_project
+uv run tcli run ./t_project
 ```
 
 **Output:**
@@ -133,7 +132,7 @@ INFO - ExecutionEngine - Successfully executed my_schema.incremental_example wit
 ### Using CLI Variables
 
 ```bash
-uv run python -m tee.cli.main run t_project --vars 'start_date=2024-01-01'
+uv run tcli run ./t_project --vars '{"start_date": "2024-01-01"}'
 ```
 
 **Output:**
@@ -257,10 +256,10 @@ metadata = metadata_delete_insert  # Switch to delete+insert strategy
 
 ```bash
 # Test with different start dates
-uv run python -m tee.cli.main run t_project --vars 'start_date=2024-02-01'
+uv run tcli run ./t_project --vars '{"start_date": "2024-02-01"}'
 
 # Test with different time ranges
-uv run python -m tee.cli.main run t_project --vars 'start_date=2024-01-15'
+uv run tcli run ./t_project --vars '{"start_date": "2024-01-15"}'
 ```
 
 ## Monitoring and Debugging
@@ -275,7 +274,7 @@ logging.basicConfig(level=logging.DEBUG)
 ### Check Execution Logs
 
 ```bash
-uv run python -m tee.cli.main run t_project 2>&1 | grep -i "incremental\|merge\|append\|delete"
+uv run tcli run ./t_project 2>&1 | grep -i "incremental\|merge\|append\|delete"
 ```
 
 ### Verify State

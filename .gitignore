@@ -31,3 +31,9 @@ test_execution.duckdb
 # Coverage reports
 htmlcov/
 .coverage
+
+# Pytest cache
+.pytest_cache/
+
+# MkDocs build output
+site/

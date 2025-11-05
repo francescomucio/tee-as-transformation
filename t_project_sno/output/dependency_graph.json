@@ -1,14 +1,14 @@
 {
   "nodes": [
-    "my_schema.my_auto_table_one",
-    "my_schema.complex_join",
+    "my_schema.my_forth_table",
     "my_schema.recent_users",
-    "my_schema.my_second_table",
+    "my_schema.complex_join",
+    "my_schema.my_auto_table_one",
     "my_schema.my_first_table",
-    "my_schema.users_summary",
     "my_schema.incremental_example",
-    "my_schema.my_third_table",
-    "my_schema.my_forth_table"
+    "my_schema.users_summary",
+    "my_schema.my_second_table",
+    "my_schema.my_third_table"
   ],
   "edges": [
     [
@@ -77,12 +77,10 @@
     ]
   },
   "dependents": {
-    "my_schema.my_auto_table_one": [],
-    "my_schema.complex_join": [],
+    "my_schema.my_forth_table": [],
     "my_schema.recent_users": [],
-    "my_schema.my_second_table": [
-      "my_schema.my_third_table"
-    ],
+    "my_schema.complex_join": [],
+    "my_schema.my_auto_table_one": [],
     "my_schema.my_first_table": [
       "my_schema.incremental_example",
       "my_schema.my_forth_table",
@@ -93,10 +91,12 @@
       "my_schema.complex_join",
       "my_schema.my_auto_table_one"
     ],
-    "my_schema.users_summary": [],
     "my_schema.incremental_example": [],
-    "my_schema.my_third_table": [],
-    "my_schema.my_forth_table": []
+    "my_schema.users_summary": [],
+    "my_schema.my_second_table": [
+      "my_schema.my_third_table"
+    ],
+    "my_schema.my_third_table": []
   },
   "execution_order": [
     "my_schema.my_first_table",
