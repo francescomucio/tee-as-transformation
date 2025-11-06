@@ -23,7 +23,9 @@ venv/
 site/
 
 # Development/Test projects
-examples/
+# Note: examples/ is committed - it contains example projects for users
+# Only ignore generated output directories within examples
+examples/*/output/
 test_project/
 test_execution.duckdb
 
