@@ -13,7 +13,7 @@ from ..shared.exceptions import SQLParsingError
 from ..shared.model_utils import create_model_metadata, compute_sqlglot_hash
 from ..shared.metadata_schema import parse_metadata_from_python_file, validate_metadata_dict
 from ...typing.metadata import ParsedModelMetadata
-from ..analysis.sql_qualifier import generate_qualified_sql, validate_qualified_sql
+from ..analysis.sql_qualifier import generate_resolved_sql, validate_resolved_sql
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -200,10 +200,10 @@ class SQLParser(BaseParser):
 
             # Generate resolved SQL with table reference resolution if table_name provided
             if table_name:
-                resolved_sql = generate_qualified_sql(str(expr), source_tables, table_name)
+                resolved_sql = generate_resolved_sql(str(expr), source_tables, table_name)
 
                 # Validate resolved SQL length and log warning if significantly different
-                validate_qualified_sql(sql_content.strip(), resolved_sql, table_name)
+                validate_resolved_sql(sql_content.strip(), resolved_sql, table_name)
             else:
                 # No table name provided, use original SQL as resolved SQL
                 resolved_sql = sql_content.strip()

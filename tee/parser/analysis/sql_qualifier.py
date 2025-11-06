@@ -12,9 +12,9 @@ from ..shared.exceptions import ParserError
 logger = logging.getLogger(__name__)
 
 
-def generate_qualified_sql(sql_str: str, tables: List[str], table_name: str) -> str:
+def generate_resolved_sql(sql_str: str, tables: List[str], table_name: str) -> str:
     """
-    Generate qualified SQL by resolving table references.
+    Generate resolved SQL by resolving table references with fully qualified names.
 
     Args:
         sql_str: Original SQL string
@@ -22,7 +22,7 @@ def generate_qualified_sql(sql_str: str, tables: List[str], table_name: str) -> 
         table_name: Full table name with schema (e.g., my_schema.users_summary)
 
     Returns:
-        Qualified SQL string with schema prefixes
+        Resolved SQL string with schema prefixes (schema.table format)
     """
     try:
         # Get the schema from the table name if it exists
@@ -71,40 +71,40 @@ def generate_qualified_sql(sql_str: str, tables: List[str], table_name: str) -> 
 
         return sql_str
     except Exception as e:
-        logger.warning(f"Failed to generate qualified SQL for {table_name}: {e}")
+        logger.warning(f"Failed to generate resolved SQL for {table_name}: {e}")
         # Fallback to original SQL
         return sql_str
 
 
-def validate_qualified_sql(original_sql: str, qualified_sql: str, table_name: str) -> None:
+def validate_resolved_sql(original_sql: str, resolved_sql: str, table_name: str) -> None:
     """
-    Validate qualified SQL and log warning if length differs significantly.
+    Validate resolved SQL and log warning if length differs significantly.
 
     Args:
         original_sql: Original SQL string
-        qualified_sql: Qualified SQL string
+        resolved_sql: Resolved SQL string with fully qualified table names
         table_name: Table name for logging
     """
     try:
         original_length = len(original_sql)
-        qualified_length = len(qualified_sql)
+        resolved_length = len(resolved_sql)
 
         # Calculate percentage difference
         if original_length > 0:
-            length_diff_percent = abs(qualified_length - original_length) / original_length * 100
+            length_diff_percent = abs(resolved_length - original_length) / original_length * 100
 
             # Log warning if difference is more than 20%
             if length_diff_percent > 20:
                 logger.warning(
-                    f"Qualified SQL for {table_name} differs significantly from original: "
-                    f"original={original_length} chars, qualified={qualified_length} chars "
+                    f"Resolved SQL for {table_name} differs significantly from original: "
+                    f"original={original_length} chars, resolved={resolved_length} chars "
                     f"({length_diff_percent:.1f}% difference)"
                 )
             else:
                 logger.debug(
-                    f"Qualified SQL for {table_name} validated: "
-                    f"original={original_length} chars, qualified={qualified_length} chars "
+                    f"Resolved SQL for {table_name} validated: "
+                    f"original={original_length} chars, resolved={resolved_length} chars "
                     f"({length_diff_percent:.1f}% difference)"
                 )
     except Exception as e:
-        logger.warning(f"Failed to validate qualified SQL for {table_name}: {e}")
+        logger.warning(f"Failed to validate resolved SQL for {table_name}: {e}")

@@ -211,7 +211,7 @@ class ExecutionEngine:
 
                 model_data = parsed_models[table_name]
 
-                # Get SQL query (prefer qualified_sql, fallback to sql_content)
+                # Get SQL query (prefer resolved_sql, fallback to original_sql)
                 sql_query = self._extract_sql_query(model_data, table_name)
                 if not sql_query:
                     results["failed_tables"].append(
