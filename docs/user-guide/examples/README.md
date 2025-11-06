@@ -1,6 +1,6 @@
 # Examples
 
-This section contains practical examples demonstrating Tee's capabilities.
+This section contains practical examples demonstrating t4t's capabilities.
 
 ## Available Examples
 

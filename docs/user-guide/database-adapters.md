@@ -1,6 +1,6 @@
 # Database Adapters
 
-Tee provides a powerful pluggable database adapter system that allows you to write SQL models in one dialect and run them on different databases with automatic SQL dialect conversion.
+t4t provides a powerful pluggable database adapter system that allows you to write SQL models in one dialect and run them on different databases with automatic SQL dialect conversion.
 
 ## Overview
 

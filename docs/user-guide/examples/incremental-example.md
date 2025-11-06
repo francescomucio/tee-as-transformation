@@ -1,6 +1,6 @@
 # Incremental Materialization Example
 
-This example demonstrates how to use Tee's incremental materialization feature to efficiently process large datasets.
+This example demonstrates how to use t4t's incremental materialization feature to efficiently process large datasets.
 
 ## Project Structure
 
@@ -220,7 +220,7 @@ AND updated_at >= '2024-01-01'
 
 ## State Management
 
-Tee automatically tracks the state of incremental models in `t_project/data/tee_state.db`:
+t4t automatically tracks the state of incremental models in `t_project/data/tee_state.db`:
 
 ```sql
 -- Check model state

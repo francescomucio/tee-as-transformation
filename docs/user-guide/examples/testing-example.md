@@ -1,6 +1,6 @@
 # Testing Example
 
-This example demonstrates how to use Tee's data quality testing framework with both standard tests and custom SQL tests.
+This example demonstrates how to use t4t's data quality testing framework with both standard tests and custom SQL tests.
 
 ## Project Structure
 

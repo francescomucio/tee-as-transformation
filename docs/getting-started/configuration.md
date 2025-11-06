@@ -1,6 +1,6 @@
 # Configuration
 
-Tee supports flexible configuration through `pyproject.toml` files and environment variables. This guide covers all configuration options.
+t4t supports flexible configuration through `pyproject.toml` files and environment variables. This guide covers all configuration options.
 
 ## Configuration Methods
 
@@ -166,7 +166,7 @@ export TEE_DB_WAREHOUSE=PROD_WAREHOUSE
 
 ## Configuration Validation
 
-Tee validates configuration at startup:
+t4t validates configuration at startup:
 
 ```python
 from tee.engine import load_database_config

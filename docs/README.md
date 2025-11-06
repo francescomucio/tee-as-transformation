@@ -1,11 +1,11 @@
-# Tee Documentation
+# t4t Documentation
 
-Welcome to the Tee for Transform (t4t) documentation. Tee is a powerful Python framework for managing SQL data transformations with support for multiple database backends and automatic SQL dialect conversion.
+Welcome to the Tee for Transform (t4t) documentation. t4t is a powerful Python framework for managing SQL data transformations with support for multiple database backends and automatic SQL dialect conversion.
 
 ## Quick Navigation
 
 ### 🚀 Getting Started
-- [Installation](getting-started/installation.md) - Install Tee and its dependencies
+- [Installation](getting-started/installation.md) - Install t4t and its dependencies
 - [Quick Start](getting-started/quick-start.md) - Get up and running in minutes
 - [Configuration](getting-started/configuration.md) - Configure databases and settings
 
@@ -26,7 +26,7 @@ Welcome to the Tee for Transform (t4t) documentation. Tee is a powerful Python f
 
 ### 🛠️ Development
 - [Architecture](development/architecture.md) - System design and components
-- [Contributing](development/contributing.md) - How to contribute to Tee
+- [Contributing](development/contributing.md) - How to contribute to t4t
 - [Migration Guides](development/migration-guides/) - Upgrading between versions
 
 ## Key Features

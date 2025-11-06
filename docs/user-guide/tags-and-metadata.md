@@ -1,10 +1,10 @@
 # Tags and Metadata
 
-Tee supports comprehensive tagging functionality for organizing, categorizing, and managing your data transformations. Tags can be attached at multiple levels: individual tables/views, and entire schemas/modules.
+t4t supports comprehensive tagging functionality for organizing, categorizing, and managing your data transformations. Tags can be attached at multiple levels: individual tables/views, and entire schemas/modules.
 
 ## Overview
 
-Tee supports two types of tags:
+t4t supports two types of tags:
 
 1. **dbt-style tags** (`tags`): List of strings used for filtering, categorization, and model selection
    - Example: `tags = ["analytics", "production", "fct"]`

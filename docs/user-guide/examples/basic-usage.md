@@ -1,6 +1,6 @@
 # Basic Usage Examples
 
-This page demonstrates common usage patterns with Tee, from simple single-model execution to complex multi-database workflows.
+This page demonstrates common usage patterns with t4t, from simple single-model execution to complex multi-database workflows.
 
 ## Single Model Execution
 

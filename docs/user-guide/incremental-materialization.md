@@ -1,10 +1,10 @@
 # Incremental Materialization
 
-Tee supports incremental materialization for efficient data processing, allowing you to process only new or changed data instead of reprocessing entire datasets. This is particularly useful for large datasets where full refreshes are expensive.
+t4t supports incremental materialization for efficient data processing, allowing you to process only new or changed data instead of reprocessing entire datasets. This is particularly useful for large datasets where full refreshes are expensive.
 
 ## Overview
 
-Incremental materialization in Tee supports three main strategies:
+Incremental materialization in t4t supports three main strategies:
 
 - **Append**: Add new records to existing tables
 - **Merge**: Update existing records and insert new ones (upsert)
@@ -265,7 +265,7 @@ Variables are resolved in the configuration:
 
 ## State Management
 
-Tee automatically tracks the state of incremental models:
+t4t automatically tracks the state of incremental models:
 
 - **Execution timestamps**: When the model was last run
 - **SQL hashes**: Detects changes in model SQL

@@ -1,6 +1,6 @@
 # Data Quality Tests
 
-Tee provides a comprehensive data quality testing framework that allows you to automatically validate your data transformations. Tests are defined in model metadata and automatically executed after model creation.
+t4t provides a comprehensive data quality testing framework that allows you to automatically validate your data transformations. Tests are defined in model metadata and automatically executed after model creation.
 
 ## Overview
 

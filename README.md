@@ -8,7 +8,7 @@ A Python framework for managing SQL data transformations with support for multip
 
 ## 🚀 Quick Start
 
-Since this is an initial release, there's no pip package available yet. The only way to use Tee is by cloning this repository:
+Since this is an initial release, there's no pip package available yet. The only way to use t4t is by cloning this repository:
 
 ```bash
 # Clone the repository
@@ -55,7 +55,7 @@ uv run tcli run .
 
 ## 📦 Installation
 
-**Note**: This is an initial release with no pip package available. You must clone this repository to use Tee.
+**Note**: This is an initial release with no pip package available. You must clone this repository to use t4t.
 
 ```bash
 # Clone the repository
@@ -76,7 +76,7 @@ uv add psycopg2-binary  # For PostgreSQL support
 
 ## 🛠️ CLI Commands
 
-Tee provides a comprehensive command-line interface through `tcli`. All commands can be run using `uv run tcli`:
+t4t provides a comprehensive command-line interface through `tcli`. All commands can be run using `uv run tcli`:
 
 ### Run Models
 Execute SQL models in your project:
