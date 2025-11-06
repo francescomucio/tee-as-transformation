@@ -7,7 +7,7 @@
 -- This query returns 0 rows if the table has 5+ rows (test passes)
 
 SELECT 1 as violation
-FROM {{ table_name }}
+FROM @table_name
 GROUP BY 1
 HAVING COUNT(*) < 5
 

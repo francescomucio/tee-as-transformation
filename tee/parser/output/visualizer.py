@@ -24,11 +24,21 @@ class DependencyVisualizer:
         """
         mermaid_lines = ["graph TD"]
 
+        # Add style definitions for test nodes
+        mermaid_lines.append("    classDef testNode fill:#e1f5ff,stroke:#01579b,stroke-width:2px")
+        mermaid_lines.append("")
+
         # Add nodes
         for node in sorted(graph["nodes"]):
             # Escape special characters in node names for Mermaid
             safe_node = self._escape_mermaid_node(node)
-            mermaid_lines.append(f'    {safe_node}["{node}"]')
+            if node.startswith("test:"):
+                # Test nodes: use different shape and style
+                test_name = node.replace("test:", "")
+                mermaid_lines.append(f'    {safe_node}["{test_name} (test)"]:::testNode')
+            else:
+                # Regular table nodes
+                mermaid_lines.append(f'    {safe_node}["{node}"]')
 
         # Add edges (dependencies)
         for dep, table in graph["edges"]:

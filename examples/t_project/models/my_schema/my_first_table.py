@@ -19,7 +19,8 @@ metadata: ModelMetadataDict = {
     "partitions": ["id"],
     "materialization": "table",
     "tests": [
-        "row_count_gt_0"
+        "row_count_gt_0",
+        "test_my_first_table"  # Table-specific test
         # Example: "example_custom_test" - Custom SQL test (requires table to have 5+ rows)
         # Example: {"name": "check_minimum_rows", "params": {"min_rows": 3}}
     ]

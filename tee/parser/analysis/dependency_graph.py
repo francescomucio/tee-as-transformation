@@ -2,23 +2,33 @@
 Dependency graph building and analysis functionality.
 """
 
-from typing import Dict, Any, List
+import logging
+from pathlib import Path
+from typing import Dict, Any, List, Optional
 from graphlib import TopologicalSorter
 
 from ..shared.types import ParsedModel, DependencyGraph, DependencyInfo, ExecutionOrder, GraphCycles
 from ..shared.exceptions import DependencyError
 
+logger = logging.getLogger(__name__)
+
 
 class DependencyGraphBuilder:
     """Handles dependency graph construction and analysis."""
 
-    def build_graph(self, parsed_models: Dict[str, ParsedModel], table_resolver) -> DependencyGraph:
+    def build_graph(
+        self,
+        parsed_models: Dict[str, ParsedModel],
+        table_resolver,
+        project_folder: Optional[Path] = None,
+    ) -> DependencyGraph:
         """
-        Build a dependency graph from the parsed SQL models.
+        Build a dependency graph from the parsed SQL models and tests.
 
         Args:
             parsed_models: Parsed SQL models
             table_resolver: TableResolver instance
+            project_folder: Optional project folder path for discovering tests
 
         Returns:
             Dict containing dependency graph information
@@ -29,10 +39,10 @@ class DependencyGraphBuilder:
         try:
             # Extract dependencies from parsed models
             dependencies = {}
-            all_tables = set()
+            all_nodes = set()
 
             for table_name, model_info in parsed_models.items():
-                all_tables.add(table_name)
+                all_nodes.add(table_name)
                 table_deps = set()
 
                 # Get dependencies from the parsed tables
@@ -49,12 +59,22 @@ class DependencyGraphBuilder:
 
                 dependencies[table_name] = list(table_deps)
 
+            # Parse tests and add them to the graph
+            if project_folder:
+                test_dependencies = self._parse_test_dependencies(
+                    parsed_models, project_folder, table_resolver
+                )
+                # Add test nodes and their dependencies
+                for test_node, test_deps in test_dependencies.items():
+                    all_nodes.add(test_node)
+                    dependencies[test_node] = test_deps
+
             # Build reverse dependencies (dependents)
-            dependents = {table: [] for table in all_tables}
-            for table, deps in dependencies.items():
+            dependents = {node: [] for node in all_nodes}
+            for node, deps in dependencies.items():
                 for dep in deps:
                     if dep in dependents:
-                        dependents[dep].append(table)
+                        dependents[dep].append(node)
 
             # Build edges for graph representation
             edges = []
@@ -69,7 +89,7 @@ class DependencyGraphBuilder:
             )
 
             return {
-                "nodes": list(all_tables),
+                "nodes": list(all_nodes),
                 "edges": edges,
                 "dependencies": dependencies,
                 "dependents": dependents,
@@ -78,6 +98,135 @@ class DependencyGraphBuilder:
             }
         except Exception as e:
             raise DependencyError(f"Failed to build dependency graph: {e}")
+
+    def _parse_test_dependencies(
+        self,
+        parsed_models: Dict[str, ParsedModel],
+        project_folder: Path,
+        table_resolver,
+    ) -> Dict[str, List[str]]:
+        """
+        Parse test SQL files to extract table dependencies using sqlglot.
+
+        Args:
+            parsed_models: Parsed SQL models
+            project_folder: Project folder path
+            table_resolver: TableResolver instance
+
+        Returns:
+            Dict mapping test_node -> list of table dependencies
+        """
+        test_dependencies = {}
+
+        try:
+            # Import here to avoid circular dependencies
+            from ...testing.test_discovery import TestDiscovery
+            from ...parser.parsers.sql_parser import SQLParser
+
+            # Discover tests
+            test_discovery = TestDiscovery(project_folder)
+            discovered_tests = test_discovery.discover_tests()
+
+            if not discovered_tests:
+                logger.debug("No tests discovered")
+                return test_dependencies
+
+            # Map tests to tables (from metadata)
+            test_to_tables = {}  # test_name -> [table_names]
+            for table_name, model_info in parsed_models.items():
+                metadata = self._extract_metadata(model_info)
+                if metadata and "tests" in metadata:
+                    for test_def in metadata["tests"]:
+                        test_name = (
+                            test_def if isinstance(test_def, str) else test_def.get("name")
+                        )
+                        if test_name and test_name in discovered_tests:
+                            if test_name not in test_to_tables:
+                                test_to_tables[test_name] = []
+                            test_to_tables[test_name].append(table_name)
+
+            # Parse test SQL to extract dependencies
+            sql_parser = SQLParser()
+
+            for test_name, sql_test in discovered_tests.items():
+                if test_name not in test_to_tables:
+                    # Test not referenced by any model, skip it
+                    continue
+
+                test_node = f"test:{test_name}"
+                all_test_deps = set()
+
+                # For each table that uses this test, parse the test SQL
+                for table_name in test_to_tables[test_name]:
+                    try:
+                        # Load test SQL
+                        test_sql = sql_test._load_sql_content()
+
+                        # Substitute @table_name and {{ table_name }} with actual table
+                        substituted_sql = test_sql.replace("@table_name", table_name)
+                        substituted_sql = substituted_sql.replace("{{ table_name }}", table_name)
+                        substituted_sql = substituted_sql.replace("{{table_name}}", table_name)
+
+                        # Parse with SQLParser (reuses existing sqlglot code!)
+                        parsed = sql_parser.parse(
+                            substituted_sql, file_path=str(sql_test.sql_file_path)
+                        )
+
+                        # Extract source tables from parsed result
+                        source_tables = (
+                            parsed.get("code", {}).get("sql", {}).get("source_tables", [])
+                        )
+
+                        # Resolve table references
+                        for ref_table in source_tables:
+                            full_ref = table_resolver.resolve_table_reference(
+                                ref_table, parsed_models
+                            )
+                            if full_ref and full_ref != table_name:
+                                all_test_deps.add(full_ref)
+
+                        # Test depends on the table it's testing
+                        all_test_deps.add(table_name)
+
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to parse test {test_name} for table {table_name}: {e}"
+                        )
+                        # Still add the table as a dependency even if parsing fails
+                        all_test_deps.add(table_name)
+
+                test_dependencies[test_node] = list(all_test_deps)
+                logger.debug(
+                    f"Test {test_name} depends on tables: {test_dependencies[test_node]}"
+                )
+
+        except ImportError as e:
+            logger.warning(f"Could not import test discovery: {e}")
+        except Exception as e:
+            logger.warning(f"Error parsing test dependencies: {e}")
+
+        return test_dependencies
+
+    def _extract_metadata(self, model_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Extract metadata from model data."""
+        try:
+            # First, try to get metadata from model_metadata
+            model_metadata = model_data.get("model_metadata", {})
+            if model_metadata and "metadata" in model_metadata:
+                nested_metadata = model_metadata["metadata"]
+                if nested_metadata:
+                    return nested_metadata
+
+            # Fallback to any other metadata in the model data
+            if "metadata" in model_data:
+                file_metadata = model_data["metadata"]
+                if file_metadata:
+                    return file_metadata
+
+            return None
+        except Exception as e:
+            logger.debug(f"Error extracting metadata: {e}")
+            return None
 
     def _detect_cycles(self, dependencies: DependencyInfo) -> GraphCycles:
         """

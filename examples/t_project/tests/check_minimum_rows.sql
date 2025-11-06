@@ -5,7 +5,7 @@
 -- Usage: {"name": "check_minimum_rows", "params": {"min_rows": 5}}
 
 SELECT 1 as violation
-FROM {{ table_name }}
+FROM @table_name
 GROUP BY 1
-HAVING COUNT(*) < {{ min_rows | default(10) }}
+HAVING COUNT(*) < @min_rows:10
 

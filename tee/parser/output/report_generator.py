@@ -52,6 +52,10 @@ class ReportGenerator:
 
             mermaid_diagram = self.visualizer.generate_mermaid_diagram(graph)
 
+            # Separate test nodes from table nodes
+            test_nodes = [node for node in graph["nodes"] if node.startswith("test:")]
+            table_nodes = [node for node in graph["nodes"] if not node.startswith("test:")]
+
             markdown_content = f"""# Dependency Graph Report
 
 ## Overview
@@ -60,7 +64,9 @@ This report provides a comprehensive analysis of the SQL model dependencies.
 
 ## Statistics
 
-- **Total Tables**: {len(graph["nodes"])}
+- **Total Tables**: {len(table_nodes)}
+- **Total Tests**: {len(test_nodes)}
+- **Total Nodes**: {len(graph["nodes"])}
 - **Total Dependencies**: {len(graph["edges"])}
 - **Circular Dependencies**: {len(graph["cycles"])}
 
@@ -80,25 +86,78 @@ This report provides a comprehensive analysis of the SQL model dependencies.
             else:
                 markdown_content += "No valid execution order (circular dependencies detected)\n"
 
-            markdown_content += "\n## Table Details\n\n"
+            # Add Tests Details section if there are any tests
+            if test_nodes:
+                markdown_content += "\n## Tests Details\n\n"
+                markdown_content += "The following tests are defined and integrated into the dependency graph:\n\n"
 
-            for table in sorted(graph["nodes"]):
+                for test_node in sorted(test_nodes):
+                    test_name = test_node.replace("test:", "")
+                    deps = graph["dependencies"][test_node]
+                    dependents = graph["dependents"][test_node]
+
+                    markdown_content += f"### `{test_name}`\n\n"
+
+                    if deps:
+                        # Filter out the table being tested from dependencies (it's always there)
+                        test_targets = [dep for dep in deps if not dep.startswith("test:")]
+                        other_deps = [dep for dep in deps if dep.startswith("test:")]
+                        
+                        if test_targets:
+                            markdown_content += f"**Tests**: {', '.join([f'`{dep}`' for dep in test_targets])}\n\n"
+                        if other_deps:
+                            test_names = [dep.replace("test:", "") for dep in other_deps]
+                            markdown_content += f"**Depends on tests**: {', '.join([f'`{name}`' for name in test_names])}\n\n"
+                    else:
+                        markdown_content += "**No dependencies**\n\n"
+
+                    if dependents:
+                        markdown_content += (
+                            f"**Used by**: {', '.join([f'`{dep}`' for dep in dependents])}\n\n"
+                        )
+                    else:
+                        markdown_content += "**No dependents**\n\n"
+
+            markdown_content += "\n## Transformation Details\n\n"
+
+            # Only include table nodes in the transformation details section (exclude tests)
+            for table in sorted(table_nodes):
                 deps = graph["dependencies"][table]
                 dependents = graph["dependents"][table]
 
                 markdown_content += f"### `{table}`\n\n"
 
                 if deps:
-                    markdown_content += (
-                        f"**Depends on**: {', '.join([f'`{dep}`' for dep in deps])}\n\n"
-                    )
+                    # Filter out test nodes from dependencies display
+                    table_deps = [dep for dep in deps if not dep.startswith("test:")]
+                    test_deps = [dep for dep in deps if dep.startswith("test:")]
+                    
+                    if table_deps:
+                        markdown_content += (
+                            f"**Depends on**: {', '.join([f'`{dep}`' for dep in table_deps])}\n\n"
+                        )
+                    if test_deps:
+                        test_names = [dep.replace("test:", "") for dep in test_deps]
+                        markdown_content += (
+                            f"**Has tests**: {', '.join([f'`{name}`' for name in test_names])}\n\n"
+                        )
                 else:
                     markdown_content += "**No dependencies** (base table)\n\n"
 
                 if dependents:
-                    markdown_content += (
-                        f"**Used by**: {', '.join([f'`{dep}`' for dep in dependents])}\n\n"
-                    )
+                    # Filter out test nodes from dependents display
+                    table_dependents = [dep for dep in dependents if not dep.startswith("test:")]
+                    test_dependents = [dep for dep in dependents if dep.startswith("test:")]
+                    
+                    if table_dependents:
+                        markdown_content += (
+                            f"**Used by**: {', '.join([f'`{dep}`' for dep in table_dependents])}\n\n"
+                        )
+                    if test_dependents:
+                        test_names = [dep.replace("test:", "") for dep in test_dependents]
+                        markdown_content += (
+                            f"**Tested by**: {', '.join([f'`{name}`' for name in test_names])}\n\n"
+                        )
                 else:
                     markdown_content += "**No dependents** (leaf table)\n\n"
 

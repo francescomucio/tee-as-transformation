@@ -188,6 +188,9 @@ class ExecutionEngine:
         # Build table mapping for resolving references
         table_mapping = {}
         for table_name in execution_order:
+            # Skip test nodes
+            if table_name.startswith("test:"):
+                continue
             if table_name in parsed_models:
                 model_data = parsed_models[table_name]
                 tables = model_data.get("tables", [])
@@ -199,6 +202,11 @@ class ExecutionEngine:
                             break
 
         for table_name in execution_order:
+            # Skip test nodes - they are executed separately by TestExecutor
+            if table_name.startswith("test:"):
+                self.logger.debug(f"Skipping test node: {table_name}")
+                continue
+
             try:
                 self.logger.info(f"Executing model: {table_name}")
 

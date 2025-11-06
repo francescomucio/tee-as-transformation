@@ -176,9 +176,9 @@ class ParserOrchestrator:
 
             logger.info("Building dependency graph")
 
-            # Build the graph
+            # Build the graph (pass project_folder for test discovery)
             self._dependency_graph = self.dependency_builder.build_graph(
-                parsed_models, self.table_resolver
+                parsed_models, self.table_resolver, project_folder=Path(self.project_folder)
             )
 
             logger.info(f"Built dependency graph with {len(self._dependency_graph['nodes'])} nodes")
