@@ -23,8 +23,7 @@ venv/
 site/
 
 # Development/Test projects
-t_project/
-t_project_sno/
+examples/
 test_project/
 test_execution.duckdb
 

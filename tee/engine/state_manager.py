@@ -9,7 +9,7 @@ and state tracking.
 import hashlib
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
@@ -129,7 +129,7 @@ class StateManager:
     ) -> None:
         """Save or update model state."""
         conn = self._get_connection()
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).isoformat()
 
         # Check if model exists
         existing_state = self.get_model_state(model_name)
@@ -196,7 +196,7 @@ class StateManager:
         )
 
         # Update the state with new processed value
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).isoformat()
         self.save_model_state(
             model_name=model_name,
             materialization=state.materialization,
@@ -225,7 +225,7 @@ class StateManager:
             return None
 
         # Create a basic state entry for existing models
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).isoformat()
         state = ModelState(
             model_name=model_name,
             materialization="unknown",  # We don't know the original materialization

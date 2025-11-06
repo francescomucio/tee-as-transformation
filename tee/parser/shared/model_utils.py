@@ -51,25 +51,22 @@ def create_model_metadata(
     return result
 
 
-def compute_sqlglot_hash(sqlglot_data: Dict[str, Any]) -> str:
+def compute_sqlglot_hash(sql_data: Dict[str, Any]) -> str:
     """
-    Compute SHA256 hash of the qualified_sql from sqlglot data.
+    Compute SHA256 hash of the resolved_sql from code data.
 
     Args:
-        sqlglot_data: SQLGlot data containing qualified_sql
+        sql_data: Dictionary containing resolved_sql
 
     Returns:
-        SHA256 hash of the qualified_sql as hexadecimal string
+        SHA256 hash of the resolved_sql as hexadecimal string
     """
-    if not sqlglot_data or "qualified_sql" not in sqlglot_data:
+    resolved_sql = sql_data.get("resolved_sql")
+    if not resolved_sql:
         return ""
 
-    qualified_sql = sqlglot_data["qualified_sql"]
-    if not qualified_sql:
-        return ""
-
-    # Compute SHA256 hash of the qualified SQL
-    return hashlib.sha256(qualified_sql.encode("utf-8")).hexdigest()
+    # Compute SHA256 hash of the resolved SQL
+    return hashlib.sha256(resolved_sql.encode("utf-8")).hexdigest()
 
 
 def standardize_parsed_model(
@@ -79,7 +76,7 @@ def standardize_parsed_model(
     is_python_model: bool = False,
 ) -> Dict[str, Any]:
     """
-    Standardize a parsed model to have both sqlglot and model_metadata keys.
+    Standardize a parsed model to have both code and model_metadata keys.
 
     Args:
         model_data: Current model data
@@ -88,7 +85,7 @@ def standardize_parsed_model(
         is_python_model: Whether this is a Python model
 
     Returns:
-        Standardized model data with sqlglot and model_metadata keys
+        Standardized model data with code and model_metadata keys
     """
     # Extract existing metadata
     if is_python_model:
@@ -110,8 +107,8 @@ def standardize_parsed_model(
             metadata=metadata,
         )
 
-        # Keep sqlglot data (may be None for unexecuted Python models)
-        sqlglot_data = model_data.get("sqlglot")
+        # Keep code data (may be None for unexecuted Python models)
+        code_data = model_data.get("code")
 
     else:
         # For SQL models, create model_metadata from table_name
@@ -119,15 +116,17 @@ def standardize_parsed_model(
             table_name=table_name, file_path=file_path, description=f"SQL model for {table_name}"
         )
 
-        # Keep existing sqlglot data
-        sqlglot_data = model_data.get("sqlglot", {})
+        # Keep existing code data
+        code_data = model_data.get("code", {})
 
-    # Compute hash of the qualified SQL for change detection
-    sqlglot_hash = compute_sqlglot_hash(sqlglot_data)
+    # Compute hash of the resolved SQL for change detection
+    sqlglot_hash = ""
+    if code_data and "sql" in code_data:
+        sqlglot_hash = compute_sqlglot_hash(code_data["sql"])
 
     # Return standardized structure
     result = {
-        "sqlglot": sqlglot_data,
+        "code": code_data,
         "model_metadata": model_metadata,
         "sqlglot_hash": sqlglot_hash,
     }

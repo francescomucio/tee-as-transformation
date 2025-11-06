@@ -193,49 +193,30 @@ class SQLParser(BaseParser):
             # Convert expression to SQL string
             sql_content = str(expr)
 
-            # Extract various components from the expression
-            sqlglot_data = {
-                "sql_content": sql_content.strip(),
-                "parsed_ast": str(expr),
-                "sql_type": expr.key if hasattr(expr, "key") else "unknown",
-            }
-
             # Extract table references
-            tables = []
+            source_tables = []
             for table in expr.find_all(sqlglot.exp.Table):
-                tables.append(table.name)
-            sqlglot_data["tables"] = tables
+                source_tables.append(table.name)
 
-            # Generate qualified SQL with table reference resolution if table_name provided
+            # Generate resolved SQL with table reference resolution if table_name provided
             if table_name:
-                qualified_sql = generate_qualified_sql(str(expr), tables, table_name)
+                resolved_sql = generate_qualified_sql(str(expr), source_tables, table_name)
 
-                # Validate qualified SQL length and log warning if significantly different
-                validate_qualified_sql(sql_content.strip(), qualified_sql, table_name)
-
-                # Add qualified SQL to the data
-                sqlglot_data["qualified_sql"] = qualified_sql
+                # Validate resolved SQL length and log warning if significantly different
+                validate_qualified_sql(sql_content.strip(), resolved_sql, table_name)
             else:
-                # No table name provided, use original SQL as qualified SQL
-                sqlglot_data["qualified_sql"] = sql_content.strip()
+                # No table name provided, use original SQL as resolved SQL
+                resolved_sql = sql_content.strip()
 
-            # Extract column references
-            columns = []
-            for column in expr.find_all(sqlglot.exp.Column):
-                columns.append(column.name)
-            sqlglot_data["columns"] = columns
-
-            # Extract function calls
-            functions = []
-            for func in expr.find_all(sqlglot.exp.Func):
-                functions.append(func.name)
-            sqlglot_data["functions"] = functions
-
-            # Extract aliases
-            aliases = []
-            for alias in expr.find_all(sqlglot.exp.Alias):
-                aliases.append(alias.alias)
-            sqlglot_data["aliases"] = aliases
+            # Build code structure with new field names
+            code_data = {
+                "sql": {
+                    "original_sql": sql_content.strip(),
+                    "resolved_sql": resolved_sql,
+                    "operation_type": expr.key if hasattr(expr, "key") else "unknown",
+                    "source_tables": source_tables,
+                }
+            }
 
             # Parse additional metadata from companion Python file
             additional_metadata = None
@@ -250,12 +231,12 @@ class SQLParser(BaseParser):
                 metadata=additional_metadata,
             )
 
-            # Compute hash of the qualified SQL for change detection
-            sqlglot_hash = compute_sqlglot_hash(sqlglot_data)
+            # Compute hash of the resolved SQL for change detection
+            sqlglot_hash = compute_sqlglot_hash({"resolved_sql": resolved_sql})
 
-            # Return standardized structure with both sqlglot and model_metadata
+            # Return standardized structure with code and model_metadata
             return {
-                "sqlglot": sqlglot_data,
+                "code": code_data,
                 "model_metadata": model_metadata,
                 "sqlglot_hash": sqlglot_hash,
             }

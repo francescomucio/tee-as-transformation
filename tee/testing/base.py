@@ -13,6 +13,8 @@ from dataclasses import dataclass
 class TestSeverity(Enum):
     """Severity level for test failures."""
 
+    __test__ = False  # Tell pytest this is not a test class
+
     ERROR = "error"
     WARNING = "warning"
 
@@ -20,6 +22,8 @@ class TestSeverity(Enum):
 @dataclass
 class TestResult:
     """Result of a test execution."""
+
+    __test__ = False  # Tell pytest this is not a test class
 
     test_name: str
     table_name: str

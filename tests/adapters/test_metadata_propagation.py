@@ -9,16 +9,27 @@ import os
 import sys
 import tempfile
 import pytest
-import shutil
 from pathlib import Path
 
 # Add the project root to the path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
+from unittest.mock import MagicMock, patch
+
 from tee.executor import execute_models
 from tee.adapters.duckdb.adapter import DuckDBAdapter
+from tee.adapters.snowflake.adapter import SnowflakeAdapter
 from tee.adapters.base import AdapterConfig
+from tests.adapters.fixtures.metadata_fixtures import (
+    USERS_METADATA,
+    PRODUCTS_METADATA,
+    ORDERS_METADATA,
+    PRIORITY_TEST_METADATA,
+    MALFORMED_METADATA,
+    LONG_DESCRIPTION_METADATA,
+    INVALID_SCHEMA_TYPE_METADATA,
+)
 
 
 class TestMetadataPropagation:
@@ -42,7 +53,7 @@ class TestMetadataPropagation:
             config = {"type": "duckdb", "path": db_path}
 
             # Test project folder
-            project_folder = "t_project_sno"
+            project_folder = "examples/t_project_sno"
 
             # Execute models
             results = execute_models(project_folder, config, save_analysis=False)
@@ -160,15 +171,153 @@ class TestMetadataPropagation:
 
     def test_metadata_priority(self):
         """Test that decorator metadata takes priority over file metadata."""
-        # This test would verify that when both decorator and file metadata exist,
-        # the decorator metadata is used. This is more of an integration test
-        # that would require setting up a test model with both types of metadata.
-        pass
+        # Create a temporary DuckDB database
+        with tempfile.NamedTemporaryFile(suffix=".duckdb", delete=False) as tmp_file:
+            db_path = tmp_file.name
+
+        tmp_file.close()
+
+        if os.path.exists(db_path):
+            os.unlink(db_path)
+
+        try:
+            # Create a temporary project directory
+            with tempfile.TemporaryDirectory() as tmpdir:
+                project_dir = Path(tmpdir)
+                
+                # Create data directory for state database
+                data_dir = project_dir / "data"
+                data_dir.mkdir()
+                
+                # Create models directory
+                models_dir = project_dir / "models"
+                models_dir.mkdir()
+                
+                # Create a Python model file with decorator metadata
+                model_file = models_dir / "test_model.py"
+                model_file.write_text("""
+from tee.parser.processing.model_decorator import model
+from sqlglot import exp
+
+@model(
+    table_name="test_schema.priority_test",
+    metadata={
+        "schema": [
+            {"name": "id", "datatype": "integer", "description": "DECORATOR: This should win"},
+            {"name": "name", "datatype": "string", "description": "DECORATOR: This should take priority"},
+        ]
+    }
+)
+def test_model():
+    return exp.select("1 as id", "'test' as name")
+""")
+                
+                # Create a companion metadata file with conflicting metadata (file metadata)
+                metadata_file = models_dir / "test_model_metadata.py"
+                metadata_file.write_text("""
+metadata = {
+    "schema": [
+        {"name": "id", "datatype": "integer", "description": "FILE: This should be ignored"},
+        {"name": "name", "datatype": "string", "description": "FILE: This should be ignored"},
+    ]
+}
+""")
+                
+                # Create project.toml
+                project_toml = project_dir / "project.toml"
+                project_toml.write_text("""
+project_folder = "."
+[connection]
+type = "duckdb"
+path = "{db_path}"
+""".format(db_path=db_path))
+                
+                # Execute models
+                config = {"type": "duckdb", "path": db_path}
+                results = execute_models(str(project_dir), config, save_analysis=False)
+                
+                # Verify the model was executed
+                assert "test_schema.priority_test" in results["executed_tables"]
+                
+                # Check that decorator metadata (not file metadata) was used
+                import duckdb
+                conn = duckdb.connect(db_path)
+                try:
+                    result = conn.execute("""
+                        SELECT column_name, column_comment 
+                        FROM information_schema.columns 
+                        WHERE table_name = 'priority_test' 
+                        AND table_schema = 'test_schema'
+                        ORDER BY ordinal_position
+                    """).fetchall()
+                    
+                    # Verify decorator metadata descriptions were used
+                    comments = {row[0]: row[1] for row in result}
+                    assert "id" in comments
+                    assert "name" in comments
+                    # Decorator metadata should have won
+                    assert "DECORATOR" in comments.get("id", "")
+                    assert "DECORATOR" in comments.get("name", "")
+                    # File metadata should NOT be present
+                    assert "FILE" not in comments.get("id", "")
+                    assert "FILE" not in comments.get("name", "")
+                finally:
+                    conn.close()
+
+        finally:
+            if os.path.exists(db_path):
+                os.unlink(db_path)
 
     def test_snowflake_metadata_propagation(self):
         """Test that column descriptions are properly stored in Snowflake."""
-        # This test would require Snowflake credentials and is skipped by default
-        pytest.skip("Snowflake test requires credentials")
+        # Mock Snowflake connection
+        snowflake_config = {
+            "type": "snowflake",
+            "host": "test.snowflakecomputing.com",
+            "user": "test_user",
+            "password": "test_password",
+            "database": "test_db",
+            "schema": "test_schema",
+        }
+        
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_cursor.fetchone.return_value = (0,)  # Schema doesn't exist
+        
+        with patch("tee.adapters.snowflake.adapter.snowflake.connector.connect") as mock_connect:
+            mock_connect.return_value = mock_conn
+            adapter = SnowflakeAdapter(snowflake_config)
+            adapter.connection = mock_conn
+            
+            # Test metadata with column descriptions
+            metadata = {
+                "description": "Test table",
+                "schema": [
+                    {
+                        "name": "id",
+                        "datatype": "integer",
+                        "description": "Primary key identifier"
+                    },
+                    {
+                        "name": "name",
+                        "datatype": "varchar",
+                        "description": "User name"
+                    }
+                ]
+            }
+            
+            # Create table with metadata
+            adapter.create_table("test_schema.test_table", "SELECT 1 as id, 'test' as name", metadata=metadata)
+            
+            # Verify that COMMENT ON COLUMN was called for each column
+            comment_calls = [str(call) for call in mock_cursor.execute.call_args_list if "COMMENT ON COLUMN" in str(call)]
+            assert len(comment_calls) == 2, f"Expected 2 COMMENT ON COLUMN calls, got {len(comment_calls)}"
+            
+            # Verify the comments contain the descriptions
+            all_calls = [str(call) for call in mock_cursor.execute.call_args_list]
+            assert any("Primary key identifier" in call for call in all_calls)
+            assert any("User name" in call for call in all_calls)
 
     def test_error_handling_malformed_metadata(self):
         """Test that malformed metadata is properly handled."""
@@ -196,183 +345,5 @@ class TestMetadataPropagation:
             adapter._validate_column_metadata(malformed_metadata)
 
         # Test invalid schema type
-        invalid_schema_metadata = {
-            "schema": "not_a_list"  # Should be a list, not a string
-        }
-
         with pytest.raises(ValueError, match="Schema must be a list of column definitions"):
-            adapter._validate_column_metadata(invalid_schema_metadata)
-
-
-# Test model fixtures for metadata testing
-class TestMetadataModels:
-    """Test models with metadata for testing purposes."""
-
-    @staticmethod
-    def create_users_with_descriptions():
-        """Create a users table with detailed column descriptions."""
-        from sqlglot import exp
-
-        return exp.select("*").from_("my_first_table")
-
-    @staticmethod
-    def create_products_with_descriptions():
-        """Create a products table with column descriptions."""
-        from sqlglot import exp
-
-        return exp.select("*").from_("my_first_table")
-
-    @staticmethod
-    def create_orders_with_descriptions():
-        """Create an orders table with column descriptions."""
-        from sqlglot import exp
-
-        return exp.select("*").from_("my_first_table")
-
-    @staticmethod
-    def create_priority_test_table():
-        """Create a table to test metadata priority."""
-        from sqlglot import exp
-
-        return exp.select("*").from_("my_first_table")
-
-    @staticmethod
-    def create_malformed_metadata_table():
-        """Create a table with malformed metadata."""
-        from sqlglot import exp
-
-        return exp.select("*").from_("my_first_table")
-
-    @staticmethod
-    def create_long_description_table():
-        """Create a table with description that's too long."""
-        from sqlglot import exp
-
-        return exp.select("*").from_("my_first_table")
-
-    @staticmethod
-    def create_invalid_schema_type_table():
-        """Create a table with invalid schema type."""
-        from sqlglot import exp
-
-        return exp.select("*").from_("my_first_table")
-
-
-# Metadata fixtures for testing
-USERS_METADATA = {
-    "schema": [
-        {"name": "id", "datatype": "integer", "description": "Unique identifier for the user"},
-        {
-            "name": "username",
-            "datatype": "string",
-            "description": "User's login username, must be unique",
-        },
-        {
-            "name": "email",
-            "datatype": "string",
-            "description": "User's email address for notifications",
-        },
-        {
-            "name": "created_at",
-            "datatype": "timestamp",
-            "description": "Timestamp when the user account was created",
-        },
-        {
-            "name": "is_active",
-            "datatype": "boolean",
-            "description": "Whether the user account is currently active",
-        },
-    ]
-}
-
-PRODUCTS_METADATA = {
-    "schema": [
-        {"name": "product_id", "datatype": "integer", "description": "Primary key for the product"},
-        {
-            "name": "product_name",
-            "datatype": "string",
-            "description": "Display name of the product",
-        },
-        {
-            "name": "price",
-            "datatype": "number",
-            "description": "Product price in USD, stored as decimal",
-        },
-        {
-            "name": "category",
-            "datatype": "string",
-            "description": "Product category for grouping and filtering",
-        },
-        {
-            "name": "in_stock",
-            "datatype": "boolean",
-            "description": "Whether the product is currently available for purchase",
-        },
-    ]
-}
-
-ORDERS_METADATA = {
-    "schema": [
-        {"name": "order_id", "datatype": "integer", "description": "Unique order identifier"},
-        {
-            "name": "user_id",
-            "datatype": "integer",
-            "description": "Foreign key reference to users table",
-        },
-        {
-            "name": "total_amount",
-            "datatype": "number",
-            "description": "Total order value including tax and shipping",
-        },
-        {
-            "name": "order_date",
-            "datatype": "timestamp",
-            "description": "Date and time when the order was placed",
-        },
-        {
-            "name": "status",
-            "datatype": "string",
-            "description": "Current order status: pending, shipped, delivered, cancelled",
-        },
-    ]
-}
-
-PRIORITY_TEST_METADATA = {
-    "schema": [
-        {
-            "name": "id",
-            "datatype": "integer",
-            "description": "DECORATOR: This description should take priority",
-        },
-        {
-            "name": "name",
-            "datatype": "string",
-            "description": "DECORATOR: This description should take priority over file metadata",
-        },
-    ]
-}
-
-MALFORMED_METADATA = {
-    "schema": [
-        {"name": "id", "datatype": "integer", "description": "Valid description"},
-        {
-            # Missing 'name' field - should cause error
-            "datatype": "string",
-            "description": "This should cause an error",
-        },
-    ]
-}
-
-LONG_DESCRIPTION_METADATA = {
-    "schema": [
-        {
-            "name": "id",
-            "datatype": "integer",
-            "description": "A" * 5000,  # This should exceed the 4000 character limit
-        }
-    ]
-}
-
-INVALID_SCHEMA_TYPE_METADATA = {
-    "schema": "not_a_list"  # Should be a list, not a string
-}
+            adapter._validate_column_metadata(INVALID_SCHEMA_TYPE_METADATA)

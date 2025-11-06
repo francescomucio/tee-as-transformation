@@ -5,6 +5,7 @@ Pytest configuration and shared fixtures for TEE tests.
 import pytest
 import tempfile
 import os
+from pathlib import Path
 from typing import Dict, Any
 
 from tee.engine.config import AdapterConfig
@@ -21,6 +22,17 @@ def temp_db_path():
     # Cleanup
     if os.path.exists(temp_path):
         os.unlink(temp_path)
+
+
+@pytest.fixture
+def temp_project_dir():
+    """Create a temporary project directory with data subdirectory for state database."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        # Create data directory for state database
+        data_dir = tmpdir_path / "data"
+        data_dir.mkdir()
+        yield tmpdir_path
 
 
 @pytest.fixture
@@ -148,14 +160,14 @@ def pytest_configure(config):
 def pytest_collection_modifyitems(config, items):
     """Modify test collection to add markers."""
     for item in items:
-        # Add unit marker to tests in test_incremental_executor.py
-        if "test_incremental_executor.py" in str(item.fspath):
+        # Add unit marker to tests in engine/incremental/ (incremental executor tests)
+        if "engine/incremental/" in str(item.fspath):
             item.add_marker(pytest.mark.unit)
 
-        # Add integration marker to tests in test_duckdb_incremental.py
-        if "test_duckdb_incremental.py" in str(item.fspath):
+        # Add integration marker to tests in adapters/duckdb/test_incremental.py
+        if "adapters/duckdb/test_incremental.py" in str(item.fspath):
             item.add_marker(pytest.mark.integration)
 
         # Add slow marker to performance tests
-        if "performance" in item.name or "large_dataset" in item.name:
+        if "performance" in item.name or "large_dataset" in item.name or "test_incremental_performance.py" in str(item.fspath):
             item.add_marker(pytest.mark.slow)

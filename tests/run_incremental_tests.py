@@ -34,7 +34,7 @@ def run_command(cmd, description):
 
 def run_unit_tests():
     """Run unit tests for incremental executor."""
-    cmd = ["uv", "run", "pytest", "tests/engine/test_incremental_executor.py", "-v", "--tb=short"]
+    cmd = ["uv", "run", "pytest", "tests/engine/incremental/", "-v", "--tb=short"]
     return run_command(cmd, "Unit Tests - Incremental Executor")
 
 
@@ -53,7 +53,7 @@ def run_adapter_interface_tests():
 
 def run_duckdb_tests():
     """Run DuckDB-specific tests."""
-    cmd = ["uv", "run", "pytest", "tests/adapters/test_duckdb_incremental.py", "-v", "--tb=short"]
+    cmd = ["uv", "run", "pytest", "tests/adapters/duckdb/test_incremental.py", "-v", "--tb=short"]
     return run_command(cmd, "DuckDB Integration Tests")
 
 
@@ -63,7 +63,7 @@ def run_performance_tests():
         "uv",
         "run",
         "pytest",
-        "tests/adapters/test_duckdb_incremental.py::TestDuckDBIncrementalPerformance",
+        "tests/adapters/duckdb/test_incremental_performance.py",
         "-v",
         "--tb=short",
         "-m",
@@ -78,9 +78,9 @@ def run_all_tests():
         "uv",
         "run",
         "pytest",
-        "tests/engine/test_incremental_executor.py",
+        "tests/engine/incremental/",
         "tests/engine/test_incremental_adapter_interface.py",
-        "tests/adapters/test_duckdb_incremental.py",
+        "tests/adapters/duckdb/test_incremental.py",
         "-v",
         "--tb=short",
     ]
@@ -93,9 +93,9 @@ def run_coverage_tests():
         "uv",
         "run",
         "pytest",
-        "tests/engine/test_incremental_executor.py",
+        "tests/engine/incremental/",
         "tests/engine/test_incremental_adapter_interface.py",
-        "tests/adapters/test_duckdb_incremental.py",
+        "tests/adapters/duckdb/test_incremental.py",
         "--cov=tee.engine.incremental_executor",
         "--cov=tee.adapters.duckdb.adapter",
         "--cov-report=html",

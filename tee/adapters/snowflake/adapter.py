@@ -167,7 +167,7 @@ class SnowflakeAdapter(DatabaseAdapter):
         if not self.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
 
-        # Create schema if needed
+        # Create schema if needed (schema tags will be handled by execution engine)
         self._create_schema_if_needed(table_name)
 
         # Use 3-part naming for the table (DATABASE.SCHEMA.TABLE)
@@ -197,12 +197,22 @@ class SnowflakeAdapter(DatabaseAdapter):
                     column_descriptions = self._validate_column_metadata(metadata)
                     if column_descriptions:
                         self._add_column_comments(qualified_table_name, column_descriptions)
+
+                    # Add tags (dbt-style, list of strings) if present
+                    tags = metadata.get("tags", [])
+                    if tags:
+                        self.attach_tags("TABLE", qualified_table_name, tags)
+
+                    # Add object_tags (database-style, key-value pairs) if present
+                    object_tags = metadata.get("object_tags", {})
+                    if object_tags and isinstance(object_tags, dict):
+                        self.attach_object_tags("TABLE", qualified_table_name, object_tags)
                 except ValueError as e:
                     self.logger.error(f"Invalid metadata for table {table_name}: {e}")
                     raise
                 except Exception as e:
-                    self.logger.warning(f"Could not add comments for table {table_name}: {e}")
-                    # Don't raise here - table creation succeeded, comments are optional
+                    self.logger.warning(f"Could not add comments/tags for table {table_name}: {e}")
+                    # Don't raise here - table creation succeeded, comments/tags are optional
 
         except Exception as e:
             self.logger.error(f"Failed to create table {table_name}: {e}")
@@ -242,6 +252,26 @@ class SnowflakeAdapter(DatabaseAdapter):
             cursor.execute(create_query)
             cursor.close()
             self.logger.info(f"Created view: {view_name}")
+
+            # Add tags if metadata is provided
+            if metadata:
+                # Add tags (dbt-style, list of strings) if present
+                tags = metadata.get("tags", [])
+                if tags:
+                    try:
+                        self.attach_tags("VIEW", qualified_view_name, tags)
+                    except Exception as e:
+                        self.logger.warning(f"Could not add tags for view {view_name}: {e}")
+                        # Don't raise here - view creation succeeded, tags are optional
+
+                # Add object_tags (database-style, key-value pairs) if present
+                object_tags = metadata.get("object_tags", {})
+                if object_tags and isinstance(object_tags, dict):
+                    try:
+                        self.attach_object_tags("VIEW", qualified_view_name, object_tags)
+                    except Exception as e:
+                        self.logger.warning(f"Could not add object_tags for view {view_name}: {e}")
+                        # Don't raise here - view creation succeeded, tags are optional
 
             # Note: View and column comments are now included inline during creation
 
@@ -371,19 +401,26 @@ class SnowflakeAdapter(DatabaseAdapter):
         if not self.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
         try:
-            # Extract plain table name for information_schema lookup
+            # Extract schema and table name for information_schema lookup
             if "." in table_name:
-                _, table_name_only = table_name.split(".", 1)
+                parts = table_name.split(".", 1)
+                if len(parts) == 2:
+                    schema_name, table_name_only = parts
+                else:
+                    schema_name = self.config.schema or "PUBLIC"
+                    table_name_only = parts[0]
             else:
+                schema_name = self.config.schema or "PUBLIC"
                 table_name_only = table_name
+            
             rows = self._execute_with_cursor(
                 """
                 SELECT column_name
                 FROM information_schema.columns
-                WHERE table_name = %s
+                WHERE table_schema = UPPER(%s) AND table_name = UPPER(%s)
                 ORDER BY ordinal_position
                 """,
-                (table_name_only,),
+                (schema_name, table_name_only),
             )
             return [r[0] for r in rows]
         except Exception as e:
@@ -485,18 +522,56 @@ class SnowflakeAdapter(DatabaseAdapter):
             return f"{database_name}.{object_name}"
         return f"{database_name}.{object_name}"
 
-    def _create_schema_if_needed(self, object_name: str) -> None:
-        """Create schema if needed for the given object name."""
+    def _create_schema_if_needed(
+        self, object_name: str, schema_metadata: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """
+        Create schema if needed for the given object name and attach tags if provided.
+
+        Args:
+            object_name: Object name (e.g., "schema.table")
+            schema_metadata: Optional metadata containing tags and object_tags for the schema
+        """
         if "." in object_name:
             schema_name, _ = object_name.split(".", 1)
             database_name = self.config.database
+            qualified_schema_name = f"{database_name}.{schema_name}"
+            
             try:
                 cursor = self.connection.cursor()
-                cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {database_name}.{schema_name}")
+                # Check if schema exists
+                cursor.execute(
+                    f"SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = '{schema_name}'"
+                )
+                schema_exists = cursor.fetchone()[0] > 0
+                
+                if not schema_exists:
+                    cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {qualified_schema_name}")
+                    self.logger.debug(f"Created schema: {qualified_schema_name}")
+                else:
+                    self.logger.debug(f"Schema already exists: {qualified_schema_name}")
+                
+                # Attach tags if schema was just created or if metadata is provided
+                if schema_metadata and (not schema_exists or schema_metadata.get("force_tag_update", False)):
+                    try:
+                        # Add tags (dbt-style, list of strings) if present
+                        tags = schema_metadata.get("tags", [])
+                        if tags:
+                            self.attach_tags("SCHEMA", qualified_schema_name, tags)
+                        
+                        # Add object_tags (database-style, key-value pairs) if present
+                        object_tags = schema_metadata.get("object_tags", {})
+                        if object_tags and isinstance(object_tags, dict):
+                            self.attach_object_tags("SCHEMA", qualified_schema_name, object_tags)
+                    except Exception as e:
+                        self.logger.warning(
+                            f"Could not add tags to schema {qualified_schema_name}: {e}"
+                        )
+                        # Don't raise - schema creation succeeded, tags are optional
+                
                 cursor.close()
-                self.logger.debug(f"Created schema: {database_name}.{schema_name}")
             except Exception as e:
-                self.logger.warning(f"Could not create schema {database_name}.{schema_name}: {e}")
+                self.logger.warning(f"Could not create schema {qualified_schema_name}: {e}")
 
     def _execute_with_cursor(self, query: str, params: Optional[tuple] = None) -> Any:
         """Execute a query with proper cursor management."""
@@ -687,6 +762,204 @@ class SnowflakeAdapter(DatabaseAdapter):
                     # Continue with other columns even if one fails
         finally:
             cursor.close()
+
+    def attach_tags(
+        self, object_type: str, object_name: str, tags: List[str]
+    ) -> None:
+        """
+        Attach tags to a Snowflake database object.
+
+        Snowflake supports tags on tables, views, and other objects using:
+        ALTER TABLE/VIEW object_name SET TAG tag_name = 'tag_value'
+
+        For simple string tags, we create/use a generic 'tag' tag and set values.
+
+        Args:
+            object_type: Type of object ('TABLE', 'VIEW', etc.)
+            object_name: Fully qualified object name (DATABASE.SCHEMA.OBJECT)
+            tags: List of tag strings to attach
+        """
+        if not self.connection:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+
+        if not tags:
+            return
+
+        cursor = self.connection.cursor()
+        try:
+            # For each tag, we'll use Snowflake's tag system
+            # Snowflake tags work as key-value pairs, so we'll create a generic 'tag' tag
+            # and set multiple values, or create individual tags for each value
+            
+            # Strategy: Create/use a generic 'tee_tags' tag and set comma-separated values
+            # OR create individual tags for each tag value
+            # We'll use the simpler approach: create a 'tee_tag' tag for each unique tag value
+            
+            for tag_value in tags:
+                if not tag_value or not isinstance(tag_value, str) or not tag_value.strip():
+                    continue
+                
+                # Sanitize tag name (Snowflake tag names must be valid identifiers)
+                # Use a prefix to avoid conflicts
+                sanitized_tag = f"tee_tag_{tag_value.replace(' ', '_').replace('-', '_').lower()}"
+                # Truncate if too long (Snowflake has limits)
+                if len(sanitized_tag) > 128:
+                    sanitized_tag = sanitized_tag[:128]
+                
+                try:
+                    # Create tag if it doesn't exist (ignore error if it exists)
+                    try:
+                        create_tag_sql = f"CREATE TAG IF NOT EXISTS {sanitized_tag}"
+                        cursor.execute(create_tag_sql)
+                        self.logger.debug(f"Created tag: {sanitized_tag}")
+                    except Exception:
+                        # Tag might already exist, continue
+                        pass
+                    
+                    # Attach tag to object
+                    # Snowflake syntax: ALTER TABLE/VIEW object SET TAG tag_name = 'value'
+                    alter_sql = f"ALTER {object_type} {object_name} SET TAG {sanitized_tag} = '{tag_value.replace("'", "''")}'"
+                    cursor.execute(alter_sql)
+                    self.logger.debug(f"Attached tag {sanitized_tag}='{tag_value}' to {object_type} {object_name}")
+                    
+                except Exception as e:
+                    self.logger.warning(
+                        f"Could not attach tag '{tag_value}' to {object_type} {object_name}: {e}"
+                    )
+                    # Continue with other tags even if one fails
+                    continue
+
+            self.logger.info(f"Attached {len(tags)} tag(s) to {object_type} {object_name}")
+
+        except Exception as e:
+            self.logger.warning(f"Error attaching tags to {object_type} {object_name}: {e}")
+            # Don't raise - tag attachment is optional
+        finally:
+            cursor.close()
+
+    def attach_object_tags(
+        self, object_type: str, object_name: str, object_tags: Dict[str, str]
+    ) -> None:
+        """
+        Attach object tags (key-value pairs) to a Snowflake database object.
+
+        This method handles database-style tags where each tag is a key-value pair,
+        like {"sensitivity_tag": "pii", "classification": "public"}.
+
+        Snowflake syntax: ALTER TABLE/VIEW object_name SET TAG tag_name = 'tag_value'
+
+        Args:
+            object_type: Type of object ('TABLE', 'VIEW', etc.)
+            object_name: Fully qualified object name (DATABASE.SCHEMA.OBJECT)
+            object_tags: Dictionary of tag key-value pairs
+        """
+        if not self.connection:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+
+        if not object_tags or not isinstance(object_tags, dict):
+            return
+
+        cursor = self.connection.cursor()
+        try:
+            for tag_key, tag_value in object_tags.items():
+                if not tag_key or not isinstance(tag_key, str):
+                    continue
+                if tag_value is None:
+                    continue
+
+                # Sanitize tag key (Snowflake tag names must be valid identifiers)
+                sanitized_tag_key = tag_key.replace(" ", "_").replace("-", "_")
+                # Truncate if too long (Snowflake has limits)
+                if len(sanitized_tag_key) > 128:
+                    sanitized_tag_key = sanitized_tag_key[:128]
+
+                # Convert tag value to string
+                tag_value_str = str(tag_value)
+
+                try:
+                    # Create tag if it doesn't exist (ignore error if it exists)
+                    try:
+                        create_tag_sql = f"CREATE TAG IF NOT EXISTS {sanitized_tag_key}"
+                        cursor.execute(create_tag_sql)
+                        self.logger.debug(f"Created tag: {sanitized_tag_key}")
+                    except Exception:
+                        # Tag might already exist, continue
+                        pass
+
+                    # Attach tag to object
+                    # Snowflake syntax: ALTER TABLE/VIEW object SET TAG tag_name = 'value'
+                    escaped_value = tag_value_str.replace("'", "''")
+                    alter_sql = f"ALTER {object_type} {object_name} SET TAG {sanitized_tag_key} = '{escaped_value}'"
+                    cursor.execute(alter_sql)
+                    self.logger.debug(
+                        f"Attached object tag {sanitized_tag_key}='{tag_value_str}' to {object_type} {object_name}"
+                    )
+
+                except Exception as e:
+                    self.logger.warning(
+                        f"Could not attach object tag '{tag_key}'='{tag_value}' to {object_type} {object_name}: {e}"
+                    )
+                    # Continue with other tags even if one fails
+                    continue
+
+            self.logger.info(
+                f"Attached {len(object_tags)} object tag(s) to {object_type} {object_name}"
+            )
+
+        except Exception as e:
+            self.logger.warning(
+                f"Error attaching object tags to {object_type} {object_name}: {e}"
+            )
+            # Don't raise - tag attachment is optional
+        finally:
+            cursor.close()
+
+    def generate_no_duplicates_test_query(
+        self, table_name: str, columns: Optional[List[str]] = None
+    ) -> str:
+        """
+        Generate SQL query for no_duplicates test (Snowflake-specific).
+
+        Snowflake does NOT support GROUP BY *, so we must use explicit column names.
+        If columns are not provided, we fetch them from the table.
+        """
+        # If columns provided, use them
+        if columns and len(columns) > 0:
+            column_list = ", ".join(columns)
+            return f"""
+                SELECT COUNT(*) 
+                FROM (
+                    SELECT {column_list}, COUNT(*) as row_count
+                    FROM {table_name}
+                    GROUP BY {column_list}
+                    HAVING COUNT(*) > 1
+                ) AS duplicate_groups
+            """
+
+        # Snowflake doesn't support GROUP BY *, so we must get columns
+        # Try to get columns from the table
+        if not self.connection:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+        
+        table_columns = self.get_table_columns(table_name)
+        if not table_columns or len(table_columns) == 0:
+            # If we can't get columns, raise an error with helpful message
+            raise ValueError(
+                f"Cannot generate no_duplicates test query for {table_name}: "
+                "Unable to retrieve column names. Snowflake requires explicit column names for GROUP BY."
+            )
+        
+        # Use the retrieved columns
+        column_list = ", ".join(table_columns)
+        return f"""
+            SELECT COUNT(*) 
+            FROM (
+                SELECT {column_list}, COUNT(*) as row_count
+                FROM {table_name}
+                GROUP BY {column_list}
+                HAVING COUNT(*) > 1
+            ) AS duplicate_groups
+        """
 
 
 # Register the adapter

@@ -36,12 +36,10 @@ class DependencyGraphBuilder:
                 table_deps = set()
 
                 # Get dependencies from the parsed tables
-                if (
-                    "sqlglot" in model_info
-                    and model_info["sqlglot"]
-                    and "tables" in model_info["sqlglot"]
-                ):
-                    for referenced_table in model_info["sqlglot"]["tables"]:
+                code_data = model_info.get("code", {})
+                if code_data and "sql" in code_data:
+                    source_tables = code_data["sql"].get("source_tables", [])
+                    for referenced_table in source_tables:
                         # Convert referenced table to full table name if needed
                         full_ref_name = table_resolver.resolve_table_reference(
                             referenced_table, parsed_models

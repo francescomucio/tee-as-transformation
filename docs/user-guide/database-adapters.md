@@ -59,7 +59,7 @@ export TEE_DB_SOURCE_DIALECT=postgresql
 
 ### Snowflake
 - **Dialect**: `snowflake`
-- **Features**: Tables, Views, Materialized Views, External Tables
+- **Features**: Tables, Views, Materialized Views, External Tables, **Tag Support**
 - **Configuration**:
   ```toml
   type = "snowflake"
@@ -70,6 +70,7 @@ export TEE_DB_SOURCE_DIALECT=postgresql
   warehouse = "warehouse"
   role = "role"
   ```
+- **Tag Support**: Full support for both dbt-style tags and database object tags on tables, views, and schemas. See [Tags and Metadata](tags-and-metadata.md) for details.
 
 ### PostgreSQL
 - **Dialect**: `postgresql`

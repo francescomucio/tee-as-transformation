@@ -201,9 +201,9 @@ class TestProjectParser:
 
         # Mock parsed models
         parsed_models = {
-            "schema1.table1": {"sqlglot": {"tables": ["table2"]}},
-            "schema1.table2": {"sqlglot": {"tables": []}},
-            "schema2.table3": {"sqlglot": {"tables": ["table1"]}},
+            "schema1.table1": {"code": {"sql": {"source_tables": ["table2"]}}},
+            "schema1.table2": {"code": {"sql": {"source_tables": []}}},
+            "schema2.table3": {"code": {"sql": {"source_tables": ["table1"]}}},
         }
 
         # Test direct match

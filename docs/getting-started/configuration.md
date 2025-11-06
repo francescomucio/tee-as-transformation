@@ -205,8 +205,27 @@ logging.basicConfig(level=logging.DEBUG)
 config = load_database_config()
 ```
 
+## Schema-Level Configuration
+
+Configure tags and metadata at the schema level:
+
+```toml
+# Per-schema configuration
+[schemas.my_schema]
+tags = ["analytics", "production"]
+object_tags = {"sensitivity_tag" = "pii"}
+
+# Module-level configuration (applies to all schemas)
+[module]
+tags = ["analytics"]
+object_tags = {"data_owner" = "analytics-team"}
+```
+
+See [Tags and Metadata](user-guide/tags-and-metadata.md) for complete documentation on tagging.
+
 ## Next Steps
 
 - [Database Adapters](user-guide/database-adapters.md) - Learn about adapter capabilities
+- [Tags and Metadata](user-guide/tags-and-metadata.md) - Tagging tables, views, and schemas
 - [SQL Dialect Conversion](user-guide/sql-dialect-conversion.md) - Understand SQL conversion
 - [Examples](user-guide/examples/) - See configuration in action

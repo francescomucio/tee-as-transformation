@@ -36,6 +36,23 @@ def restore_test_registry():
     TestRegistry.register(ACCEPTED_VALUES)
 
 
+@pytest.fixture
+def test_impl_class():
+    """Fixture to create a TestImpl class for testing StandardTest functionality."""
+    class TestImpl(StandardTest):
+        def __init__(self, name="test", query="SELECT COUNT(*) FROM table", severity=TestSeverity.ERROR):
+            super().__init__(name, severity)
+            self._query = query
+
+        def get_test_query(self, adapter, table_name, column_name=None, params=None):
+            return self._query
+
+        def validate_params(self, params=None, column_name=None):
+            pass
+
+    return TestImpl
+
+
 class TestTestResult:
     """Test cases for TestResult dataclass."""
 
@@ -117,110 +134,54 @@ class TestTestResult:
 class TestStandardTest:
     """Test cases for StandardTest base class."""
 
-    def test_extract_row_count_list_tuple(self):
+    def test_extract_row_count_list_tuple(self, test_impl_class):
         """Test extracting count from list of tuples (standard adapter result)."""
-
-        class TestImpl(StandardTest):
-            def get_test_query(self, adapter, table_name, column_name=None, params=None):
-                return "SELECT COUNT(*) FROM table"
-
-            def validate_params(self, params=None, column_name=None):
-                pass
-
-        test = TestImpl("test", TestSeverity.ERROR)
+        test = test_impl_class("test", "SELECT COUNT(*) FROM table")
         results = [(5,)]  # Standard adapter format
 
         count = test._extract_row_count(results)
         assert count == 5
 
-    def test_extract_row_count_empty_list(self):
+    def test_extract_row_count_empty_list(self, test_impl_class):
         """Test extracting count from empty list."""
-
-        class TestImpl(StandardTest):
-            def get_test_query(self, adapter, table_name, column_name=None, params=None):
-                return "SELECT COUNT(*) FROM table"
-
-            def validate_params(self, params=None, column_name=None):
-                pass
-
-        test = TestImpl("test", TestSeverity.ERROR)
+        test = test_impl_class("test")
         results = []
 
         count = test._extract_row_count(results)
         assert count == 0
 
-    def test_extract_row_count_multiple_rows(self):
+    def test_extract_row_count_multiple_rows(self, test_impl_class):
         """Test extracting count from multiple rows (should return 0 for invalid format)."""
-
-        class TestImpl(StandardTest):
-            def get_test_query(self, adapter, table_name, column_name=None, params=None):
-                return "SELECT COUNT(*) FROM table"
-
-            def validate_params(self, params=None, column_name=None):
-                pass
-
-        test = TestImpl("test", TestSeverity.ERROR)
+        test = test_impl_class("test")
         results = [(1,), (2,)]  # Multiple rows - invalid for COUNT(*)
 
         count = test._extract_row_count(results)
         assert count == 0
 
-    def test_check_passed_default(self):
+    def test_check_passed_default(self, test_impl_class):
         """Test default check_passed logic (count == 0 means pass)."""
-
-        class TestImpl(StandardTest):
-            def get_test_query(self, adapter, table_name, column_name=None, params=None):
-                return "SELECT COUNT(*) FROM table"
-
-            def validate_params(self, params=None, column_name=None):
-                pass
-
-        test = TestImpl("test", TestSeverity.ERROR)
+        test = test_impl_class("test")
 
         assert test.check_passed(0) is True  # No violations = pass
         assert test.check_passed(5) is False  # 5 violations = fail
 
-    def test_format_message_passed(self):
+    def test_format_message_passed(self, test_impl_class):
         """Test format_message for passed test."""
-
-        class TestImpl(StandardTest):
-            def get_test_query(self, adapter, table_name, column_name=None, params=None):
-                return "SELECT COUNT(*) FROM table"
-
-            def validate_params(self, params=None, column_name=None):
-                pass
-
-        test = TestImpl("not_null", TestSeverity.ERROR)
+        test = test_impl_class("not_null")
         message = test.format_message(True, 0)
 
         assert message == "Test passed: not_null"
 
-    def test_format_message_failed(self):
+    def test_format_message_failed(self, test_impl_class):
         """Test format_message for failed test."""
-
-        class TestImpl(StandardTest):
-            def get_test_query(self, adapter, table_name, column_name=None, params=None):
-                return "SELECT COUNT(*) FROM table"
-
-            def validate_params(self, params=None, column_name=None):
-                pass
-
-        test = TestImpl("not_null", TestSeverity.ERROR)
+        test = test_impl_class("not_null")
         message = test.format_message(False, 5)
 
         assert message == "Test failed: not_null found 5 violation(s)"
 
-    def test_execute_success(self):
+    def test_execute_success(self, test_impl_class):
         """Test execute method with successful test."""
-
-        class TestImpl(StandardTest):
-            def get_test_query(self, adapter, table_name, column_name=None, params=None):
-                return "SELECT COUNT(*) FROM table WHERE column IS NULL"
-
-            def validate_params(self, params=None, column_name=None):
-                pass
-
-        test = TestImpl("not_null", TestSeverity.ERROR)
+        test = test_impl_class("not_null", "SELECT COUNT(*) FROM table WHERE column IS NULL")
 
         # Mock adapter
         mock_adapter = Mock()
@@ -236,17 +197,9 @@ class TestStandardTest:
         assert result.severity == TestSeverity.ERROR
         assert "passed" in result.message.lower()
 
-    def test_execute_failure(self):
+    def test_execute_failure(self, test_impl_class):
         """Test execute method with failed test."""
-
-        class TestImpl(StandardTest):
-            def get_test_query(self, adapter, table_name, column_name=None, params=None):
-                return "SELECT COUNT(*) FROM table WHERE column IS NULL"
-
-            def validate_params(self, params=None, column_name=None):
-                pass
-
-        test = TestImpl("not_null", TestSeverity.ERROR)
+        test = test_impl_class("not_null", "SELECT COUNT(*) FROM table WHERE column IS NULL")
 
         # Mock adapter
         mock_adapter = Mock()
@@ -259,17 +212,9 @@ class TestStandardTest:
         assert "failed" in result.message.lower()
         assert "3 violation(s)" in result.message
 
-    def test_execute_with_exception(self):
+    def test_execute_with_exception(self, test_impl_class):
         """Test execute method when query execution fails."""
-
-        class TestImpl(StandardTest):
-            def get_test_query(self, adapter, table_name, column_name=None, params=None):
-                return "SELECT COUNT(*) FROM table"
-
-            def validate_params(self, params=None, column_name=None):
-                pass
-
-        test = TestImpl("not_null", TestSeverity.ERROR)
+        test = test_impl_class("not_null")
 
         # Mock adapter that raises exception
         mock_adapter = Mock()
@@ -281,17 +226,9 @@ class TestStandardTest:
         assert result.error == "Database error"
         assert "error" in result.message.lower()
 
-    def test_execute_with_severity_override(self):
+    def test_execute_with_severity_override(self, test_impl_class):
         """Test execute method with severity override."""
-
-        class TestImpl(StandardTest):
-            def get_test_query(self, adapter, table_name, column_name=None, params=None):
-                return "SELECT COUNT(*) FROM table"
-
-            def validate_params(self, params=None, column_name=None):
-                pass
-
-        test = TestImpl("not_null", TestSeverity.ERROR)
+        test = test_impl_class("not_null")
 
         mock_adapter = Mock()
         mock_adapter.execute_query.return_value = [(0,)]
@@ -304,17 +241,9 @@ class TestStandardTest:
 class TestTestRegistry:
     """Test cases for TestRegistry."""
 
-    def test_register_and_get(self):
+    def test_register_and_get(self, test_impl_class):
         """Test registering and retrieving a test."""
-
-        class TestImpl(StandardTest):
-            def get_test_query(self, adapter, table_name, column_name=None, params=None):
-                return "SELECT COUNT(*) FROM table"
-
-            def validate_params(self, params=None, column_name=None):
-                pass
-
-        test = TestImpl("custom_test", TestSeverity.ERROR)
+        test = test_impl_class("custom_test")
 
         # Clear registry first
         TestRegistry.clear()
@@ -334,27 +263,12 @@ class TestTestRegistry:
 
         assert result is None
 
-    def test_list_all(self):
+    def test_list_all(self, test_impl_class):
         """Test listing all registered tests."""
-
-        class TestImpl1(StandardTest):
-            def get_test_query(self, adapter, table_name, column_name=None, params=None):
-                return "SELECT COUNT(*) FROM table"
-
-            def validate_params(self, params=None, column_name=None):
-                pass
-
-        class TestImpl2(StandardTest):
-            def get_test_query(self, adapter, table_name, column_name=None, params=None):
-                return "SELECT COUNT(*) FROM table"
-
-            def validate_params(self, params=None, column_name=None):
-                pass
-
         TestRegistry.clear()
 
-        test1 = TestImpl1("test1", TestSeverity.ERROR)
-        test2 = TestImpl2("test2", TestSeverity.ERROR)
+        test1 = test_impl_class("test1")
+        test2 = test_impl_class("test2")
 
         TestRegistry.register(test1)
         TestRegistry.register(test2)
@@ -365,17 +279,9 @@ class TestTestRegistry:
         assert "test2" in all_tests
         assert len(all_tests) == 2
 
-    def test_clear(self):
+    def test_clear(self, test_impl_class):
         """Test clearing the registry."""
-
-        class TestImpl(StandardTest):
-            def get_test_query(self, adapter, table_name, column_name=None, params=None):
-                return "SELECT COUNT(*) FROM table"
-
-            def validate_params(self, params=None, column_name=None):
-                pass
-
-        test = TestImpl("test", TestSeverity.ERROR)
+        test = test_impl_class("test")
 
         TestRegistry.register(test)
         assert TestRegistry.get("test") is not None

@@ -122,12 +122,12 @@ class ModelExecutor:
             # Execute all models
             results = self.execution_engine.execute_models(parsed_models, execution_order)
 
-            # Update Python parser's cached models with qualified SQL from execution
-            # This ensures the qualified_sql is saved back to the Python parser
-            parser.orchestrator.update_python_models_with_qualified_sql(parsed_models)
+            # Update Python parser's cached models with resolved SQL from execution
+            # This ensures the resolved_sql is saved back to the Python parser
+            parser.orchestrator.update_python_models_with_resolved_sql(parsed_models)
 
-            # Update the main parser's cached models with qualified SQL from execution
-            # This ensures the qualified_sql is saved back to the main parser for JSON output
+            # Update the main parser's cached models with resolved SQL from execution
+            # This ensures the resolved_sql is saved back to the main parser for JSON output
             parser.update_parsed_models(parsed_models)
 
             # Log results

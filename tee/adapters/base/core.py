@@ -220,6 +220,44 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
             "supported_materializations": [m.value for m in self.get_supported_materializations()],
         }
 
+    def attach_tags(
+        self, object_type: str, object_name: str, tags: List[str]
+    ) -> None:
+        """
+        Attach tags (dbt-style, list of strings) to a database object.
+
+        This is an optional method that adapters can override if they support tagging.
+        By default, it logs a debug message that tagging is not supported.
+
+        Args:
+            object_type: Type of object ('TABLE', 'VIEW', etc.)
+            object_name: Fully qualified object name
+            tags: List of tag strings to attach (dbt-style)
+        """
+        self.logger.debug(
+            f"Adapter {self.__class__.__name__} does not support tagging. "
+            f"Tags would be attached to {object_type} {object_name}: {tags}"
+        )
+
+    def attach_object_tags(
+        self, object_type: str, object_name: str, object_tags: Dict[str, str]
+    ) -> None:
+        """
+        Attach object tags (database-style, key-value pairs) to a database object.
+
+        This is an optional method that adapters can override if they support object tagging.
+        By default, it logs a debug message that object tagging is not supported.
+
+        Args:
+            object_type: Type of object ('TABLE', 'VIEW', etc.)
+            object_name: Fully qualified object name
+            object_tags: Dictionary of tag key-value pairs (database-style)
+        """
+        self.logger.debug(
+            f"Adapter {self.__class__.__name__} does not support object tagging. "
+            f"Object tags would be attached to {object_type} {object_name}: {object_tags}"
+        )
+
     def _get_dialect(self, dialect_name: Optional[str]):
         """Get SQLglot dialect object from name."""
         from sqlglot.dialects import Dialect

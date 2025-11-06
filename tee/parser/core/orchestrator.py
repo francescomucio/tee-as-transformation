@@ -144,8 +144,8 @@ class ParserOrchestrator:
                     logger.error(f"Error processing Python file {python_file}: {e}")
                     continue
 
-            # Evaluate Python models to populate their sqlglot data
-            logger.info("Evaluating Python models to populate SQLGlot data")
+            # Evaluate Python models to populate their code data
+            logger.info("Evaluating Python models to populate code data")
             parsed_models = self.evaluate_python_models(parsed_models, self.variables)
 
             # Cache the result
@@ -245,18 +245,18 @@ class ParserOrchestrator:
             logger.error(f"Error evaluating Python models: {e}")
             return parsed_models
 
-    def update_python_models_with_qualified_sql(self, updated_models: Dict[str, Any]) -> None:
+    def update_python_models_with_resolved_sql(self, updated_models: Dict[str, Any]) -> None:
         """
-        Update Python parser's cached models with qualified SQL from execution.
+        Update Python parser's cached models with resolved SQL from execution.
 
         Args:
-            updated_models: Updated model data with qualified SQL
+            updated_models: Updated model data with resolved SQL
         """
         try:
             python_parser = ParserFactory.create_parser(Path("dummy.py"))
-            python_parser.update_models_with_qualified_sql(updated_models)
+            python_parser.update_models_with_resolved_sql(updated_models)
         except Exception as e:
-            logger.error(f"Error updating Python models with qualified SQL: {e}")
+            logger.error(f"Error updating Python models with resolved SQL: {e}")
 
     def get_execution_order(self) -> list[str]:
         """Get the execution order for all tables based on dependencies."""

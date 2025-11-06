@@ -10,11 +10,25 @@ tests/
 ├── run_incremental_tests.py              # Test runner script
 ├── README.md                             # This file
 ├── engine/                               # Core engine tests
-│   ├── test_incremental_executor.py      # Incremental executor unit tests
+│   ├── incremental/                     # Incremental executor tests (split by functionality)
+│   │   ├── test_executor_base.py        # Base class and fixtures
+│   │   ├── test_should_run.py           # should_run_incremental tests
+│   │   ├── test_time_filter.py          # Time filter condition tests
+│   │   ├── test_lookback.py             # Lookback parsing and application
+│   │   ├── test_variables.py            # Variable resolution tests
+│   │   ├── test_date_casting.py         # Date casting tests
+│   │   ├── test_strategy.py             # Strategy execution tests
+│   │   └── test_integration.py          # Integration tests
 │   └── test_incremental_adapter_interface.py  # Adapter interface tests
 ├── adapters/                             # Database adapter tests
-│   ├── test_duckdb_incremental.py        # DuckDB-specific tests
-│   └── test_metadata_propagation.py     # Metadata propagation tests
+│   ├── fixtures/                        # Test fixtures
+│   │   └── metadata_fixtures.py        # Metadata test fixtures
+│   ├── duckdb/                          # DuckDB-specific tests
+│   │   ├── test_incremental.py         # Functional incremental tests
+│   │   └── test_incremental_performance.py  # Performance tests (marked slow)
+│   ├── test_metadata_propagation.py    # Metadata propagation tests
+│   ├── test_snowflake_tags.py          # Snowflake tag tests
+│   └── test_snowflake_schema_tags.py   # Snowflake schema tag tests
 ├── parser/                               # Parser tests
 │   ├── core/                             # Core parser tests
 │   │   └── test_project_parser.py
@@ -22,15 +36,25 @@ tests/
 │   │   └── test_python_variable_support.py
 │   ├── processing/                      # Processing tests
 │   │   └── test_sql_variable_substitution.py
+│   ├── output/                           # Output transformation tests
+│   │   └── test_ots_tags.py             # OTS tag extraction tests
 │   └── shared/                          # Shared utilities tests
 │       └── test_metadata_schema.py
 ├── testing/                              # Testing framework tests
+│   ├── standard_tests/                  # Standard test implementations (split by type)
+│   │   ├── test_not_null.py            # NotNullTest tests
+│   │   ├── test_unique.py               # UniqueTest tests
+│   │   ├── test_accepted_values.py      # AcceptedValuesTest tests
+│   │   ├── test_relationships.py       # RelationshipsTest tests
+│   │   ├── test_no_duplicates.py       # NoDuplicatesTest tests
+│   │   └── test_row_count_gt_0.py      # RowCountGreaterThanZeroTest tests
 │   ├── test_base.py                      # Base test classes
 │   ├── test_executor.py                  # Test executor
 │   ├── test_query_generation.py          # Query generation
 │   ├── test_sql_test.py                  # SQL test support
-│   ├── test_standard_tests.py           # Standard test implementations
 │   └── test_test_discovery.py           # Test discovery
+├── cli/                                  # CLI tests
+│   └── test_selection.py                 # Model selection tests
 └── typing/                               # Type system tests
 ```
 
@@ -40,6 +64,15 @@ tests/
 
 Tests the core incremental logic independently of database implementations:
 
+- **`engine/incremental/`**: Incremental executor tests split by functionality
+  - `test_executor_base.py`: Base test class and shared fixtures
+  - `test_should_run.py`: Tests for determining when to run incremental vs full load
+  - `test_time_filter.py`: Tests for time-based filtering conditions
+  - `test_lookback.py`: Tests for lookback parsing and application
+  - `test_variables.py`: Tests for variable resolution (`@variable` and `{{ variable }}`)
+  - `test_date_casting.py`: Tests for date casting in SQL conditions
+  - `test_strategy.py`: Tests for append, merge, and delete+insert strategy execution
+  - `test_integration.py`: Integration tests for complete workflows
 - **Strategy Logic**: Tests for append, merge, and delete+insert strategies
 - **Time Filtering**: Tests for time-based filtering and lookback logic
 - **Variable Resolution**: Tests for CLI variable resolution (`@variable` and `{{ variable }}`)
@@ -74,13 +107,28 @@ Tests for the data quality testing framework itself:
 - **Test Executor**: Tests for test execution and result collection
 - **Query Generation**: Tests for database-specific SQL query generation
 - **SQL Tests**: Tests for custom SQL test support (dbt-style)
-- **Standard Tests**: Tests for built-in test implementations (not_null, unique, etc.)
+- **Standard Tests** (`testing/standard_tests/`): Tests for built-in test implementations
+  - `test_not_null.py`: NotNullTest tests
+  - `test_unique.py`: UniqueTest tests
+  - `test_accepted_values.py`: AcceptedValuesTest tests
+  - `test_relationships.py`: RelationshipsTest tests
+  - `test_no_duplicates.py`: NoDuplicatesTest tests
+  - `test_row_count_gt_0.py`: RowCountGreaterThanZeroTest tests
 - **Test Discovery**: Tests for automatic test discovery from SQL files
 
 ### 5. Database-Specific Tests (`adapters/`)
 
-Tests specific to DuckDB implementation (template for other adapters):
+Tests specific to database adapter implementations:
 
+- **Fixtures** (`adapters/fixtures/`): Shared test fixtures
+  - `metadata_fixtures.py`: Metadata test data and helper functions
+- **DuckDB** (`adapters/duckdb/`): DuckDB-specific tests
+  - `test_incremental.py`: Functional incremental materialization tests
+  - `test_incremental_performance.py`: Performance tests with large datasets (marked `@pytest.mark.slow`)
+- **Snowflake**: Snowflake-specific tests
+  - `test_snowflake_tags.py`: Tag attachment tests
+  - `test_snowflake_schema_tags.py`: Schema-level tag tests
+- **Metadata Propagation**: Tests for metadata propagation across adapters
 - **SQL Generation**: Tests for database-specific SQL generation
 - **Data Operations**: Tests for actual data operations
 - **Schema Handling**: Tests for schema qualification and table creation
@@ -111,7 +159,7 @@ uv run python tests/run_incremental_tests.py performance
 uv run python tests/run_incremental_tests.py coverage
 
 # Run specific test
-uv run python tests/run_incremental_tests.py specific --test-path tests/engine/test_incremental_executor.py::TestShouldRunIncremental
+uv run python tests/run_incremental_tests.py specific --test-path tests/engine/incremental/test_should_run.py::TestShouldRunIncremental
 ```
 
 ### Using pytest directly
@@ -121,13 +169,13 @@ uv run python tests/run_incremental_tests.py specific --test-path tests/engine/t
 uv run pytest tests/ -v
 
 # Run specific test file
-uv run pytest tests/engine/test_incremental_executor.py -v
+uv run pytest tests/engine/incremental/test_should_run.py -v
 
 # Run specific test class
-uv run pytest tests/engine/test_incremental_executor.py::TestShouldRunIncremental -v
+uv run pytest tests/engine/incremental/test_should_run.py::TestShouldRunIncremental -v
 
 # Run specific test method
-uv run pytest tests/engine/test_incremental_executor.py::TestShouldRunIncremental::test_no_state_exists_runs_full_load -v
+uv run pytest tests/engine/incremental/test_should_run.py::TestShouldRunIncremental::test_no_state_exists_runs_full_load -v
 
 # Run with coverage
 uv run pytest tests/ --cov=tcli.engine.incremental_executor --cov-report=html
@@ -177,9 +225,14 @@ def test_my_feature(duckdb_adapter, sample_append_config):
 
 ### For Core Logic
 
-Add tests to `test_incremental_executor.py`:
+Add tests to the appropriate file in `engine/incremental/`:
 
 ```python
+# For should_run logic, add to test_should_run.py
+# For time filtering, add to test_time_filter.py
+# For variable resolution, add to test_variables.py
+# etc.
+
 def test_new_feature(executor, sample_config):
     """Test new incremental feature."""
     result = executor.some_method(sample_config)
@@ -211,13 +264,17 @@ Add tests to the appropriate parser subdirectory:
 Add tests to `testing/` directory:
 - `test_base.py` for base class tests
 - `test_executor.py` for executor tests
-- `test_standard_tests.py` for new standard test implementations
+- `testing/standard_tests/` for standard test implementations (create new file if adding new test type)
 
 ### For Database-Specific Features
 
 Add tests to `adapters/` directory (or create new adapter test file):
 
 ```python
+# For DuckDB functional tests, add to adapters/duckdb/test_incremental.py
+# For DuckDB performance tests, add to adapters/duckdb/test_incremental_performance.py
+# For other adapters, create adapters/<adapter_name>/ directory
+
 def test_duckdb_specific_feature(duckdb_adapter, sample_table_sql):
     """Test DuckDB-specific feature."""
     duckdb_adapter.execute_query(sample_table_sql)
@@ -310,7 +367,7 @@ Tests are designed to run in CI environments:
 uv run pytest tests/ -vvv --tb=long
 
 # Run specific test with debug
-uv run pytest tests/engine/test_incremental_executor.py::TestShouldRunIncremental::test_no_state_exists_runs_full_load -vvv --tb=long
+uv run pytest tests/engine/incremental/test_should_run.py::TestShouldRunIncremental::test_no_state_exists_runs_full_load -vvv --tb=long
 ```
 
 ### Using pytest Debugging

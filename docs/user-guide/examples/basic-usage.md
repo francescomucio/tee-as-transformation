@@ -190,3 +190,4 @@ executor = ModelExecutor("/path/to/project", config)
 - [Multi-Database Examples](multi-database.md) - Advanced multi-database workflows
 - [Custom Adapters](custom-adapters.md) - Creating custom database adapters
 - [Configuration](getting-started/configuration.md) - Advanced configuration options
+- [Tags and Metadata](tags-and-metadata.md) - Organize and filter models with tags

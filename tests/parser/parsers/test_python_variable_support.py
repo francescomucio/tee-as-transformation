@@ -176,7 +176,7 @@ def test_nested_model():
             mock_execute.side_effect = lambda model_data, table_name, vars: {
                 **model_data,
                 "needs_execution": False,
-                "sqlglot": {"qualified_sql": "SELECT * FROM test"},
+                "code": {"sql": {"resolved_sql": "SELECT * FROM test", "original_sql": "SELECT * FROM test", "source_tables": []}},
             }
 
             # Execute all models with variables

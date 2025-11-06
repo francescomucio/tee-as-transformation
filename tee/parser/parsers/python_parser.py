@@ -92,7 +92,7 @@ class PythonParser(BaseParser):
                         model_data = {
                             "model_metadata": model_metadata,  # Include the original metadata
                             "needs_evaluation": True,
-                            "sqlglot": None,  # Will be populated when evaluated
+                            "code": None,  # Will be populated when evaluated
                         }
 
                         # Standardize the model structure
@@ -161,9 +161,10 @@ class PythonParser(BaseParser):
                 # Parse the SQLGlot expression using the SQL parser
                 parsed_data = self._sql_parser.parse(str(sqlglot_expr), table_name=table_name)
 
-                # Update model data with SQLGlot data while maintaining standardized structure
+                # Update model data with code data while maintaining standardized structure
                 updated_model_data = model_data.copy()
-                updated_model_data["sqlglot"] = parsed_data["sqlglot"]
+                updated_model_data["code"] = parsed_data["code"]
+                updated_model_data["sqlglot_hash"] = parsed_data.get("sqlglot_hash", "")
                 updated_model_data["needs_evaluation"] = False
 
                 # Ensure the structure remains standardized
@@ -227,15 +228,15 @@ class PythonParser(BaseParser):
 
         return updated_models
 
-    def update_models_with_qualified_sql(self, updated_models: Dict[str, Any]) -> None:
+    def update_models_with_resolved_sql(self, updated_models: Dict[str, Any]) -> None:
         """
-        Update the parser's cached models with qualified SQL from execution.
+        Update the parser's cached models with resolved SQL from execution.
 
         This method should be called by the executor after execution to ensure
-        the parser's cached models are updated with the qualified SQL.
+        the parser's cached models are updated with the resolved SQL.
 
         Args:
-            updated_models: Models with qualified SQL from execution
+            updated_models: Models with resolved SQL from execution
         """
         for table_name, model_data in updated_models.items():
             # Skip None or invalid model data
@@ -243,17 +244,19 @@ class PythonParser(BaseParser):
                 continue
 
             # Only update Python models (those with function_name and file_path)
+            code_data = model_data.get("code", {})
             if (
                 "function_name" in model_data
                 and "file_path" in model_data
-                and "sqlglot" in model_data
-                and "qualified_sql" in model_data["sqlglot"]
+                and code_data
+                and "sql" in code_data
+                and "resolved_sql" in code_data["sql"]
             ):
-                # Update the execution cache with qualified SQL
+                # Update the execution cache with resolved SQL
                 cache_key = f"{model_data['file_path']}:{model_data['function_name']}"
                 if cache_key in self._execution_cache:
                     self._execution_cache[cache_key] = model_data
-                    logger.debug(f"Updated execution cache with qualified SQL for {table_name}")
+                    logger.debug(f"Updated execution cache with resolved SQL for {table_name}")
 
                 # Also update the file cache if it exists
                 file_path = model_data["file_path"]

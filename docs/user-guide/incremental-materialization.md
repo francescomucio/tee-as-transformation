@@ -250,10 +250,10 @@ You can pass variables via the command line:
 
 ```bash
 # Using @variable syntax (JSON format)
-uv run tcli run ./t_project --vars '{"start_date": "2024-01-01"}'
+uv run tcli run ./examples/t_project --vars '{"start_date": "2024-01-01"}'
 
 # Using {{ variable }} syntax (JSON format)
-uv run tcli run ./t_project --vars '{"start_date": "2024-01-01"}'
+uv run tcli run ./examples/t_project --vars '{"start_date": "2024-01-01"}'
 ```
 
 Variables are resolved in the configuration:
@@ -272,7 +272,7 @@ TEE automatically tracks the state of incremental models:
 - **Config hashes**: Detects changes in model configuration
 - **Last processed values**: For tracking incremental progress
 
-State is stored in `t_project/data/tee_state.db` by default.
+State is stored in `examples/t_project/data/tee_state.db` by default.
 
 ## Database Support
 
@@ -401,7 +401,7 @@ WHERE event_timestamp >= '2024-01-01'
 
 Run with:
 ```bash
-uv run tcli run ./t_project
+uv run tcli run ./examples/t_project
 ```
 
 This will create an incremental table that:

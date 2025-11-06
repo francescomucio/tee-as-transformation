@@ -10,7 +10,7 @@ This module handles the execution of incremental materializations including:
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Dict, Any, Optional, Union
 import sqlglot
 from sqlglot import expressions as exp
@@ -292,7 +292,7 @@ class IncrementalExecutor:
             adapter.create_table(table_name, filtered_sql)
 
         # Update state with current max time value
-        current_time = datetime.utcnow().isoformat()
+        current_time = datetime.now(UTC).isoformat()
         self.state_manager.update_processed_value(model_name, current_time, strategy="append")
 
     def execute_merge_strategy(
@@ -330,7 +330,7 @@ class IncrementalExecutor:
             adapter.execute_query(filtered_sql)
 
         # Update state
-        current_time = datetime.utcnow().isoformat()
+        current_time = datetime.now(UTC).isoformat()
         self.state_manager.update_processed_value(model_name, current_time, strategy="merge")
 
     def execute_delete_insert_strategy(
@@ -383,7 +383,7 @@ class IncrementalExecutor:
             adapter.execute_query(filtered_sql)
 
         # Update state
-        current_time = datetime.utcnow().isoformat()
+        current_time = datetime.now(UTC).isoformat()
         self.state_manager.update_processed_value(
             model_name, current_time, strategy="delete_insert"
         )

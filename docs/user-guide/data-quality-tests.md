@@ -47,10 +47,10 @@ Tests are automatically executed after model runs:
 
 ```bash
 # Run models (tests execute automatically)
-tcli run t_project
+tcli run examples/t_project
 
 # Run tests independently
-tcli test t_project
+tcli test examples/t_project
 ```
 
 ## Available Tests
@@ -282,8 +282,8 @@ Override test severity:
 
 **Via CLI:**
 ```bash
-tcli test t_project --severity not_null=warning
-tcli test t_project --severity my_table.name.not_null=error
+tcli test examples/t_project --severity not_null=warning
+tcli test examples/t_project --severity my_table.name.not_null=error
 ```
 
 ---
@@ -295,7 +295,7 @@ tcli test t_project --severity my_table.name.not_null=error
 Tests are automatically executed after models are created:
 
 ```bash
-tcli run t_project
+tcli run examples/t_project
 ```
 
 Output includes test results:
@@ -318,16 +318,16 @@ Run tests independently without re-running models:
 
 ```bash
 # Run all tests
-tcli test t_project
+tcli test examples/t_project
 
 # Run with verbose output
-tcli test t_project --verbose
+tcli test examples/t_project --verbose
 
 # Override test severity
-tcli test t_project --severity not_null=warning
+tcli test examples/t_project --severity not_null=warning
 
 # Run with variables (JSON format)
-tcli test ./t_project --vars '{"start_date": "2024-01-01"}'
+tcli test ./examples/t_project --vars '{"start_date": "2024-01-01"}'
 ```
 
 ### Test Execution Order
@@ -426,10 +426,10 @@ metadata: ModelMetadataDict = {
 
 ```bash
 # Make all not_null tests warnings
-tcli test t_project --severity not_null=warning
+tcli test examples/t_project --severity not_null=warning
 
 # Make specific test a warning
-tcli test t_project --severity my_schema.orders.status.accepted_values=warning
+tcli test examples/t_project --severity my_schema.orders.status.accepted_values=warning
 ```
 
 ---
@@ -479,7 +479,7 @@ You can create custom SQL tests by placing `.sql` files in a `tests/` folder in 
 ### Project Structure
 
 ```
-t_project/
+examples/t_project/
 ├── models/
 │   └── my_schema/
 │       └── my_table.sql

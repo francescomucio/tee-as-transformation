@@ -7,7 +7,7 @@ for database-agnostic SQL model execution with automatic dialect conversion.
 
 from typing import Dict, Any, List, Optional, Union
 import logging
-from datetime import datetime
+from datetime import datetime, UTC
 
 from ..adapters import get_adapter, AdapterConfig
 from .config import load_database_config
@@ -49,6 +49,9 @@ class ExecutionEngine:
 
         # Initialize state manager
         self.state_manager = ModelStateManager(project_folder=project_folder)
+        
+        # Track schemas that have been processed for tag attachment
+        self._processed_schemas: Dict[str, Dict[str, Any]] = {}
 
     def connect(self) -> None:
         """Establish connection to the database."""
@@ -233,6 +236,11 @@ class ExecutionEngine:
                 materialization = self._get_materialization_type(model_data)
                 metadata = self._extract_metadata(model_data)
 
+                # Extract schema name and attach schema-level tags if needed
+                schema_name = self._extract_schema_name(table_name)
+                if schema_name:
+                    self._attach_schema_tags_if_needed(schema_name)
+
                 # Check for materialization changes and database existence
                 self._check_model_state(table_name, materialization, metadata)
 
@@ -279,17 +287,22 @@ class ExecutionEngine:
 
     def _extract_sql_query(self, model_data: Dict[str, Any], table_name: str) -> str:
         """Extract SQL query from model data."""
-        # Get qualified SQL from the sqlglot object (should be generated during parsing)
-        if "sqlglot" in model_data and "qualified_sql" in model_data["sqlglot"]:
-            return model_data["sqlglot"]["qualified_sql"]
-        else:
+        code_data = model_data.get("code", {})
+        if not code_data or "sql" not in code_data:
+            self.logger.error(f"No code.sql found for {table_name}")
+            return ""
+        
+        sql_data = code_data["sql"]
+        if "resolved_sql" in sql_data:
+            return sql_data["resolved_sql"]
+        elif "original_sql" in sql_data:
             self.logger.warning(
-                f"No qualified SQL found for {table_name}, falling back to sql_content"
+                f"No resolved_sql found for {table_name}, falling back to original_sql"
             )
-            if "sqlglot" in model_data and "sql_content" in model_data["sqlglot"]:
-                return model_data["sqlglot"]["sql_content"]
-            else:
-                return ""
+            return sql_data["original_sql"]
+        
+        self.logger.error(f"No SQL query found for {table_name}")
+        return ""
 
     def _get_materialization_type(self, model_data: Dict[str, Any]) -> str:
         """
@@ -427,7 +440,7 @@ class ExecutionEngine:
                 self.adapter.create_table(table_name, sql_query, metadata)
 
                 # Update state after full load to enable incremental runs
-                current_time = datetime.utcnow().isoformat()
+                current_time = datetime.now(UTC).isoformat()
                 strategy = incremental_config.get("strategy") if incremental_config else None
                 self.state_manager.update_processed_value(table_name, current_time, strategy)
             else:
@@ -497,7 +510,7 @@ class ExecutionEngine:
             model_data: Dictionary containing model data
 
         Returns:
-            Metadata dictionary with column descriptions, or None if no metadata found
+            Metadata dictionary with column descriptions, tags, and other info, or None if no metadata found
         """
         try:
             # Debug: Log the entire model_data structure
@@ -512,12 +525,16 @@ class ExecutionEngine:
                     "materialization" in nested_metadata
                     and nested_metadata["materialization"] == "incremental"
                 ):
+                    # Extract tags if present
+                    self._extract_tags_to_metadata(nested_metadata, model_metadata)
                     return nested_metadata
 
                 if nested_metadata and "schema" in nested_metadata:
                     # Prioritize file metadata description over nested description
                     if "description" in model_metadata and "description" not in nested_metadata:
                         nested_metadata["description"] = model_metadata["description"]
+                    # Extract tags if present
+                    self._extract_tags_to_metadata(nested_metadata, model_metadata)
                     return nested_metadata
                 elif (
                     nested_metadata
@@ -528,6 +545,8 @@ class ExecutionEngine:
                     deep_nested_metadata = nested_metadata["metadata"]
                     if "description" in model_metadata:
                         deep_nested_metadata["description"] = model_metadata["description"]
+                    # Extract tags if present
+                    self._extract_tags_to_metadata(deep_nested_metadata, model_metadata)
                     return deep_nested_metadata
 
             # Fallback to any other metadata in the model data
@@ -537,6 +556,8 @@ class ExecutionEngine:
                     # Use file metadata description if available
                     if "description" in model_metadata:
                         file_metadata["description"] = model_metadata["description"]
+                    # Extract tags if present
+                    self._extract_tags_to_metadata(file_metadata, model_metadata)
                     # If no decorator description, file metadata description is already there
                     return file_metadata
 
@@ -544,4 +565,138 @@ class ExecutionEngine:
 
         except Exception as e:
             self.logger.warning(f"Error extracting metadata: {e}")
+            return None
+
+    def _extract_tags_to_metadata(
+        self, metadata: Dict[str, Any], model_metadata: Dict[str, Any]
+    ) -> None:
+        """
+        Extract tags and object_tags from model metadata and ensure they're in the metadata dict.
+
+        Args:
+            metadata: Metadata dictionary to populate with tags
+            model_metadata: Model metadata containing tags
+        """
+        nested_metadata = model_metadata.get("metadata", {})
+        
+        # Extract tags (dbt-style, list of strings) from nested metadata structure
+        if "tags" not in metadata or not metadata.get("tags"):
+            nested_tags = nested_metadata.get("tags", [])
+            if nested_tags:
+                metadata["tags"] = nested_tags
+
+        # Extract object_tags (database-style, key-value pairs) from nested metadata structure
+        if "object_tags" not in metadata or not metadata.get("object_tags"):
+            nested_object_tags = nested_metadata.get("object_tags", {})
+            if nested_object_tags and isinstance(nested_object_tags, dict):
+                metadata["object_tags"] = nested_object_tags
+
+    def _extract_schema_name(self, table_name: str) -> Optional[str]:
+        """
+        Extract schema name from table name.
+
+        Args:
+            table_name: Full table name (e.g., "my_schema.table_name")
+
+        Returns:
+            Schema name or None if no schema in table name
+        """
+        if "." in table_name:
+            return table_name.split(".", 1)[0]
+        return None
+
+    def _attach_schema_tags_if_needed(self, schema_name: str) -> None:
+        """
+        Attach tags to schema if not already processed and if schema-level tags are configured.
+
+        Args:
+            schema_name: Name of the schema
+        """
+        # Skip if already processed
+        if schema_name in self._processed_schemas:
+            return
+
+        # Load schema-level tags from project config
+        schema_metadata = self._load_schema_metadata(schema_name)
+        if not schema_metadata:
+            # Mark as processed even if no tags to avoid repeated checks
+            self._processed_schemas[schema_name] = {}
+            return
+
+        # Attach tags to schema if adapter supports it
+        if hasattr(self.adapter, "attach_tags") and hasattr(self.adapter, "_create_schema_if_needed"):
+            try:
+                # Use the adapter's _create_schema_if_needed with metadata to attach tags
+                # This will create the schema if needed and attach tags
+                self.adapter._create_schema_if_needed(f"{schema_name}.dummy", schema_metadata)
+                self.logger.info(f"Attached tags to schema: {schema_name}")
+            except Exception as e:
+                self.logger.warning(f"Could not attach tags to schema {schema_name}: {e}")
+
+        # Mark as processed
+        self._processed_schemas[schema_name] = schema_metadata
+
+    def _load_schema_metadata(self, schema_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Load schema-level metadata (tags, object_tags) from project config.
+
+        Supports:
+        - Module-level tags: [module] tags = [...]
+        - Per-schema tags: [schemas.schema_name] tags = [...]
+        - Per-schema object_tags: [schemas.schema_name] object_tags = {...}
+
+        Args:
+            schema_name: Name of the schema
+
+        Returns:
+            Dictionary with tags and object_tags, or None if no schema metadata found
+        """
+        try:
+            from .config import load_database_config
+
+            config = load_database_config("default", self.project_folder)
+            # Try to get project config directly
+            from pathlib import Path
+            import tomllib
+
+            project_toml = Path(self.project_folder) / "project.toml"
+            if not project_toml.exists():
+                return None
+
+            with open(project_toml, "rb") as f:
+                project_config = tomllib.load(f)
+
+            schema_metadata = {}
+
+            # Check for per-schema configuration
+            schemas_config = project_config.get("schemas", {})
+            if isinstance(schemas_config, dict) and schema_name in schemas_config:
+                schema_config = schemas_config[schema_name]
+                if isinstance(schema_config, dict):
+                    if "tags" in schema_config:
+                        schema_metadata["tags"] = schema_config["tags"]
+                    if "object_tags" in schema_config:
+                        schema_metadata["object_tags"] = schema_config["object_tags"]
+
+            # Fall back to module-level tags if no per-schema tags
+            if not schema_metadata.get("tags") and not schema_metadata.get("object_tags"):
+                if "module" in project_config:
+                    module_config = project_config.get("module", {})
+                    if isinstance(module_config, dict):
+                        if "tags" in module_config:
+                            schema_metadata["tags"] = module_config["tags"]
+                        if "object_tags" in module_config:
+                            schema_metadata["object_tags"] = module_config["object_tags"]
+                
+                # Also check root-level tags (as fallback even if module exists but has no tags)
+                if not schema_metadata.get("tags") and "tags" in project_config:
+                    # Root-level tags
+                    root_tags = project_config.get("tags", [])
+                    if isinstance(root_tags, list):
+                        schema_metadata["tags"] = root_tags
+
+            return schema_metadata if schema_metadata else None
+
+        except Exception as e:
+            self.logger.debug(f"Could not load schema metadata for {schema_name}: {e}")
             return None

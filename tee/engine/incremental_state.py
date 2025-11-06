@@ -10,7 +10,7 @@ This module provides functionality to track incremental model state including:
 import hashlib
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Union
 from dataclasses import dataclass, asdict
@@ -137,7 +137,7 @@ class IncrementalStateManager:
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """
 
-            now = datetime.utcnow().isoformat()
+            now = datetime.now(UTC).isoformat()
             conn.execute(
                 insert_sql,
                 [
@@ -160,7 +160,7 @@ class IncrementalStateManager:
             WHERE model_name = ?
             """
 
-            now = datetime.utcnow().isoformat()
+            now = datetime.now(UTC).isoformat()
             logger.info(
                 f"Updating state for {state.model_name} with last_processed_value: {state.last_processed_value}"
             )
@@ -199,7 +199,7 @@ class IncrementalStateManager:
             f"Updating processed value for {model_name}: {state.last_processed_value} -> {value}"
         )
         state.last_processed_value = value
-        state.last_run_timestamp = datetime.utcnow().isoformat()
+        state.last_run_timestamp = datetime.now(UTC).isoformat()
         self.save_state(state)
         logger.info(f"State saved for {model_name}: {state}")
 

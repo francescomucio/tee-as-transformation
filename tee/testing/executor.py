@@ -16,6 +16,8 @@ from ..adapters.base import DatabaseAdapter
 class TestExecutor:
     """Executes tests against models after they are created."""
 
+    __test__ = False  # Tell pytest this is not a test class
+
     def __init__(self, adapter: DatabaseAdapter, project_folder: Optional[str] = None):
         """
         Initialize test executor.

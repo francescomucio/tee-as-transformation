@@ -49,6 +49,7 @@ uv run tcli run .
 - **Dependency-Aware Execution**: Automatic model dependency resolution
 - **Incremental Materialization**: Efficient data processing with append, merge, and delete+insert strategies
 - **Rich Metadata Support**: Python-based metadata configuration with full type safety
+- **Comprehensive Tagging**: dbt-style tags and database object tags for tables, views, and schemas
 - **Pluggable Architecture**: Easy to add new database adapters
 - **Configuration Management**: Flexible configuration via `project.toml`
 

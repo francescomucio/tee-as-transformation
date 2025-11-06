@@ -126,6 +126,21 @@ class OTSTransformer:
             "sql_dialect": self.sql_dialect,
         }
 
+        # Extract module-level tags from project config
+        module_tags = []
+        if "module" in self.project_config:
+            module_config = self.project_config.get("module", {})
+            if isinstance(module_config, dict):
+                module_tags = module_config.get("tags", [])
+        elif "tags" in self.project_config:
+            root_tags = self.project_config.get("tags", [])
+            if isinstance(root_tags, list):
+                module_tags = root_tags
+
+        # Ensure module_tags is a list
+        if not isinstance(module_tags, list):
+            module_tags = []
+
         # Build module
         module: OTSModule = {
             "ots_version": "0.1.0",
@@ -134,6 +149,10 @@ class OTSTransformer:
             "target": target,
             "transformations": transformations,
         }
+
+        # Add module-level tags if present
+        if module_tags:
+            module["tags"] = module_tags
 
         return module
 
@@ -156,12 +175,16 @@ class OTSTransformer:
         # Extract description
         description = model_metadata.get("description")
 
+        # Get code structure
+        code_data = model_data.get("code", {})
+        
         # Transform structure
         transformation: OTSTransformation = {
             "transformation_id": model_id,
             "description": description,
+            "transformation_type": "sql",  # Default to SQL for now
             "sql_dialect": self.sql_dialect,
-            "sqlglot": model_data.get("sqlglot", {}),
+            "code": code_data,
             "schema": self._transform_schema(model_data),
             "materialization": self._transform_materialization(model_data),
             "metadata": {"file_path": model_metadata.get("file_path", "")},
@@ -172,10 +195,15 @@ class OTSTransformer:
         if tests:
             transformation["tests"] = tests
 
-        # Add tags if present
+        # Add tags (dbt-style, list of strings) if present
         tags = self._merge_tags(model_data)
         if tags:
             transformation["metadata"]["tags"] = tags
+
+        # Add object_tags (database-style, key-value pairs) if present
+        object_tags = self._extract_object_tags(model_data)
+        if object_tags:
+            transformation["metadata"]["object_tags"] = object_tags
 
         return transformation
 
@@ -231,9 +259,12 @@ class OTSTransformer:
         try:
             import sqlglot
 
-            sqlglot_data = model_data.get("sqlglot", {})
-            sql_content = sqlglot_data.get("sql_content")
-
+            # Get SQL from code structure
+            code_data = model_data.get("code", {})
+            if not code_data or "sql" not in code_data:
+                return None
+            
+            sql_content = code_data["sql"].get("original_sql")
             if not sql_content:
                 return None
 
@@ -409,12 +440,69 @@ class OTSTransformer:
         Returns:
             Merged list of tags
         """
-        # TODO: Extract module tags from project config
+        # Extract module tags from project config
         module_tags = []
+        if "module" in self.project_config:
+            module_config = self.project_config.get("module", {})
+            if isinstance(module_config, dict):
+                module_tags = module_config.get("tags", [])
+            elif isinstance(module_config, list):
+                # Handle case where module is a list (unlikely but handle gracefully)
+                module_tags = []
+        elif "tags" in self.project_config:
+            # Also support tags at root level of project config
+            root_tags = self.project_config.get("tags", [])
+            if isinstance(root_tags, list):
+                module_tags = root_tags
+
+        # Ensure module_tags is a list
+        if not isinstance(module_tags, list):
+            module_tags = []
 
         # Transformation-specific tags
         metadata = model_data.get("model_metadata", {}).get("metadata", {})
         transformation_tags = metadata.get("tags", [])
+        if not isinstance(transformation_tags, list):
+            transformation_tags = []
 
-        # Merge
-        return module_tags + transformation_tags
+        # Merge and deduplicate while preserving order
+        all_tags = module_tags + transformation_tags
+        seen = set()
+        merged_tags = []
+        for tag in all_tags:
+            tag_str = str(tag).lower() if tag else ""
+            if tag_str and tag_str not in seen:
+                seen.add(tag_str)
+                merged_tags.append(tag)
+
+        return merged_tags
+
+    def _extract_object_tags(self, model_data: ParsedModel) -> Dict[str, str]:
+        """
+        Extract object_tags (database-style key-value pairs) from model data.
+
+        Object tags are key-value pairs that are attached directly to database objects,
+        like {"sensitivity_tag": "pii", "classification": "public"}.
+
+        Args:
+            model_data: Parsed model data
+
+        Returns:
+            Dictionary of object tags (key-value pairs)
+        """
+        metadata = model_data.get("model_metadata", {}).get("metadata", {})
+
+        # Extract object_tags from metadata
+        object_tags = metadata.get("object_tags", {})
+        if not isinstance(object_tags, dict):
+            return {}
+
+        # Validate that all values are strings (or convert them)
+        validated_tags = {}
+        for key, value in object_tags.items():
+            if key and isinstance(key, str):
+                # Convert value to string if it's not already
+                if value is not None:
+                    validated_tags[key] = str(value)
+
+        return validated_tags

@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 class TestDiscovery:
     """Discovers SQL test files in the project's tests/ folder."""
 
+    __test__ = False  # Tell pytest this is not a test class
+
     def __init__(self, project_folder: Path):
         """
         Initialize test discovery.

@@ -8,10 +8,11 @@ The Execution Engine is a powerful component that can execute parsed SQL models 
 - **Dependency-Aware Execution**: Executes models in the correct order based on dependencies
 - **Incremental Materialization**: Support for append, merge, and delete+insert strategies
 - **Table Reference Resolution**: Automatically resolves table references and aliases
-- **Schema Management**: Automatically creates schemas and handles table creation
+- **Schema Management**: Automatically creates schemas and handles table creation with tag support
 - **State Management**: Tracks incremental model state and execution history
 - **Comprehensive Logging**: Detailed logging for debugging and monitoring
 - **Error Handling**: Robust error handling with detailed error messages
+- **Tag Support**: Automatic attachment of tags and metadata to database objects (Snowflake)
 
 ## Supported Databases
 
@@ -186,7 +187,21 @@ The execution engine automatically creates schemas and handles table creation:
 ```python
 # Schema is automatically created if it doesn't exist
 # Tables are created with CREATE OR REPLACE TABLE (DuckDB) or CREATE TABLE IF NOT EXISTS (SQLite/PostgreSQL)
+# Schema-level tags are automatically attached when schemas are created (Snowflake)
 ```
+
+#### Model Selection with Tags
+Models can be filtered by tags during execution:
+
+```bash
+# Run only models with specific tags
+uv run tcli run ./my_project --select tag:analytics
+
+# Exclude models with specific tags
+uv run tcli run ./my_project --exclude tag:test
+```
+
+See [Tags and Metadata](tags-and-metadata.md) for complete documentation on tagging.
 
 ## Error Handling
 

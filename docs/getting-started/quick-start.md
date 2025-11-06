@@ -128,4 +128,5 @@ See [Data Quality Tests](user-guide/data-quality-tests.md) for more information.
 - [Configuration](configuration.md) - Learn about advanced configuration options
 - [Database Adapters](user-guide/database-adapters.md) - Explore multi-database support
 - [Data Quality Tests](user-guide/data-quality-tests.md) - Comprehensive testing guide
+- [Tags and Metadata](user-guide/tags-and-metadata.md) - Organize and filter models with tags
 - [Examples](user-guide/examples/) - See more complex examples

@@ -75,6 +75,12 @@ uv run tcli run ./t_project --vars '{"start_date": "2024-01-01"}'
 
 # Run specific model
 uv run tcli run ./t_project --select my_schema.my_table
+
+# Run models by tag
+uv run tcli run ./t_project --select tag:analytics
+
+# Exclude models by tag
+uv run tcli run ./t_project --exclude tag:test
 ```
 
 ## Example Projects
@@ -119,3 +125,4 @@ materialization_change_behavior = "warn"
 - Try the [Incremental Example](incremental-example.md) for advanced data processing
 - Learn about [Testing](testing-example.md) with standard and custom SQL tests
 - Check the [Incremental Materialization Guide](../incremental-materialization.md) for detailed configuration options
+- Learn about [Tags and Metadata](../tags-and-metadata.md) for organizing and filtering models

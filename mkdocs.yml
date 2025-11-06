@@ -79,6 +79,7 @@ nav:
     - user-guide/execution-engine.md
     - user-guide/data-quality-tests.md
     - user-guide/database-adapters.md
+    - user-guide/tags-and-metadata.md
     - user-guide/sql-dialect-conversion.md
     - Examples:
       - user-guide/examples/basic-usage.md
