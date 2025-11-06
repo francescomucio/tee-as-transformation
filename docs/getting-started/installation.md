@@ -1,6 +1,6 @@
 # Installation
 
-TEE is a Python package that can be installed using `uv`, pip, or other Python package managers.
+Tee is a Python package that can be installed using `uv`, pip, or other Python package managers.
 
 ## Prerequisites
 
@@ -12,7 +12,7 @@ TEE is a Python package that can be installed using `uv`, pip, or other Python p
 ### Using uv (Recommended)
 
 ```bash
-# Install TEE
+# Install Tee
 uv add tee
 
 # Or add to an existing project
@@ -22,7 +22,7 @@ uv add tee
 ### Using pip
 
 ```bash
-# Install TEE
+# Install Tee
 pip install tee
 
 # Or add to requirements.txt
@@ -44,7 +44,7 @@ uv pip install -e .
 
 ## Database Dependencies
 
-TEE supports multiple databases. Install the appropriate driver for your database:
+Tee supports multiple databases. Install the appropriate driver for your database:
 
 ### DuckDB (Default)
 ```bash
@@ -71,7 +71,7 @@ uv add google-cloud-bigquery
 ```python
 # Test the installation
 import tee
-print(f"TEE version: {tee.__version__}")
+print(f"Tee version: {tee.__version__}")
 
 # Test database adapters
 from tee.adapters import get_adapter

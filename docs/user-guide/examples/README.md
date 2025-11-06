@@ -1,6 +1,6 @@
 # Examples
 
-This section contains practical examples demonstrating TEE's capabilities.
+This section contains practical examples demonstrating Tee's capabilities.
 
 ## Available Examples
 

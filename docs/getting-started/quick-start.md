@@ -1,6 +1,6 @@
 # Quick Start
 
-Get up and running with TEE in minutes. This guide will walk you through creating your first SQL model and executing it.
+Get up and running with Tee in minutes. This guide will walk you through creating your first SQL model and executing it.
 
 ## 1. Create a Project
 
@@ -13,10 +13,10 @@ cd my_tee_project
 uv init
 ```
 
-## 2. Install TEE
+## 2. Install Tee
 
 ```bash
-# Add TEE and DuckDB
+# Add Tee and DuckDB
 uv add tee duckdb
 ```
 
@@ -78,7 +78,7 @@ uv run python run_models.py
 
 ## What Happened?
 
-1. **Parsing**: TEE analyzed your SQL model and identified dependencies
+1. **Parsing**: Tee analyzed your SQL model and identified dependencies
 2. **Configuration**: Database settings were loaded from `pyproject.toml`
 3. **Execution**: Your model was executed in the correct order
 4. **Results**: The model was materialized as a table in DuckDB

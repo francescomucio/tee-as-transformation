@@ -1,10 +1,10 @@
 # Tags and Metadata
 
-TEE supports comprehensive tagging functionality for organizing, categorizing, and managing your data transformations. Tags can be attached at multiple levels: individual tables/views, and entire schemas/modules.
+Tee supports comprehensive tagging functionality for organizing, categorizing, and managing your data transformations. Tags can be attached at multiple levels: individual tables/views, and entire schemas/modules.
 
 ## Overview
 
-TEE supports two types of tags:
+Tee supports two types of tags:
 
 1. **dbt-style tags** (`tags`): List of strings used for filtering, categorization, and model selection
    - Example: `tags = ["analytics", "production", "fct"]`

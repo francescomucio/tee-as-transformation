@@ -1,11 +1,11 @@
-# TEE Documentation
+# Tee Documentation
 
-Welcome to the TEE (Transform, Extract, Execute) documentation. TEE is a powerful Python framework for managing SQL data transformations with support for multiple database backends and automatic SQL dialect conversion.
+Welcome to the Tee for Transform (t4t) documentation. Tee is a powerful Python framework for managing SQL data transformations with support for multiple database backends and automatic SQL dialect conversion.
 
 ## Quick Navigation
 
 ### 🚀 Getting Started
-- [Installation](getting-started/installation.md) - Install TEE and its dependencies
+- [Installation](getting-started/installation.md) - Install Tee and its dependencies
 - [Quick Start](getting-started/quick-start.md) - Get up and running in minutes
 - [Configuration](getting-started/configuration.md) - Configure databases and settings
 
@@ -26,7 +26,7 @@ Welcome to the TEE (Transform, Extract, Execute) documentation. TEE is a powerfu
 
 ### 🛠️ Development
 - [Architecture](development/architecture.md) - System design and components
-- [Contributing](development/contributing.md) - How to contribute to TEE
+- [Contributing](development/contributing.md) - How to contribute to Tee
 - [Migration Guides](development/migration-guides/) - Upgrading between versions
 
 ## Key Features

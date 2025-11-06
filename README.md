@@ -2,9 +2,9 @@
 
 <img src="https://upload.wikimedia.org/wikipedia/commons/f/f7/Rpb_clothing_icon.svg" alt="Tee Logo" width="80" height="80" align="left" style="margin-right: 15px; margin-bottom: 10px;">
 
-**This is a "what if" project**: What if dbt supported functions? What if dbt allowed for richer metadata? What if data modeling was a priority? After a chat with a friend, I decided to see how far I could go...
+**This is a "what if" project**: What if a transformation tool supported functions? What if it allowed for richer metadata? What if data modeling was a priority? After a chat with a friend, I decided to see how far I could go...
 
-A Python framework for managing SQL data transformations with support for multiple database backends, automatic SQL dialect conversion, and rich metadata-driven modeling. Named "Tee" for Transform, but also because everyone loves a good t-shirt! 👕
+A Python framework for managing SQL data transformations with support for multiple database backends, automatic SQL dialect conversion, and rich metadata-driven modeling. Named "Tee for Transform" (abbreviated as **t4t**), but also because everyone loves a good t-shirt! 👕
 
 ## 🚀 Quick Start
 

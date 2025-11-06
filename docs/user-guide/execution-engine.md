@@ -88,7 +88,7 @@ if result["status"] == "success":
 
 ## Incremental Materialization
 
-TEE supports three incremental materialization strategies for efficient data processing:
+Tee supports three incremental materialization strategies for efficient data processing:
 
 ### Append Strategy
 Adds new records to existing tables without modifying existing data.
