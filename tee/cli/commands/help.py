@@ -3,18 +3,10 @@ Help command implementation.
 """
 
 
-def cmd_help(args):
-    """
-    Show help information.
-    
-    Args:
-        args: Parsed arguments (contains parser reference)
-    """
-    # The parser is passed via args from main.py
-    parser = getattr(args, 'parser', None)
-    if parser:
-        parser.print_help()
-    else:
-        # Fallback if parser not available
-        print("Use 'tcli <command> --help' for command-specific help")
+def cmd_help():
+    """Show help information."""
+    # Typer automatically generates help via --help flags
+    # This command is kept for backward compatibility
+    print("Use 't4t <command> --help' for command-specific help")
+    print("Or 't4t --help' to see all available commands")
 

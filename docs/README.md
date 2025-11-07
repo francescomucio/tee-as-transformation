@@ -11,6 +11,7 @@ Welcome to the Tee for Transform (t4t) documentation. t4t is a powerful Python f
 
 ### 📖 User Guide
 - [Overview](user-guide/overview.md) - Core concepts and architecture
+- [CLI Reference](user-guide/cli-reference.md) - Complete CLI commands and options reference
 - [Execution Engine](user-guide/execution-engine.md) - Running SQL models
 - [Seeds](user-guide/seeds.md) - Loading static data files (CSV, JSON, TSV)
 - [Data Quality Tests](user-guide/data-quality-tests.md) - Automated data validation
@@ -21,9 +22,10 @@ Welcome to the Tee for Transform (t4t) documentation. t4t is a powerful Python f
 - [Examples](user-guide/examples/) - Practical usage examples and tutorials
 
 ### 🔧 API Reference
-- [Engine API](api-reference/engine/) - Execution engine classes and methods
-- [Parser API](api-reference/parser/) - SQL parsing and analysis
-- [Adapters API](api-reference/adapters/) - Database adapter implementations
+- [API Reference Overview](api-reference/README.md) - API documentation status and overview
+- [Engine API](api-reference/engine/) - Execution engine classes and methods (coming soon)
+- [Parser API](api-reference/parser/) - SQL parsing and analysis (coming soon)
+- [Adapters API](api-reference/adapters/) - Database adapter implementations (coming soon)
 
 ### 🛠️ Development
 - [Architecture](development/architecture.md) - System design and components

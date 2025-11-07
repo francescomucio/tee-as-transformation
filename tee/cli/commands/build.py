@@ -4,18 +4,31 @@ Build command implementation.
 Builds models with interleaved test execution, stopping on test failures.
 """
 import sys
+from typing import Optional, List
 from tee.cli.context import CommandContext
 from tee.engine.connection_manager import ConnectionManager
 from tee import build_models
 
 
-def cmd_build(args):
+def cmd_build(
+    project_folder: str,
+    vars: Optional[str] = None,
+    verbose: bool = False,
+    select: Optional[List[str]] = None,
+    exclude: Optional[List[str]] = None,
+):
     """Execute the build command."""
-    ctx = CommandContext(args)
+    ctx = CommandContext(
+        project_folder=project_folder,
+        vars=vars,
+        verbose=verbose,
+        select=select,
+        exclude=exclude,
+    )
     connection_manager = None
     
     try:
-        print(f"Building project: {args.project_folder}")
+        print(f"Building project: {project_folder}")
         ctx.print_variables_info()
         ctx.print_selection_info()
 

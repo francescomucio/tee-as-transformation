@@ -87,32 +87,9 @@ export TEE_DB_SOURCE_DIALECT=postgresql
 
 ## SQL Dialect Conversion
 
-The system automatically converts SQL between dialects using SQLglot:
+t4t automatically converts SQL between dialects using SQLglot, allowing you to write models in one dialect and run them on different databases.
 
-```python
-# Write models in PostgreSQL dialect
-sql = """
-SELECT 
-    u.id,
-    u.name,
-    COUNT(o.id) as order_count
-FROM users u
-LEFT JOIN orders o ON u.id = o.user_id
-WHERE u.created_at > '2023-01-01'
-GROUP BY u.id, u.name
-"""
-
-# Automatically converted to DuckDB/Snowflake/etc. when executed
-```
-
-### Supported Source Dialects
-- PostgreSQL
-- MySQL
-- SQLite
-- DuckDB
-- Snowflake
-- BigQuery
-- And many more via SQLglot
+For complete documentation on SQL dialect conversion, including configuration, examples, and best practices, see the [SQL Dialect Conversion Guide](sql-dialect-conversion.md).
 
 ## Materialization Types
 

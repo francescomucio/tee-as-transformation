@@ -68,19 +68,19 @@ WHERE status = 'active'
 
 ```bash
 # Run all models
-uv run tcli run ./t_project
+uv run t4t run ./t_project
 
 # Run with variables (JSON format)
-uv run tcli run ./t_project --vars '{"start_date": "2024-01-01"}'
+uv run t4t run ./t_project --vars '{"start_date": "2024-01-01"}'
 
 # Run specific model
-uv run tcli run ./t_project --select my_schema.my_table
+uv run t4t run ./t_project --select my_schema.my_table
 
 # Run models by tag
-uv run tcli run ./t_project --select tag:analytics
+uv run t4t run ./t_project --select tag:analytics
 
 # Exclude models by tag
-uv run tcli run ./t_project --exclude tag:test
+uv run t4t run ./t_project --exclude tag:test
 ```
 
 ## Example Projects

@@ -17,33 +17,40 @@ class CommandContext:
     and extracting selection criteria.
     """
 
-    def __init__(self, args):
+    def __init__(
+        self,
+        project_folder: str,
+        vars: Optional[str] = None,
+        verbose: bool = False,
+        select: Optional[List[str]] = None,
+        exclude: Optional[List[str]] = None,
+    ):
         """
-        Initialize command context from parsed arguments.
+        Initialize command context from parameters.
         
         Args:
-            args: Parsed argparse arguments
+            project_folder: Path to the project folder
+            vars: Variables string (JSON format)
+            verbose: Enable verbose output
+            select: Selection patterns
+            exclude: Exclusion patterns
         """
         # Parse variables if provided
-        vars_string = getattr(args, "vars", None)
-        self.vars = parse_vars(vars_string)
+        self.vars = parse_vars(vars)
         
         # Load project configuration
-        self.config = load_project_config(args.project_folder, self.vars)
+        self.config = load_project_config(project_folder, self.vars)
         
         # Set up logging
-        self.verbose = getattr(args, "verbose", False)
+        self.verbose = verbose
         setup_logging(self.verbose)
         
         # Resolve project folder to absolute path
-        self.project_path = Path(args.project_folder).resolve()
+        self.project_path = Path(project_folder).resolve()
         
         # Extract selection criteria
-        self.select_patterns = getattr(args, "select", None)
-        self.exclude_patterns = getattr(args, "exclude", None)
-        
-        # Store original args for commands that need them
-        self.args = args
+        self.select_patterns = select
+        self.exclude_patterns = exclude
 
     def handle_error(self, error: Exception, show_traceback: bool = None) -> None:
         """

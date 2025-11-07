@@ -8,8 +8,8 @@ The seeds functionality provides:
 - **Automatic Discovery**: Automatically finds seed files in the `seeds/` folder
 - **Multiple Formats**: Supports CSV, JSON, and TSV files
 - **Schema Support**: Organize seeds by schema using subfolders
-- **Explicit Loading**: Load seeds with `tcli seed` or automatically with `tcli build`
-- **Standalone Command**: Load seeds independently with `tcli seed`
+- **Explicit Loading**: Load seeds with `t4t seed` or automatically with `t4t build`
+- **Standalone Command**: Load seeds independently with `t4t seed`
 
 ## Quick Start
 
@@ -64,14 +64,14 @@ Seeds must be loaded explicitly using the `seed` command:
 
 ```bash
 # Load seeds before running models
-tcli seed ./my_project
-tcli run ./my_project
+t4t seed ./my_project
+t4t run ./my_project
 ```
 
 Or load seeds and run models in one step:
 
 ```bash
-tcli seed ./my_project && tcli run ./my_project
+t4t seed ./my_project && t4t run ./my_project
 ```
 
 **Note**: The `build` command automatically loads seeds before building models, but `run` does not.
@@ -187,10 +187,10 @@ You can load seeds independently without running models using the `seed` command
 
 ```bash
 # Load all seeds
-tcli seed ./my_project
+t4t seed ./my_project
 
 # With verbose output
-tcli seed ./my_project -v
+t4t seed ./my_project -v
 ```
 
 ### Command Output
@@ -393,10 +393,10 @@ Load seeds **before** running models to make them available as dependencies:
 
 ```bash
 # Step 1: Load seeds
-tcli seed ./my_project
+t4t seed ./my_project
 
 # Step 2: Run models (seeds are now available)
-tcli run ./my_project
+t4t run ./my_project
 ```
 
 Then your models can reference seed tables:
@@ -413,7 +413,7 @@ JOIN users u ON u.id = o.user_id
 JOIN products p ON p.id = o.product_id
 ```
 
-**Note**: The `build` command automatically loads seeds, so you only need to run `tcli build ./my_project`.
+**Note**: The `build` command automatically loads seeds, so you only need to run `t4t build ./my_project`.
 
 ## Advanced Usage
 
@@ -423,7 +423,7 @@ You can control seed loading by organizing seeds in different folders and using 
 
 ```bash
 # Load only production seeds
-tcli seed ./my_project  # Loads all seeds
+t4t seed ./my_project  # Loads all seeds
 
 # Or use environment-specific seed folders
 # seeds/production/
@@ -458,7 +458,7 @@ Seeds provide a simple way to load static reference data into your database:
 - ✅ Automatic discovery of seed files
 - ✅ Support for CSV, JSON, and TSV formats
 - ✅ Schema organization with subfolders
-- ✅ Explicit loading with `tcli seed` or automatic with `tcli build`
+- ✅ Explicit loading with `t4t seed` or automatic with `t4t build`
 - ✅ Standalone command for testing
 
 Use seeds for reference data, configuration, and small static datasets that your models depend on.

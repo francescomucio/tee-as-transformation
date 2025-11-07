@@ -11,7 +11,7 @@ The testing framework supports:
 - **Parameterized Tests**: Tests that accept configuration parameters
 - **Test Severity Levels**: Control whether tests fail builds (ERROR) or just warn (WARNING)
 - **Automatic Execution**: Tests run automatically after models are executed
-- **Standalone Execution**: Run tests independently with `tcli test`
+- **Standalone Execution**: Run tests independently with `t4t test`
 
 ## Quick Start
 
@@ -48,10 +48,10 @@ Tests are automatically executed after model runs:
 
 ```bash
 # Run models (tests execute automatically)
-tcli run examples/t_project
+t4t run examples/t_project
 
 # Run tests independently
-tcli test examples/t_project
+t4t test examples/t_project
 ```
 
 ## Test Definition Formats
@@ -343,8 +343,8 @@ Verifies no duplicate rows exist in a table. When applied at the table level wit
 
 **Via CLI:**
 ```bash
-tcli test examples/t_project --severity not_null=warning
-tcli test examples/t_project --severity my_table.name.not_null=error
+t4t test examples/t_project --severity not_null=warning
+t4t test examples/t_project --severity my_table.name.not_null=error
 ```
 
 ---
@@ -558,8 +558,8 @@ WHERE @column_name = @status
 ### Test Discovery
 
 SQL tests are automatically discovered from the `tests/` folder when:
-- Running `tcli test`
-- Running `tcli run` (tests execute automatically)
+- Running `t4t test`
+- Running `t4t run` (tests execute automatically)
 
 Test names are derived from file names (without `.sql` extension):
 - `tests/my_test.sql` → test name `"my_test"`
@@ -598,14 +598,14 @@ You'll see a warning like this:
 
 ## Test Library Export (OTS Format)
 
-When you parse a project with `tcli parse`, t4t automatically exports your SQL tests to an OTS-compliant test library file. This allows your tests to be shared and used by other OTS-compliant tools.
+When you parse a project with `t4t parse`, t4t automatically exports your SQL tests to an OTS-compliant test library file. This allows your tests to be shared and used by other OTS-compliant tools.
 
 ### Automatic Export
 
 The test library is automatically generated when parsing a project:
 
 ```bash
-tcli parse examples/t_project
+t4t parse examples/t_project
 ```
 
 This creates a test library file in the `output/` folder:
@@ -685,7 +685,7 @@ This allows OTS-compliant tools to discover and use your test definitions.
 Tests are automatically executed after models are created:
 
 ```bash
-tcli run examples/t_project
+t4t run examples/t_project
 ```
 
 Output includes test results:
@@ -708,16 +708,16 @@ Run tests independently without re-running models:
 
 ```bash
 # Run all tests
-tcli test examples/t_project
+t4t test examples/t_project
 
 # Run with verbose output
-tcli test examples/t_project --verbose
+t4t test examples/t_project --verbose
 
 # Override test severity
-tcli test examples/t_project --severity not_null=warning
+t4t test examples/t_project --severity not_null=warning
 
 # Run with variables (JSON format)
-tcli test ./examples/t_project --vars '{"start_date": "2024-01-01"}'
+t4t test ./examples/t_project --vars '{"start_date": "2024-01-01"}'
 ```
 
 ### Test Execution Order
@@ -816,10 +816,10 @@ metadata: ModelMetadataDict = {
 
 ```bash
 # Make all not_null tests warnings
-tcli test examples/t_project --severity not_null=warning
+t4t test examples/t_project --severity not_null=warning
 
 # Make specific test a warning
-tcli test examples/t_project --severity my_schema.orders.status.accepted_values=warning
+t4t test examples/t_project --severity my_schema.orders.status.accepted_values=warning
 ```
 
 ---
@@ -834,7 +834,7 @@ tcli test examples/t_project --severity my_schema.orders.status.accepted_values=
 4. **Monitor Table Health**: Use `row_count_gt_0` to ensure tables aren't empty
 5. **Check for Duplicates**: Use `unique` at table level (without columns) for fact tables to check entire row uniqueness
 6. **Set Appropriate Severity**: Use WARNING for non-critical checks
-7. **Test in CI/CD**: Include `tcli test` in your CI/CD pipeline
+7. **Test in CI/CD**: Include `t4t test` in your CI/CD pipeline
 
 ### SQL Test Best Practices
 

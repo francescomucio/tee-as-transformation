@@ -120,14 +120,9 @@ source_dialect = "postgresql"  # Write models in PostgreSQL
 # Automatically converts to target database dialect
 ```
 
-Supported source dialects:
-- `postgresql`
-- `mysql`
-- `sqlite`
-- `duckdb`
-- `snowflake`
-- `bigquery`
-- And many more via SQLglot
+t4t supports many source dialects including PostgreSQL, MySQL, SQLite, DuckDB, Snowflake, BigQuery, and more via SQLglot.
+
+For complete documentation on SQL dialect conversion, including all supported dialects, examples, and best practices, see the [SQL Dialect Conversion Guide](user-guide/sql-dialect-conversion.md).
 
 ## Advanced Configuration
 

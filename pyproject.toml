@@ -11,10 +11,10 @@ dependencies = [
     "snowflake-connector-python>=4.0.0",
     "sqlglot[rs]>=27.27.0",
     "toml>=0.10.2",
+    "typer>=0.20.0",
 ]
 
 [project.scripts]
-tcli = "tee.cli.main:main"
 t4t = "tee.cli.main:main"
 
 [build-system]

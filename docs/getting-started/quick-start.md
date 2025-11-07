@@ -5,24 +5,82 @@ Get up and running with t4t in minutes. This guide will walk you through creatin
 ## 1. Create a Project
 
 ```bash
-# Create a new project directory
-mkdir my_tee_project
-cd my_tee_project
+# Initialize a new t4t project
+uv run t4t init my_tee_project
 
-# Initialize with uv
-uv init
+# Or specify a database type
+uv run t4t init my_tee_project -d snowflake
 ```
 
-## 2. Install t4t
+This creates the project structure with:
+- `project.toml` - Configuration file with database connection template
+- `models/` - SQL model files
+- `tests/` - Data quality tests
+- `seeds/` - Static data files (CSV, JSON, TSV)
+- `data/` - Database files (for DuckDB projects only)
 
+The generated `project.toml` includes:
+```toml
+project_folder = "my_tee_project"
+
+[connection]
+type = "duckdb"
+path = "data/my_tee_project.duckdb"
+
+[flags]
+materialization_change_behavior = "warn"  # Options: "warn", "error", "ignore"
+```
+
+Then navigate to your project:
 ```bash
-# Add t4t and DuckDB
-uv add tee duckdb
+cd my_tee_project
+```
+
+## 2. Configure Database
+
+Edit `project.toml` to configure your database connection. For DuckDB, the default configuration is already set up and ready to use. For other databases, update the connection settings:
+
+**DuckDB (default):**
+```toml
+[connection]
+type = "duckdb"
+path = "data/my_tee_project.duckdb"
+```
+
+**Snowflake:**
+```toml
+[connection]
+type = "snowflake"
+host = "YOUR_ACCOUNT.snowflakecomputing.com"
+user = "YOUR_USERNAME"
+password = "YOUR_PASSWORD"
+role = "YOUR_ROLE"
+warehouse = "YOUR_WAREHOUSE"
+database = "YOUR_DATABASE"
+```
+
+**PostgreSQL:**
+```toml
+[connection]
+type = "postgresql"
+host = "localhost"
+port = 5432
+database = "my_tee_project"
+user = "postgres"
+password = "postgres"
+```
+
+**BigQuery:**
+```toml
+[connection]
+type = "bigquery"
+project = "YOUR_PROJECT_ID"
+database = "my_tee_project"  # dataset name
 ```
 
 ## 3. Create Your First Model
 
-Create a `models/` directory and add your first SQL model:
+The `models/` directory was already created by the `init` command. Add your first SQL model:
 
 ```sql
 -- models/users.sql
@@ -35,51 +93,25 @@ FROM source_users
 WHERE active = true
 ```
 
-## 4. Configure Database
+## 4. Execute Your Model
 
-Add database configuration to `pyproject.toml`:
-
-```toml
-[tool.tee.database]
-type = "duckdb"
-path = "data/my_project.db"
-source_dialect = "postgresql"  # Write in PostgreSQL, convert to DuckDB
-```
-
-## 5. Execute Your Model
-
-Create a simple script to run your model:
-
-```python
-# run_models.py
-from tee.engine import ModelExecutor, load_database_config
-from tee.parser import ProjectParser
-
-# Load configuration
-config = load_database_config()
-
-# Parse models
-parser = ProjectParser(".", config)
-parsed_models = parser.collect_models()
-
-# Execute models
-executor = ModelExecutor(".", config)
-results = executor.execute_models(parsed_models)
-
-print(f"Executed {len(results['executed_tables'])} models successfully!")
-```
-
-## 6. Run Your Project
+Use the CLI to run your models:
 
 ```bash
-# Execute the script
-uv run python run_models.py
+# Run all models in the project
+uv run t4t run .
+```
+
+Or from the parent directory:
+
+```bash
+uv run t4t run my_tee_project
 ```
 
 ## What Happened?
 
 1. **Parsing**: t4t analyzed your SQL model and identified dependencies
-2. **Configuration**: Database settings were loaded from `pyproject.toml`
+2. **Configuration**: Database settings were loaded from `project.toml`
 3. **Execution**: Your model was executed in the correct order
 4. **Results**: The model was materialized as a table in DuckDB
 5. **Testing**: Tests (if defined) were automatically executed
@@ -137,8 +169,8 @@ echo "id,name
 2,Bob" > seeds/users.csv
 
 # Load seeds explicitly before running models
-tcli seed ./my_project
-tcli run ./my_project
+t4t seed ./my_project
+t4t run ./my_project
 ```
 
 **Note**: The `build` command automatically loads seeds, but `run` requires explicit seed loading.

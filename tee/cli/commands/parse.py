@@ -2,17 +2,30 @@
 Parse command implementation.
 """
 
+from typing import Optional, List
 from tee.cli.context import CommandContext
 from tee.cli.selection import ModelSelector
 from tee import parse_models_only
 
 
-def cmd_parse(args):
+def cmd_parse(
+    project_folder: str,
+    vars: Optional[str] = None,
+    verbose: bool = False,
+    select: Optional[List[str]] = None,
+    exclude: Optional[List[str]] = None,
+):
     """Execute the parse command."""
-    ctx = CommandContext(args)
+    ctx = CommandContext(
+        project_folder=project_folder,
+        vars=vars,
+        verbose=verbose,
+        select=select,
+        exclude=exclude,
+    )
     
     try:
-        print(f"Parsing models in project: {args.project_folder}")
+        print(f"Parsing models in project: {project_folder}")
         ctx.print_variables_info()
         ctx.print_selection_info()
         

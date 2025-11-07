@@ -18,12 +18,12 @@ A complete example project using **DuckDB** as the database backend. This projec
 **To run:**
 ```bash
 cd examples/t_project
-uv run tcli run .
+uv run t4t run .
 ```
 
 **To run tests:**
 ```bash
-uv run tcli test .
+uv run t4t test .
 ```
 
 ### `t_project_sno` - Snowflake Example
@@ -39,12 +39,12 @@ A complete example project using **Snowflake** as the database backend. This pro
 **To run:**
 ```bash
 cd examples/t_project_sno
-uv run tcli run .
+uv run t4t run .
 ```
 
 **To run tests:**
 ```bash
-uv run tcli test .
+uv run t4t test .
 ```
 
 **Note**: This example requires valid Snowflake credentials configured in `project.toml`.

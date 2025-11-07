@@ -339,7 +339,9 @@ class TestSeedLoader:
         
         # Create valid and invalid files
         (seeds_folder / "users.csv").write_text("id,name\n1,Alice\n")
-        (seeds_folder / "invalid.csv").write_text("invalid,data,no,header\n")
+        # Create an invalid CSV file with no header (empty first line, then data)
+        # This will cause csv.DictReader to have None fieldnames
+        (seeds_folder / "invalid.csv").write_text("\n1,Alice\n2,Bob\n")
         
         seed_files = [
             (seeds_folder / "users.csv", None),

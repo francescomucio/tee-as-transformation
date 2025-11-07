@@ -2,18 +2,31 @@
 Run command implementation.
 """
 
+from typing import Optional, List
 from tee.cli.context import CommandContext
 from tee.engine.connection_manager import ConnectionManager
 from tee import execute_models
 
 
-def cmd_run(args):
+def cmd_run(
+    project_folder: str,
+    vars: Optional[str] = None,
+    verbose: bool = False,
+    select: Optional[List[str]] = None,
+    exclude: Optional[List[str]] = None,
+):
     """Execute the run command."""
-    ctx = CommandContext(args)
+    ctx = CommandContext(
+        project_folder=project_folder,
+        vars=vars,
+        verbose=verbose,
+        select=select,
+        exclude=exclude,
+    )
     connection_manager = None
     
     try:
-        print(f"Running t4t on project: {args.project_folder}")
+        print(f"Running t4t on project: {project_folder}")
         ctx.print_variables_info()
         ctx.print_selection_info()
 

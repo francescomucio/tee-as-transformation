@@ -2,17 +2,26 @@
 Debug command implementation.
 """
 
+from typing import Optional
 from tee.cli.context import CommandContext
 from tee.engine.connection_manager import ConnectionManager
 
 
-def cmd_debug(args):
+def cmd_debug(
+    project_folder: str,
+    vars: Optional[str] = None,
+    verbose: bool = False,
+):
     """Execute the debug command to test database connectivity."""
-    ctx = CommandContext(args)
+    ctx = CommandContext(
+        project_folder=project_folder,
+        vars=vars,
+        verbose=verbose,
+    )
     connection_manager = None
     
     try:
-        print(f"Testing database connectivity for project: {args.project_folder}")
+        print(f"Testing database connectivity for project: {project_folder}")
         ctx.print_variables_info()
 
         # Create unified connection manager

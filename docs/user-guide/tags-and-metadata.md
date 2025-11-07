@@ -68,13 +68,13 @@ Tags can be used to filter models during execution:
 
 ```bash
 # Run only models with "analytics" tag
-uv run tcli run ./my_project --select tag:analytics
+uv run t4t run ./my_project --select tag:analytics
 
 # Run models excluding "test" tag
-uv run tcli run ./my_project --exclude tag:test
+uv run t4t run ./my_project --exclude tag:test
 
 # Combine tag and name selection
-uv run tcli run ./my_project --select tag:production my_schema.users
+uv run t4t run ./my_project --select tag:production my_schema.users
 ```
 
 ## Schema-Level Tags
@@ -376,7 +376,7 @@ object_tags = {
 3. Check logs: Enable debug logging to see tag attachment attempts
 
 ```bash
-uv run tcli run ./my_project -v
+uv run t4t run ./my_project -v
 ```
 
 ### Schema Tags Not Applied

@@ -179,7 +179,7 @@ WHERE {{ column_name }} < 0
 ### Run Models (Tests Execute Automatically)
 
 ```bash
-tcli run t_project
+t4t run t_project
 ```
 
 Output:
@@ -210,7 +210,7 @@ Test Results:
 ### Run Tests Independently
 
 ```bash
-tcli test t_project
+t4t test t_project
 ```
 
 Output:
@@ -230,7 +230,7 @@ Test Results:
 ### Run Tests with Severity Overrides
 
 ```bash
-tcli test t_project --severity check_minimum_rows=warning
+t4t test t_project --severity check_minimum_rows=warning
 ```
 
 This makes the `check_minimum_rows` test a warning instead of an error, so it won't fail the build.
@@ -317,7 +317,7 @@ metadata: ModelMetadataDict = {
 2. **Use SQL tests for custom business logic** - When standard tests don't cover your needs
 3. **Document your SQL tests** - Add comments explaining parameters and logic
 4. **Use parameters for flexibility** - Make tests reusable across different thresholds
-5. **Test in CI/CD** - Include `tcli test` in your pipeline
+5. **Test in CI/CD** - Include `t4t test` in your pipeline
 
 ## Troubleshooting
 

@@ -4,6 +4,7 @@ Test command implementation.
 
 import sys
 from pathlib import Path
+from typing import Optional, List
 
 from tee.cli.context import CommandContext
 from tee.cli.selection import ModelSelector
@@ -13,12 +14,25 @@ from tee.testing import TestExecutor
 from tee.testing.base import TestSeverity
 
 
-def cmd_test(args):
+def cmd_test(
+    project_folder: str,
+    vars: Optional[str] = None,
+    verbose: bool = False,
+    select: Optional[List[str]] = None,
+    exclude: Optional[List[str]] = None,
+    severity: Optional[List[str]] = None,
+):
     """Execute the test command."""
-    ctx = CommandContext(args)
+    ctx = CommandContext(
+        project_folder=project_folder,
+        vars=vars,
+        verbose=verbose,
+        select=select,
+        exclude=exclude,
+    )
     
     try:
-        print(f"Running tests for project: {args.project_folder}")
+        print(f"Running tests for project: {project_folder}")
         ctx.print_variables_info()
         ctx.print_selection_info()
         
@@ -57,8 +71,8 @@ def cmd_test(args):
 
             # Parse severity overrides from CLI
             severity_overrides = {}
-            if hasattr(args, "severity") and args.severity:
-                for override in args.severity:
+            if severity:
+                for override in severity:
                     if "=" in override:
                         key, severity_str = override.split("=", 1)
                         try:

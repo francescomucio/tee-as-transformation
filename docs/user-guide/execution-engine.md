@@ -195,10 +195,10 @@ Models can be filtered by tags during execution:
 
 ```bash
 # Run only models with specific tags
-uv run tcli run ./my_project --select tag:analytics
+uv run t4t run ./my_project --select tag:analytics
 
 # Exclude models with specific tags
-uv run tcli run ./my_project --exclude tag:test
+uv run t4t run ./my_project --exclude tag:test
 ```
 
 See [Tags and Metadata](tags-and-metadata.md) for complete documentation on tagging.

@@ -2,18 +2,27 @@
 Seed command implementation.
 """
 
+from typing import Optional
 from pathlib import Path
 from tee.cli.context import CommandContext
 from tee.engine.seeds import SeedDiscovery, SeedLoader
 from tee.engine.execution_engine import ExecutionEngine
 
 
-def cmd_seed(args):
+def cmd_seed(
+    project_folder: str,
+    vars: Optional[str] = None,
+    verbose: bool = False,
+):
     """Execute the seed command to load seed files into the database."""
-    ctx = CommandContext(args)
+    ctx = CommandContext(
+        project_folder=project_folder,
+        vars=vars,
+        verbose=verbose,
+    )
     
     try:
-        print(f"Loading seeds from project: {args.project_folder}")
+        print(f"Loading seeds from project: {project_folder}")
         
         # Get seeds folder
         seeds_folder = ctx.project_path / "seeds"

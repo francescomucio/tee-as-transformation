@@ -40,7 +40,7 @@ mkdir models
 echo "SELECT 1 as id, 'hello' as message" > models/my_first_model.sql
 
 # Run your models
-uv run tcli run .
+uv run t4t run .
 ```
 
 ## ✨ Key Features
@@ -65,7 +65,7 @@ cd tee-as-transformation
 # Install dependencies using uv
 uv sync
 
-# Install the package in development mode to make tcli available
+# Install the package in development mode to make t4t available
 uv pip install -e .
 
 # Or install specific dependencies
@@ -76,17 +76,53 @@ uv add psycopg2-binary  # For PostgreSQL support
 
 ## 🛠️ CLI Commands
 
-t4t provides a comprehensive command-line interface through `tcli`. All commands can be run using `uv run tcli`:
+t4t provides a comprehensive command-line interface through `t4t`. All commands can be run using `uv run t4t`:
+
+### Initialize Project
+Create a new t4t project with the proper structure:
+
+```bash
+# Initialize a new project with DuckDB (default)
+uv run t4t init my_project
+
+# Initialize with a specific database type
+uv run t4t init my_project -d snowflake
+uv run t4t init my_project -d postgresql
+uv run t4t init my_project -d bigquery
+```
+
+The `init` command creates:
+- Project directory with the specified name
+- `project.toml` configuration file with database connection template and default flags
+- Default directories: `models/`, `tests/`, `seeds/`
+- `data/` directory (for DuckDB projects only)
+
+**Generated `project.toml` structure:**
+```toml
+project_folder = "my_project"
+
+[connection]
+# Database-specific connection settings
+# For DuckDB: type, path
+# For Snowflake: type, host, user, password, role, warehouse, database
+# For PostgreSQL: type, host, port, database, user, password
+# For BigQuery: type, project, database
+
+[flags]
+materialization_change_behavior = "warn"  # Options: "warn", "error", "ignore"
+```
+
+After initialization, edit `project.toml` to configure your database connection. For Snowflake, PostgreSQL, and BigQuery, you'll need to update the connection parameters with your actual credentials.
 
 ### Run Models
 Execute SQL models in your project:
 
 ```bash
 # Run all models in a project
-uv run tcli run ./my_project
+uv run t4t run ./my_project
 
 # Run with variables (JSON format)
-uv run tcli run ./my_project --vars '{"env": "prod", "start_date": "2024-01-01"}'
+uv run t4t run ./my_project --vars '{"env": "prod", "start_date": "2024-01-01"}'
 ```
 
 ### Parse Models
@@ -94,10 +130,10 @@ Parse and analyze SQL models without execution:
 
 ```bash
 # Parse models and show dependency analysis
-uv run tcli parse ./my_project
+uv run t4t parse ./my_project
 
 # Parse with variables (JSON format)
-uv run tcli parse ./my_project --vars '{"env": "dev"}'
+uv run t4t parse ./my_project --vars '{"env": "dev"}'
 ```
 
 ### Debug Connection
@@ -105,7 +141,7 @@ Test database connectivity and configuration:
 
 ```bash
 # Test database connection
-uv run tcli debug ./my_project
+uv run t4t debug ./my_project
 ```
 
 ### Build Models with Tests
@@ -113,13 +149,13 @@ Build models and run tests interleaved, stopping on the first ERROR severity tes
 
 ```bash
 # Build models with tests (stops on test failure)
-uv run tcli build ./my_project
+uv run t4t build ./my_project
 
 # Build with variables
-uv run tcli build ./my_project --vars '{"env": "prod"}'
+uv run t4t build ./my_project --vars '{"env": "prod"}'
 
 # Build specific models
-uv run tcli build ./my_project --select my_model
+uv run t4t build ./my_project --select my_model
 ```
 
 The `build` command executes models and their tests in dependency order. If a model fails or an ERROR severity test fails, the build stops and dependent models are skipped. WARNING severity test failures do not stop the build.
@@ -129,36 +165,37 @@ Execute data quality tests on models independently:
 
 ```bash
 # Run all tests defined in model metadata
-uv run tcli test ./my_project
+uv run t4t test ./my_project
 
 # Run tests with variables (JSON format)
-uv run tcli test ./my_project --vars '{"env": "prod"}'
+uv run t4t test ./my_project --vars '{"env": "prod"}'
 
 # Override test severity (make specific tests warnings instead of errors)
-uv run tcli test ./my_project --severity not_null=warning
+uv run t4t test ./my_project --severity not_null=warning
 
 # Override severity for specific table/column/test
-uv run tcli test ./my_project --severity my_table.id.unique=warning
+uv run t4t test ./my_project --severity my_table.id.unique=warning
 
 # Multiple severity overrides
-uv run tcli test ./my_project --severity not_null=warning --severity unique=error
+uv run t4t test ./my_project --severity not_null=warning --severity unique=error
 ```
 
-Tests are automatically executed after model runs with `tcli run`, but you can also run them independently using the `test` command. See [Data Quality Tests](docs/user-guide/data-quality-tests.md) for more information.
+Tests are automatically executed after model runs with `t4t run`, but you can also run them independently using the `test` command. See [Data Quality Tests](docs/user-guide/data-quality-tests.md) for more information.
 
 ### Help
 Show help information:
 
 ```bash
 # Show general help
-uv run tcli help
+uv run t4t help
 
 # Show help for specific command
-uv run tcli run --help
-uv run tcli build --help
-uv run tcli parse --help
-uv run tcli debug --help
-uv run tcli test --help
+uv run t4t init --help
+uv run t4t run --help
+uv run t4t build --help
+uv run t4t parse --help
+uv run t4t debug --help
+uv run t4t test --help
 ```
 
 ## 📚 Documentation
