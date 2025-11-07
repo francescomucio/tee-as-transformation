@@ -15,8 +15,8 @@ try:
 except ImportError:
     duckdb = None
 
-from ..base import DatabaseAdapter, AdapterConfig, MaterializationType
-from ..registry import register_adapter
+from tee.adapters.base import DatabaseAdapter, AdapterConfig, MaterializationType
+from tee.adapters.registry import register_adapter
 
 
 class DuckDBAdapter(DatabaseAdapter):

@@ -6,7 +6,7 @@ import hashlib
 from typing import Dict, Any, Optional
 from pathlib import Path
 
-from ...typing.metadata import ParsedModelMetadata
+from tee.typing.metadata import ParsedModelMetadata
 
 
 def create_model_metadata(

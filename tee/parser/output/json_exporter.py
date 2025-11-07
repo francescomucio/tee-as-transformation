@@ -7,11 +7,12 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-from ..shared.types import ParsedModel, DependencyGraph
-from ..shared.exceptions import OutputGenerationError
-from ..shared.constants import OUTPUT_FILES
+from tee.parser.shared.types import ParsedModel, DependencyGraph
+from tee.parser.shared.exceptions import OutputGenerationError
+from tee.parser.shared.constants import OUTPUT_FILES
 from .ots_transformer import OTSTransformer
-from ...typing.metadata import OTSModule
+from .test_library_exporter import TestLibraryExporter
+from tee.typing.metadata import OTSModule
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -20,17 +21,19 @@ logger = logging.getLogger(__name__)
 class JSONExporter:
     """Handles JSON export of parsed models and dependency graphs."""
 
-    def __init__(self, output_folder: Path, project_config: Optional[Dict[str, Any]] = None):
+    def __init__(self, output_folder: Path, project_config: Optional[Dict[str, Any]] = None, project_folder: Optional[Path] = None):
         """
         Initialize the JSON exporter.
 
         Args:
             output_folder: Path to the output folder
             project_config: Optional project configuration for OTS transformer
+            project_folder: Optional project folder path for test library export
         """
         self.output_folder = output_folder
         self.output_folder.mkdir(parents=True, exist_ok=True)
         self.project_config = project_config or {}
+        self.project_folder = project_folder
         self.transformer = OTSTransformer(self.project_config) if self.project_config else None
 
     def export_parsed_models(
@@ -140,7 +143,11 @@ class JSONExporter:
         except Exception as e:
             raise OutputGenerationError(f"Failed to export all data: {e}")
 
-    def export_ots_modules(self, parsed_models: Dict[str, ParsedModel]) -> Dict[str, Path]:
+    def export_ots_modules(
+        self, 
+        parsed_models: Dict[str, ParsedModel], 
+        test_library_path: Optional[Path] = None
+    ) -> Dict[str, Path]:
         """
         Export parsed models as OTS Modules.
 
@@ -162,7 +169,10 @@ class JSONExporter:
 
         try:
             logger.info("Transforming models to OTS Modules")
-            modules = self.transformer.transform_to_ots_modules(parsed_models)
+            modules = self.transformer.transform_to_ots_modules(
+                parsed_models, 
+                test_library_path=test_library_path
+            )
 
             results = {}
             for module_name, module_data in modules.items():
@@ -189,3 +199,27 @@ class JSONExporter:
 
         except Exception as e:
             raise OutputGenerationError(f"Failed to export OTS modules: {e}")
+
+    def export_test_library(self, project_name: str) -> Optional[Path]:
+        """
+        Export discovered SQL tests to OTS test library format.
+
+        Args:
+            project_name: Project name (for filename generation)
+
+        Returns:
+            Path to the exported test library file, or None if no tests found
+
+        Raises:
+            OutputGenerationError: If export fails
+        """
+        if not self.project_folder:
+            logger.debug("No project folder provided, skipping test library export")
+            return None
+
+        try:
+            exporter = TestLibraryExporter(self.project_folder, project_name)
+            return exporter.export_test_library(self.output_folder, format="json")
+        except Exception as e:
+            logger.warning(f"Failed to export test library: {e}")
+            return None

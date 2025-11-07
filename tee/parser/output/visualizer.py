@@ -5,8 +5,8 @@ Visualization functionality for dependency graphs.
 from typing import Dict, Any
 from pathlib import Path
 
-from ..shared.types import DependencyGraph
-from ..shared.exceptions import OutputGenerationError
+from tee.parser.shared.types import DependencyGraph
+from tee.parser.shared.exceptions import OutputGenerationError
 
 
 class DependencyVisualizer:
@@ -34,8 +34,10 @@ class DependencyVisualizer:
             safe_node = self._escape_mermaid_node(node)
             if node.startswith("test:"):
                 # Test nodes: use different shape and style
-                test_name = node.replace("test:", "")
-                mermaid_lines.append(f'    {safe_node}["{test_name} (test)"]:::testNode')
+                # Extract display name: test:table.test_name -> "table.test_name (test)"
+                # or test:table.column.test_name -> "table.column.test_name (test)"
+                test_display = node.replace("test:", "")
+                mermaid_lines.append(f'    {safe_node}["{test_display} (test)"]:::testNode')
             else:
                 # Regular table nodes
                 mermaid_lines.append(f'    {safe_node}["{node}"]')

@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional
 import logging
 
 from .base import StandardTest, TestSeverity, TestResult
-from ..parser.processing.variable_substitution import substitute_sql_variables
+from tee.parser.processing.variable_substitution import substitute_sql_variables
 
 
 class SqlTest(StandardTest):

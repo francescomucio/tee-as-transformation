@@ -9,8 +9,8 @@ This module provides BigQuery-specific functionality including:
 """
 
 from typing import Any
-from ..base import DatabaseAdapter, AdapterConfig, MaterializationType
-from ..registry import register_adapter
+from tee.adapters.base import DatabaseAdapter, AdapterConfig, MaterializationType
+from tee.adapters.registry import register_adapter
 
 
 class BigQueryAdapter(DatabaseAdapter):

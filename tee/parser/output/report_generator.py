@@ -6,9 +6,9 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 
 from .visualizer import DependencyVisualizer
-from ..shared.types import DependencyGraph
-from ..shared.exceptions import OutputGenerationError
-from ..shared.constants import OUTPUT_FILES
+from tee.parser.shared.types import DependencyGraph
+from tee.parser.shared.exceptions import OutputGenerationError
+from tee.parser.shared.constants import OUTPUT_FILES
 
 
 class ReportGenerator:
@@ -92,29 +92,52 @@ This report provides a comprehensive analysis of the SQL model dependencies.
                 markdown_content += "The following tests are defined and integrated into the dependency graph:\n\n"
 
                 for test_node in sorted(test_nodes):
-                    test_name = test_node.replace("test:", "")
+                    # Parse test node: test:table.test_name or test:table.column.test_name
+                    test_parts = test_node.replace("test:", "").split(".")
+                    if len(test_parts) == 2:
+                        # Table-level test: test:table.test_name
+                        table_name, test_name = test_parts
+                        test_display = f"`{test_name}` on `{table_name}`"
+                        test_type = "Table-level"
+                    elif len(test_parts) == 3:
+                        # Column-level test: test:table.column.test_name
+                        table_name, column_name, test_name = test_parts
+                        test_display = f"`{test_name}` on `{table_name}.{column_name}`"
+                        test_type = "Column-level"
+                    else:
+                        # Fallback for unexpected format
+                        test_display = test_node.replace("test:", "")
+                        test_type = "Test"
+                    
                     deps = graph["dependencies"][test_node]
                     dependents = graph["dependents"][test_node]
 
-                    markdown_content += f"### `{test_name}`\n\n"
+                    markdown_content += f"### {test_display}\n\n"
+                    markdown_content += f"**Type**: {test_type}\n\n"
 
                     if deps:
-                        # Filter out the table being tested from dependencies (it's always there)
-                        test_targets = [dep for dep in deps if not dep.startswith("test:")]
-                        other_deps = [dep for dep in deps if dep.startswith("test:")]
+                        # Filter out test nodes from dependencies
+                        table_deps = [dep for dep in deps if not dep.startswith("test:")]
+                        test_deps = [dep for dep in deps if dep.startswith("test:")]
                         
-                        if test_targets:
-                            markdown_content += f"**Tests**: {', '.join([f'`{dep}`' for dep in test_targets])}\n\n"
-                        if other_deps:
-                            test_names = [dep.replace("test:", "") for dep in other_deps]
+                        if table_deps:
+                            markdown_content += f"**Depends on tables**: {', '.join([f'`{dep}`' for dep in table_deps])}\n\n"
+                        if test_deps:
+                            test_names = [dep.replace("test:", "") for dep in test_deps]
                             markdown_content += f"**Depends on tests**: {', '.join([f'`{name}`' for name in test_names])}\n\n"
                     else:
                         markdown_content += "**No dependencies**\n\n"
 
                     if dependents:
-                        markdown_content += (
-                            f"**Used by**: {', '.join([f'`{dep}`' for dep in dependents])}\n\n"
-                        )
+                        # Filter out test nodes from dependents
+                        table_dependents = [dep for dep in dependents if not dep.startswith("test:")]
+                        test_dependents = [dep for dep in dependents if dep.startswith("test:")]
+                        
+                        if table_dependents:
+                            markdown_content += f"**Used by tables**: {', '.join([f'`{dep}`' for dep in table_dependents])}\n\n"
+                        if test_dependents:
+                            test_names = [dep.replace("test:", "") for dep in test_dependents]
+                            markdown_content += f"**Used by tests**: {', '.join([f'`{name}`' for name in test_names])}\n\n"
                     else:
                         markdown_content += "**No dependents**\n\n"
 

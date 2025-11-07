@@ -13,9 +13,9 @@ from sqlglot import exp
 
 from .base import BaseParser
 from .sql_parser import SQLParser
-from ..shared.types import ParsedModel, FilePath, Variables
-from ..shared.exceptions import PythonParsingError
-from ..shared.model_utils import standardize_parsed_model
+from tee.parser.shared.types import ParsedModel, FilePath, Variables
+from tee.parser.shared.exceptions import PythonParsingError
+from tee.parser.shared.model_utils import standardize_parsed_model
 
 # Configure logging
 logger = logging.getLogger(__name__)

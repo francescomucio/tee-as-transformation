@@ -43,5 +43,5 @@ metadata: ModelMetadataDict = {
     ],
     "partitions": ["created_at"],
     "materialization": "table",
-    "tests": ["row_count_gt_0", "no_duplicates"]
+    "tests": ["row_count_gt_0", "unique"]
 }

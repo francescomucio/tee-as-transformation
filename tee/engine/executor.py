@@ -9,7 +9,7 @@ import logging
 from typing import Dict, List, Any, Optional, Union
 from .execution_engine import ExecutionEngine
 from .config import load_database_config
-from ..adapters import AdapterConfig
+from tee.adapters import AdapterConfig
 
 
 class ModelExecutor:

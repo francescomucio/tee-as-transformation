@@ -33,7 +33,7 @@ class TestQueryGenerator:
         # Using COUNT(*) for better performance on large tables
         return f"SELECT COUNT(*) FROM {table_name} WHERE {column_name} IS NULL"
 
-    def generate_unique_test_query(self, table_name: str, columns: List[str]) -> str:
+    def generate_unique_test_query(self, table_name: str, columns: Optional[List[str]] = None) -> str:
         """
         Generate SQL query for unique test.
 
@@ -45,7 +45,8 @@ class TestQueryGenerator:
 
         Args:
             table_name: Fully qualified table name (e.g., "my_schema.my_table")
-            columns: List of column names to check for uniqueness (e.g., ["col1", "col2"])
+            columns: List of column names to check for uniqueness (e.g., ["col1", "col2"]).
+                    If None, checks all columns (entire row uniqueness).
 
         Returns:
             SQL query string
@@ -54,63 +55,40 @@ class TestQueryGenerator:
         # Note: table_name and columns are expected to be simple identifiers
         # (no spaces, no special chars) from validated metadata
         # Using COUNT(*) for better performance on large tables
-        column_list = ", ".join(columns)
-        return f"""
-            SELECT COUNT(*) 
-            FROM (
-                SELECT {column_list}, COUNT(*) as duplicate_count
-                FROM {table_name}
-                GROUP BY {column_list}
-                HAVING COUNT(*) > 1
-            ) AS duplicate_groups
-        """
-
-    def generate_no_duplicates_test_query(
-        self, table_name: str, columns: Optional[List[str]] = None
-    ) -> str:
-        """
-        Generate SQL query for no_duplicates test.
-
-        Returns count of duplicate row groups (test fails if count > 0).
-        Query should return 0 if test passes (no duplicate rows).
-
-        This is a default implementation using standard SQL.
-        Adapters can override this method for database-specific optimizations or syntax.
-
-        Args:
-            table_name: Fully qualified table name (e.g., "my_schema.my_table")
-            columns: Optional list of column names. If None, will try to get from adapter
-                    or use metadata. If provided, groups by these columns.
-
-        Returns:
-            SQL query string
-        """
-        # If columns provided, use them
-        if columns and len(columns) > 0:
+        
+        if columns is None or len(columns) == 0:
+            # Check all columns (entire row uniqueness)
+            # Use SELECT * to group by all columns
+            return f"""
+                SELECT COUNT(*) 
+                FROM (
+                    SELECT *, COUNT(*) as duplicate_count
+                    FROM {table_name}
+                    GROUP BY *
+                    HAVING COUNT(*) > 1
+                ) AS duplicate_groups
+            """
+        else:
             column_list = ", ".join(columns)
             return f"""
                 SELECT COUNT(*) 
                 FROM (
-                    SELECT {column_list}, COUNT(*) as row_count
+                    SELECT {column_list}, COUNT(*) as duplicate_count
                     FROM {table_name}
                     GROUP BY {column_list}
                     HAVING COUNT(*) > 1
                 ) AS duplicate_groups
             """
 
-        # Default: Try to use a query that works for most databases
-        # This approach uses a subquery to find duplicate groups
-        # Note: Some databases may need adapter-specific implementation
-        # For DuckDB, we can use GROUP BY *, but that's not standard SQL
-        return f"""
-            SELECT COUNT(*) 
-            FROM (
-                SELECT *, COUNT(*) as row_count
-                FROM {table_name}
-                GROUP BY *
-                HAVING COUNT(*) > 1
-            ) AS duplicate_groups
+    def generate_no_duplicates_test_query(
+        self, table_name: str, columns: Optional[List[str]] = None
+    ) -> str:
         """
+        DEPRECATED: Use generate_unique_test_query instead.
+        
+        This method is kept for backward compatibility but delegates to generate_unique_test_query.
+        """
+        return self.generate_unique_test_query(table_name, columns)
 
     def generate_row_count_gt_0_test_query(self, table_name: str) -> str:
         """

@@ -6,8 +6,8 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict, Any
 
-from ..shared.types import ParsedModel, FilePath
-from ..shared.exceptions import ParserError
+from tee.parser.shared.types import ParsedModel, FilePath
+from tee.parser.shared.exceptions import ParserError
 
 
 class BaseParser(ABC):

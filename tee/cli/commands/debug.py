@@ -2,8 +2,8 @@
 Debug command implementation.
 """
 
-from ..context import CommandContext
-from ...engine.connection_manager import ConnectionManager
+from tee.cli.context import CommandContext
+from tee.engine.connection_manager import ConnectionManager
 
 
 def cmd_debug(args):

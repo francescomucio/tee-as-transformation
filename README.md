@@ -108,8 +108,24 @@ Test database connectivity and configuration:
 uv run tcli debug ./my_project
 ```
 
+### Build Models with Tests
+Build models and run tests interleaved, stopping on the first ERROR severity test failure:
+
+```bash
+# Build models with tests (stops on test failure)
+uv run tcli build ./my_project
+
+# Build with variables
+uv run tcli build ./my_project --vars '{"env": "prod"}'
+
+# Build specific models
+uv run tcli build ./my_project --select my_model
+```
+
+The `build` command executes models and their tests in dependency order. If a model fails or an ERROR severity test fails, the build stops and dependent models are skipped. WARNING severity test failures do not stop the build.
+
 ### Run Tests
-Execute data quality tests on models:
+Execute data quality tests on models independently:
 
 ```bash
 # Run all tests defined in model metadata
@@ -128,7 +144,7 @@ uv run tcli test ./my_project --severity my_table.id.unique=warning
 uv run tcli test ./my_project --severity not_null=warning --severity unique=error
 ```
 
-Tests are automatically executed after model runs, but you can also run them independently using the `test` command. See [Data Quality Tests](docs/user-guide/data-quality-tests.md) for more information.
+Tests are automatically executed after model runs with `tcli run`, but you can also run them independently using the `test` command. See [Data Quality Tests](docs/user-guide/data-quality-tests.md) for more information.
 
 ### Help
 Show help information:
@@ -139,6 +155,7 @@ uv run tcli help
 
 # Show help for specific command
 uv run tcli run --help
+uv run tcli build --help
 uv run tcli parse --help
 uv run tcli debug --help
 uv run tcli test --help

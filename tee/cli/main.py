@@ -1,11 +1,11 @@
 """
-Tee CLI Main Module
+t4t CLI Main Module
 
-Command-line interface for the Tee SQL model execution framework.
+Command-line interface for the t4t SQL model execution framework.
 """
 
 import argparse
-from .commands import cmd_run, cmd_parse, cmd_test, cmd_debug, cmd_help
+from tee.cli.commands import cmd_run, cmd_parse, cmd_test, cmd_debug, cmd_help, cmd_build
 
 
 def add_common_args(parser: argparse.ArgumentParser) -> None:
@@ -52,11 +52,12 @@ def main():
     global parser
 
     parser = argparse.ArgumentParser(
-        description="Tee - Transform, Extract, Execute (and t-shirts!)",
+        description="t4t - Transform, Extract, Execute (and t-shirts!)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   tcli run ./my_project                    # Run models in ./my_project
+  tcli build ./my_project                  # Build models with tests (stops on failure)
   tcli parse ./my_project                  # Parse models in ./my_project
   tcli test ./my_project                   # Run tests on models in ./my_project
   tcli debug ./my_project                  # Test database connectivity
@@ -106,6 +107,14 @@ Examples:
     )
     add_selection_args(test_parser)
     test_parser.set_defaults(func=cmd_test)
+
+    # Build command
+    build_parser = subparsers.add_parser(
+        "build", help="Build models with tests (stops on test failure)"
+    )
+    add_common_args(build_parser)
+    add_selection_args(build_parser)
+    build_parser.set_defaults(func=cmd_build)
 
     # Help command
     help_parser = subparsers.add_parser("help", help="Show help information")

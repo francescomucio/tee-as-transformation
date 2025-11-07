@@ -48,9 +48,9 @@ class TestQueryGeneration:
         assert "col2" in query
         assert "GROUP BY" in query
 
-    def test_generate_no_duplicates_test_query_with_columns(self, generator):
-        """Test no_duplicates query generation with explicit columns."""
-        query = generator.generate_no_duplicates_test_query("my_table", ["id", "name"])
+    def test_generate_unique_test_query_with_columns(self, generator):
+        """Test unique query generation with explicit columns."""
+        query = generator.generate_unique_test_query("my_table", ["id", "name"])
 
         assert "SELECT COUNT(*)" in query
         assert "id" in query
@@ -58,13 +58,13 @@ class TestQueryGeneration:
         assert "GROUP BY" in query
         assert "HAVING COUNT(*)" in query
 
-    def test_generate_no_duplicates_test_query_without_columns(self, generator):
-        """Test no_duplicates query generation without explicit columns."""
-        query = generator.generate_no_duplicates_test_query("my_table", None)
+    def test_generate_unique_test_query_without_columns(self, generator):
+        """Test unique query generation without explicit columns (entire row uniqueness)."""
+        query = generator.generate_unique_test_query("my_table", None)
 
         assert "SELECT COUNT(*)" in query
         assert "my_table" in query
-        assert "GROUP BY *" in query  # Default uses GROUP BY *
+        assert "GROUP BY *" in query  # Default uses GROUP BY * for all columns
 
     def test_generate_row_count_gt_0_test_query(self, generator):
         """Test row_count_gt_0 query generation."""

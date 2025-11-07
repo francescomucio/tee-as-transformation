@@ -24,14 +24,12 @@ def restore_test_registry():
     from tee.testing.standard_tests import (
         NOT_NULL,
         UNIQUE,
-        NO_DUPLICATES,
         ROW_COUNT_GT_0,
         ACCEPTED_VALUES,
     )
 
     TestRegistry.register(NOT_NULL)
     TestRegistry.register(UNIQUE)
-    TestRegistry.register(NO_DUPLICATES)
     TestRegistry.register(ROW_COUNT_GT_0)
     TestRegistry.register(ACCEPTED_VALUES)
 

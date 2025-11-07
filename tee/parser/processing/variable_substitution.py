@@ -8,9 +8,9 @@ Supports nested object access, default values, and proper error handling.
 import re
 from typing import Dict, Any, Optional
 
-from ..shared.types import Variables
-from ..shared.exceptions import VariableSubstitutionError
-from ..shared.constants import SQL_VARIABLE_PATTERNS
+from tee.parser.shared.types import Variables
+from tee.parser.shared.exceptions import VariableSubstitutionError
+from tee.parser.shared.constants import SQL_VARIABLE_PATTERNS
 
 
 def _format_sql_value(value: Any) -> str:

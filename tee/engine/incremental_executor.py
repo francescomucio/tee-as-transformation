@@ -16,7 +16,7 @@ import sqlglot
 from sqlglot import expressions as exp
 
 from .model_state import ModelStateManager
-from ..typing.metadata import (
+from tee.typing.metadata import (
     IncrementalConfig,
     IncrementalAppendConfig,
     IncrementalMergeConfig,

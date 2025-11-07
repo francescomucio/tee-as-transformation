@@ -6,7 +6,8 @@ t4t provides a comprehensive data quality testing framework that allows you to a
 
 The testing framework supports:
 - **Standard Tests**: Pre-built tests for common data quality checks
-- **Custom SQL Tests**: User-defined SQL tests in `tests/` folder (dbt-style)
+- **Generic SQL Tests**: Reusable SQL tests with placeholders (e.g., `@table_name`, `@column_name`)
+- **Singular SQL Tests**: SQL tests with hardcoded table names for table-specific validations
 - **Parameterized Tests**: Tests that accept configuration parameters
 - **Test Severity Levels**: Control whether tests fail builds (ERROR) or just warn (WARNING)
 - **Automatic Execution**: Tests run automatically after models are executed
@@ -342,7 +343,12 @@ tcli test examples/t_project --severity my_table.name.not_null=error
 
 ## Custom SQL Tests
 
-You can create custom SQL tests by placing `.sql` files in a `tests/` folder in your project (alongside the `models/` folder). These tests work like dbt's generic tests and can be reused across multiple tables or made table-specific.
+You can create custom SQL tests by placing `.sql` files in a `tests/` folder in your project (alongside the `models/` folder). SQL tests come in two types:
+
+- **Generic SQL Tests**: Reusable tests with placeholders (like `@table_name`) that can be applied to multiple tables
+- **Singular SQL Tests**: Tests with hardcoded table names for table-specific validations
+
+These tests work like dbt's generic and singular tests.
 
 ### Project Structure
 
@@ -447,15 +453,15 @@ metadata: ModelMetadataDict = {
 }
 ```
 
-### Generic Tests vs Table-Specific Tests
+### Generic SQL Tests vs Singular SQL Tests
 
-SQL tests can be either **generic** (reusable across multiple tables) or **table-specific** (designed for a single table).
+SQL tests can be either **generic** (reusable across multiple tables) or **singular** (designed for a single table).
 
-#### Generic Tests (Recommended)
+#### Generic SQL Tests (Recommended)
 
-Generic tests use variables like `@table_name` or `{{ table_name }}` to make them reusable across multiple tables. They are referenced in model metadata and automatically substitute the table name when executed.
+Generic SQL tests use variables like `@table_name` or `{{ table_name }}` to make them reusable across multiple tables. They are referenced in model metadata and automatically substitute the table name when executed.
 
-**Example - Generic Test:**
+**Example - Generic SQL Test:**
 ```sql
 -- tests/check_minimum_rows.sql
 -- This test can be used on any table
@@ -484,14 +490,16 @@ metadata: ModelMetadataDict = {
 - Easier to maintain (update in one place)
 - Consistent testing across tables
 
-#### Table-Specific Tests
+**Important:** Generic SQL tests must be referenced in model metadata to be used. If you create a generic SQL test but never reference it in any model's metadata, t4t will warn you that the test is unused.
 
-Table-specific tests hardcode the table name directly in the SQL. They are useful when:
+#### Singular SQL Tests
+
+Singular SQL tests hardcode the table name directly in the SQL. They are useful when:
 - The test logic is specific to one table's structure
 - You need to reference multiple tables in one test
 - The test has complex table-specific business rules
 
-**Example - Table-Specific Test:**
+**Example - Singular SQL Test:**
 ```sql
 -- tests/test_my_first_table.sql
 -- This test is specific to my_schema.my_first_table
@@ -513,8 +521,8 @@ metadata: ModelMetadataDict = {
 **Note:** Even with hardcoded table names, you still need to reference the test in the model's metadata for it to execute.
 
 **When to Use Each:**
-- **Use generic tests** when the validation logic applies to multiple tables
-- **Use table-specific tests** when the validation is unique to one table or requires hardcoded table references
+- **Use generic SQL tests** when the validation logic applies to multiple tables
+- **Use singular SQL tests** when the validation is unique to one table or requires hardcoded table references
 
 ### Variable Substitution
 
@@ -548,6 +556,35 @@ SQL tests are automatically discovered from the `tests/` folder when:
 Test names are derived from file names (without `.sql` extension):
 - `tests/my_test.sql` → test name `"my_test"`
 - `tests/check_minimum_rows.sql` → test name `"check_minimum_rows"`
+
+#### Unused Generic Test Warnings
+
+t4t automatically detects when generic SQL tests (tests with placeholders like `@table_name`) are never used. If you have a generic SQL test in your `tests/` folder that is:
+- Not referenced in any model's metadata
+- Never executed during test runs
+
+You'll see a warning like this:
+
+```
+⚠️  Warnings:
+  - Generic SQL test 'check_minimum_rows' is never used. Add it to model metadata to apply it to tables. File: tests/check_minimum_rows.sql
+```
+
+**Why this warning exists:**
+- Generic SQL tests are designed to be reusable across multiple tables
+- They must be explicitly referenced in model metadata to be applied
+- If a generic test is never referenced, it's likely an oversight or dead code
+
+**How to fix:**
+1. Add the test to the appropriate model's metadata:
+   ```python
+   metadata: ModelMetadataDict = {
+       "tests": ["check_minimum_rows"]  # Add the test here
+   }
+   ```
+2. Or remove the unused test file if it's no longer needed
+
+**Note:** Singular SQL tests (with hardcoded table names) do not trigger this warning, as they may be intentionally unused or used in specific scenarios.
 
 ---
 
@@ -730,11 +767,37 @@ tcli test examples/t_project --severity my_schema.orders.status.accepted_values=
    ```
 
 4. **Use meaningful test names** that describe what they check
-5. **Prefer generic tests** over table-specific tests when possible for reusability
+5. **Prefer generic SQL tests** over singular SQL tests when possible for reusability
 
 ---
 
 ## Troubleshooting
+
+### Unused Generic SQL Tests
+
+If you see a warning about an unused generic SQL test:
+
+```
+⚠️  Generic SQL test 'my_custom_test' is never used. Add it to model metadata to apply it to tables. File: tests/my_custom_test.sql
+```
+
+This means you have a generic SQL test file that uses placeholders (like `@table_name`) but it's never referenced in any model's metadata.
+
+**Solution:**
+1. **Add the test to model metadata** if you want to use it:
+   ```python
+   # models/my_table.py
+   metadata: ModelMetadataDict = {
+       "tests": ["my_custom_test"]  # Add here
+   }
+   ```
+
+2. **Remove the test file** if it's no longer needed:
+   ```bash
+   rm tests/my_custom_test.sql
+   ```
+
+**Note:** This warning only applies to generic SQL tests. Singular SQL tests (with hardcoded table names) won't trigger this warning.
 
 ### Unimplemented Tests
 

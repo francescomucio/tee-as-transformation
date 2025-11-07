@@ -11,7 +11,7 @@ from typing import Dict, Any, Optional
 from pathlib import Path
 import tomllib
 
-from ..adapters.base import AdapterConfig
+from tee.adapters.base import AdapterConfig
 
 
 class DatabaseConfigManager:

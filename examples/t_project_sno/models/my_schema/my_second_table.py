@@ -16,6 +16,6 @@ metadata: ModelMetadataDict = {
         }
     ],
     "materialization": "view",
-    "tests": ["row_count_gt_0", "no_duplicates"],
+    "tests": ["row_count_gt_0", "unique"],
     "description": "This is a description of the view"
 }

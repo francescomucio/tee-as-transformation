@@ -6,12 +6,12 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-from ..parsers import ParserFactory
-from ..analysis import DependencyGraphBuilder, TableResolver
-from ..processing import FileDiscovery, substitute_sql_variables, validate_sql_variables
-from ..output import JSONExporter, ReportGenerator
-from ..shared.types import ParsedModel, DependencyGraph, ConnectionConfig, Variables
-from ..shared.exceptions import ParserError
+from tee.parser.parsers import ParserFactory
+from tee.parser.analysis import DependencyGraphBuilder, TableResolver
+from tee.parser.processing import FileDiscovery, substitute_sql_variables, validate_sql_variables
+from tee.parser.output import JSONExporter, ReportGenerator
+from tee.parser.shared.types import ParsedModel, DependencyGraph, ConnectionConfig, Variables
+from tee.parser.shared.exceptions import ParserError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -46,7 +46,11 @@ class ParserOrchestrator:
         self.file_discovery = FileDiscovery(self.models_folder)
         self.table_resolver = TableResolver(connection)
         self.dependency_builder = DependencyGraphBuilder()
-        self.json_exporter = JSONExporter(self.project_folder / "output", project_config)
+        self.json_exporter = JSONExporter(
+            self.project_folder / "output", 
+            project_config, 
+            project_folder=self.project_folder
+        )
         self.report_generator = ReportGenerator(self.project_folder / "output")
         self.transformer = project_config is not None  # Flag to enable OTS export
 
@@ -203,11 +207,20 @@ class ParserOrchestrator:
             # Export JSON files
             json_results = self.json_exporter.export_all(parsed_models, dependency_graph)
 
-            # Export OTS modules
+            # Export OTS modules and test library
             ots_results = {}
+            test_library_path = None
             if self.transformer:
                 try:
-                    ots_results = self.json_exporter.export_ots_modules(parsed_models)
+                    # Export test library first
+                    project_name = self.project_config.get("project_folder", self.project_folder.name)
+                    test_library_path = self.json_exporter.export_test_library(project_name)
+                    
+                    # Export OTS modules (will include test_library_path reference)
+                    ots_results = self.json_exporter.export_ots_modules(
+                        parsed_models, 
+                        test_library_path=test_library_path
+                    )
                     logger.info(f"Exported {len(ots_results)} OTS modules")
                 except Exception as e:
                     logger.warning(f"Failed to export OTS modules: {e}")
@@ -217,6 +230,10 @@ class ParserOrchestrator:
 
             # Combine results
             all_results = {**json_results, **ots_results, **report_results}
+            
+            # Add test library if exported
+            if test_library_path:
+                all_results["test_library"] = test_library_path
 
             logger.info(f"Exported {len(all_results)} files")
 

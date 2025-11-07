@@ -5,12 +5,12 @@ Test command implementation.
 import sys
 from pathlib import Path
 
-from ..context import CommandContext
-from ..selection import ModelSelector
-from ...parser import ProjectParser
-from ...engine.execution_engine import ExecutionEngine
-from ...testing import TestExecutor
-from ...testing.base import TestSeverity
+from tee.cli.context import CommandContext
+from tee.cli.selection import ModelSelector
+from tee.parser import ProjectParser
+from tee.engine.execution_engine import ExecutionEngine
+from tee.testing import TestExecutor
+from tee.testing.base import TestSeverity
 
 
 def cmd_test(args):

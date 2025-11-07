@@ -8,12 +8,12 @@ from typing import Optional
 from pathlib import Path
 
 from .base import BaseParser
-from ..shared.types import ParsedModel, FilePath
-from ..shared.exceptions import SQLParsingError
-from ..shared.model_utils import create_model_metadata, compute_sqlglot_hash
-from ..shared.metadata_schema import parse_metadata_from_python_file, validate_metadata_dict
-from ...typing.metadata import ParsedModelMetadata
-from ..analysis.sql_qualifier import generate_resolved_sql, validate_resolved_sql
+from tee.parser.shared.types import ParsedModel, FilePath
+from tee.parser.shared.exceptions import SQLParsingError
+from tee.parser.shared.model_utils import create_model_metadata, compute_sqlglot_hash
+from tee.parser.shared.metadata_schema import parse_metadata_from_python_file, validate_metadata_dict
+from tee.typing.metadata import ParsedModelMetadata
+from tee.parser.analysis.sql_qualifier import generate_resolved_sql, validate_resolved_sql
 
 # Configure logging
 logger = logging.getLogger(__name__)

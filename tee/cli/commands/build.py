@@ -1,19 +1,21 @@
 """
-Run command implementation.
-"""
+Build command implementation.
 
+Builds models with interleaved test execution, stopping on test failures.
+"""
+import sys
 from tee.cli.context import CommandContext
 from tee.engine.connection_manager import ConnectionManager
-from tee import execute_models
+from tee import build_models
 
 
-def cmd_run(args):
-    """Execute the run command."""
+def cmd_build(args):
+    """Execute the build command."""
     ctx = CommandContext(args)
     connection_manager = None
     
     try:
-        print(f"Running t4t on project: {args.project_folder}")
+        print(f"Building project: {args.project_folder}")
         ctx.print_variables_info()
         ctx.print_selection_info()
 
@@ -24,8 +26,8 @@ def cmd_run(args):
             variables=ctx.vars,
         )
 
-        # Execute models using the unified connection manager
-        results = execute_models(
+        # Build models with interleaved tests
+        results = build_models(
             project_folder=str(ctx.project_path),
             connection_config=ctx.config["connection"],
             save_analysis=True,
@@ -38,25 +40,34 @@ def cmd_run(args):
         total_tables = len(results["executed_tables"]) + len(results["failed_tables"])
         successful_count = len(results["executed_tables"])
         failed_count = len(results["failed_tables"])
-        warning_count = len(results.get("warnings", []))
+        total_tests = results.get("test_results", {}).get("total", 0)
+        passed_tests = results.get("test_results", {}).get("passed", 0)
+        failed_tests = results.get("test_results", {}).get("failed", 0)
 
         print(
             f"\nCompleted! Executed {successful_count} out of {total_tables} tables successfully."
         )
-        if failed_count > 0 or warning_count > 0:
-            print(f"  ✅ Successful: {successful_count} tables")
+        print(f"Tests: {passed_tests} passed, {failed_tests} failed out of {total_tests} total")
+        
+        if failed_count > 0 or failed_tests > 0:
             if failed_count > 0:
-                print(f"  ❌ Failed: {failed_count} tables")
-            if warning_count > 0:
-                print(f"  ⚠️  Warnings: {warning_count} warnings")
+                print(f"  ❌ Failed models: {failed_count}")
+            if failed_tests > 0:
+                print(f"  ❌ Failed tests: {failed_tests}")
+            sys.exit(1)
         else:
             print(f"  ✅ All {successful_count} tables executed successfully!")
+            print(f"  ✅ All {total_tests} tests passed!")
 
         if ctx.verbose:
             print(f"Analysis info: {results.get('analysis', {})}")
 
+    except KeyboardInterrupt:
+        print("\n\n⚠️  Build interrupted by user")
+        sys.exit(130)
     except Exception as e:
         ctx.handle_error(e)
+        sys.exit(1)
     finally:
         # Cleanup
         if connection_manager:

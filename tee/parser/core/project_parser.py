@@ -6,9 +6,9 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-from .orchestrator import ParserOrchestrator
-from ..shared.types import ParsedModel, DependencyGraph, ConnectionConfig, Variables
-from ..shared.exceptions import ParserError
+from tee.parser.core.orchestrator import ParserOrchestrator
+from tee.parser.shared.types import ParsedModel, DependencyGraph, ConnectionConfig, Variables
+from tee.parser.shared.exceptions import ParserError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -136,10 +136,15 @@ class ProjectParser:
             # Use orchestrator's JSON exporter
             if output_file is None:
                 self.orchestrator.json_exporter.export_parsed_models(result)
-                # Also export OTS modules if transformer is available
+                # Also export OTS modules and test library if transformer is available
                 if self.orchestrator.transformer:
                     try:
-                        self.orchestrator.json_exporter.export_ots_modules(result)
+                        # Export test library first
+                        project_name = self.orchestrator.project_config.get("project_folder", self.orchestrator.project_folder.name)
+                        test_library_path = self.orchestrator.json_exporter.export_test_library(project_name)
+                        
+                        # Export OTS modules (will include test_library_path reference)
+                        self.orchestrator.json_exporter.export_ots_modules(result, test_library_path=test_library_path)
                     except Exception as e:
                         logger.warning(f"Failed to export OTS modules: {e}")
             else:

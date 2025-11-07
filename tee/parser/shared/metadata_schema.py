@@ -8,7 +8,7 @@ import logging
 import ast
 import os
 
-from ...typing.metadata import (
+from tee.typing.metadata import (
     ColumnDefinition,
     ModelMetadataDict,
     ParsedModelMetadata,
@@ -214,7 +214,7 @@ def parse_metadata_from_python_file(file_path: str) -> Optional[ModelMetadataDic
             # Create a safe namespace for execution
             namespace = {}
             # Add the typing classes to the namespace
-            from ...typing.metadata import (
+            from tee.typing.metadata import (
                 ModelMetadataDict,
                 ColumnDefinition,
                 ParsedModelMetadata,

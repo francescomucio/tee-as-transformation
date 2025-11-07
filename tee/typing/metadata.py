@@ -33,7 +33,7 @@ ColumnTestName = Literal[
 ]
 
 # Test names for models
-ModelTestName = Literal["row_count_gt_0", "no_duplicates", "freshness", "custom"]
+ModelTestName = Literal["row_count_gt_0", "unique", "freshness", "custom"]
 
 
 # Test definition can be a simple string name or a dict with name/params/severity
@@ -130,8 +130,9 @@ class OTSTransformation(TypedDict):
 
     transformation_id: str
     description: NotRequired[Optional[str]]
+    transformation_type: NotRequired[Optional[str]]  # "sql" (default), future: "python", "pyspark", "r"
     sql_dialect: NotRequired[Optional[str]]
-    sqlglot: Dict[str, Any]
+    code: Dict[str, Any]  # Type-based structure: {"sql": {"original_sql": ..., "resolved_sql": ..., "source_tables": [...]}}
     schema: NotRequired[Optional[Dict[str, Any]]]
     materialization: NotRequired[Optional[Dict[str, Any]]]
     tests: NotRequired[Optional[Dict[str, Any]]]
@@ -146,5 +147,6 @@ class OTSModule(TypedDict):
     module_description: NotRequired[Optional[str]]
     version: NotRequired[Optional[str]]
     tags: NotRequired[Optional[List[str]]]
+    test_library_path: NotRequired[Optional[str]]
     target: OTSTarget
     transformations: List[OTSTransformation]

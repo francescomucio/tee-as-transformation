@@ -5,8 +5,8 @@ Table name resolution and generation functionality.
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-from ..shared.types import ParsedModel, ConnectionConfig
-from ..shared.exceptions import TableResolutionError
+from tee.parser.shared.types import ParsedModel, ConnectionConfig
+from tee.parser.shared.exceptions import TableResolutionError
 
 
 class TableResolver:

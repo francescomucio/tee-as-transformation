@@ -8,8 +8,8 @@ to the Open Transformation Specification (OTS) Module format.
 import logging
 from typing import Dict, List, Any, Optional, Tuple
 
-from ...typing.metadata import OTSModule, OTSTarget, OTSTransformation
-from ..shared.types import ParsedModel
+from tee.typing.metadata import OTSModule, OTSTarget, OTSTransformation
+from tee.parser.shared.types import ParsedModel
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -47,7 +47,9 @@ class OTSTransformer:
         return dialect_map.get(conn_type, "duckdb")
 
     def transform_to_ots_modules(
-        self, parsed_models: Dict[str, ParsedModel]
+        self, 
+        parsed_models: Dict[str, ParsedModel],
+        test_library_path: Optional[Path] = None
     ) -> Dict[str, OTSModule]:
         """
         Transform parsed models into OTS Module(s).
@@ -67,7 +69,7 @@ class OTSTransformer:
         for schema, models in models_by_schema.items():
             module_name = f"{self.database}.{schema}"
             logger.info(f"Creating OTS module: {module_name} with {len(models)} transformations")
-            module = self._create_ots_module(module_name, schema, models)
+            module = self._create_ots_module(module_name, schema, models, test_library_path)
             modules[module_name] = module
 
         return modules
@@ -100,7 +102,11 @@ class OTSTransformer:
         return grouped
 
     def _create_ots_module(
-        self, module_name: str, schema: str, models: List[Tuple[str, ParsedModel]]
+        self, 
+        module_name: str, 
+        schema: str, 
+        models: List[Tuple[str, ParsedModel]],
+        test_library_path: Optional[Path] = None
     ) -> OTSModule:
         """
         Create a single OTS Module for a schema.
@@ -149,6 +155,12 @@ class OTSTransformer:
             "target": target,
             "transformations": transformations,
         }
+
+        # Add test_library_path if test library was exported
+        if test_library_path:
+            # Calculate relative path from output folder to test library
+            # test_library_path is already in output folder, so use just the filename
+            module["test_library_path"] = test_library_path.name
 
         # Add module-level tags if present
         if module_tags:
@@ -426,7 +438,29 @@ class OTSTransformer:
         # Extract table tests
         table_tests = metadata.get("tests", [])
         if table_tests:
-            tests["table"] = table_tests
+            # Replace no_duplicates with unique (per OTS spec)
+            normalized_table_tests = []
+            for test_def in table_tests:
+                if isinstance(test_def, str):
+                    # Replace "no_duplicates" with "unique"
+                    if test_def == "no_duplicates":
+                        normalized_table_tests.append("unique")
+                    else:
+                        normalized_table_tests.append(test_def)
+                elif isinstance(test_def, dict):
+                    # Handle dict format: {"name": "no_duplicates", ...}
+                    test_name = test_def.get("name") or test_def.get("test")
+                    if test_name == "no_duplicates":
+                        # Replace with unique
+                        new_test = test_def.copy()
+                        new_test["name"] = "unique"
+                        normalized_table_tests.append(new_test)
+                    else:
+                        normalized_table_tests.append(test_def)
+                else:
+                    normalized_table_tests.append(test_def)
+            
+            tests["table"] = normalized_table_tests
 
         return tests if tests else None
 

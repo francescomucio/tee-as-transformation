@@ -6,7 +6,7 @@ Inspired by dlt's resource decorator pattern.
 import logging
 from typing import Dict, Any, Optional, Callable, List
 
-from ..shared.exceptions import ParserError
+from tee.parser.shared.exceptions import ParserError
 
 # Configure logging
 logger = logging.getLogger(__name__)

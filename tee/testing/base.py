@@ -2,8 +2,6 @@
 Base classes and types for the testing framework.
 """
 
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Dict, Any, Optional, List

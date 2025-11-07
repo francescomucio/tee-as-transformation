@@ -1,9 +1,9 @@
 """
-Tee CLI Module
+t4t CLI Module
 
-Command-line interface for the Tee SQL model execution framework.
+Command-line interface for the t4t SQL model execution framework.
 """
 
-from .main import main
+from tee.cli.main import main
 
 __all__ = ["main"]

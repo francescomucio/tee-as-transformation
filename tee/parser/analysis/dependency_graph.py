@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 from graphlib import TopologicalSorter
 
-from ..shared.types import ParsedModel, DependencyGraph, DependencyInfo, ExecutionOrder, GraphCycles
-from ..shared.exceptions import DependencyError
+from tee.parser.shared.types import ParsedModel, DependencyGraph, DependencyInfo, ExecutionOrder, GraphCycles
+from tee.parser.shared.exceptions import DependencyError
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +107,7 @@ class DependencyGraphBuilder:
     ) -> Dict[str, List[str]]:
         """
         Parse test SQL files to extract table dependencies using sqlglot.
+        Creates separate nodes for each test instance.
 
         Args:
             parsed_models: Parsed SQL models
@@ -115,6 +116,8 @@ class DependencyGraphBuilder:
 
         Returns:
             Dict mapping test_node -> list of table dependencies
+            Test nodes are named: test:{table_name}.{test_name} for table-level
+            or test:{table_name}.{column_name}.{test_name} for column-level
         """
         test_dependencies = {}
 
@@ -123,82 +126,74 @@ class DependencyGraphBuilder:
             from ...testing.test_discovery import TestDiscovery
             from ...parser.parsers.sql_parser import SQLParser
 
-            # Discover tests
+            # Discover SQL tests
             test_discovery = TestDiscovery(project_folder)
             discovered_tests = test_discovery.discover_tests()
-
-            if not discovered_tests:
-                logger.debug("No tests discovered")
-                return test_dependencies
-
-            # Map tests to tables (from metadata)
-            test_to_tables = {}  # test_name -> [table_names]
-            for table_name, model_info in parsed_models.items():
-                metadata = self._extract_metadata(model_info)
-                if metadata and "tests" in metadata:
-                    for test_def in metadata["tests"]:
-                        test_name = (
-                            test_def if isinstance(test_def, str) else test_def.get("name")
-                        )
-                        if test_name and test_name in discovered_tests:
-                            if test_name not in test_to_tables:
-                                test_to_tables[test_name] = []
-                            test_to_tables[test_name].append(table_name)
 
             # Parse test SQL to extract dependencies
             sql_parser = SQLParser()
 
-            for test_name, sql_test in discovered_tests.items():
-                if test_name not in test_to_tables:
-                    # Test not referenced by any model, skip it
+            # Process each model to find test instances
+            for table_name, model_info in parsed_models.items():
+                metadata = self._extract_metadata(model_info)
+                if not metadata:
                     continue
 
-                test_node = f"test:{test_name}"
-                all_test_deps = set()
+                # Process column-level tests
+                if "schema" in metadata and metadata["schema"]:
+                    for column_def in metadata["schema"]:
+                        if "tests" in column_def and column_def["tests"]:
+                            column_name = column_def.get("name")
+                            if not column_name:
+                                continue
 
-                # For each table that uses this test, parse the test SQL
-                for table_name in test_to_tables[test_name]:
-                    try:
-                        # Load test SQL
-                        test_sql = sql_test._load_sql_content()
+                            for test_def in column_def["tests"]:
+                                test_name = (
+                                    test_def if isinstance(test_def, str) else test_def.get("name")
+                                )
+                                if not test_name:
+                                    continue
 
-                        # Substitute @table_name and {{ table_name }} with actual table
-                        substituted_sql = test_sql.replace("@table_name", table_name)
-                        substituted_sql = substituted_sql.replace("{{ table_name }}", table_name)
-                        substituted_sql = substituted_sql.replace("{{table_name}}", table_name)
+                                # Create column-level test node
+                                test_node = f"test:{table_name}.{column_name}.{test_name}"
+                                test_deps = self._parse_test_instance_dependencies(
+                                    test_name=test_name,
+                                    table_name=table_name,
+                                    column_name=column_name,
+                                    discovered_tests=discovered_tests,
+                                    sql_parser=sql_parser,
+                                    table_resolver=table_resolver,
+                                    parsed_models=parsed_models,
+                                )
+                                test_dependencies[test_node] = test_deps
+                                logger.debug(
+                                    f"Column-level test {test_node} depends on: {test_deps}"
+                                )
 
-                        # Parse with SQLParser (reuses existing sqlglot code!)
-                        parsed = sql_parser.parse(
-                            substituted_sql, file_path=str(sql_test.sql_file_path)
+                # Process table-level tests
+                if "tests" in metadata and metadata["tests"]:
+                    for test_def in metadata["tests"]:
+                        test_name = (
+                            test_def if isinstance(test_def, str) else test_def.get("name")
                         )
+                        if not test_name:
+                            continue
 
-                        # Extract source tables from parsed result
-                        source_tables = (
-                            parsed.get("code", {}).get("sql", {}).get("source_tables", [])
+                        # Create table-level test node
+                        test_node = f"test:{table_name}.{test_name}"
+                        test_deps = self._parse_test_instance_dependencies(
+                            test_name=test_name,
+                            table_name=table_name,
+                            column_name=None,
+                            discovered_tests=discovered_tests,
+                            sql_parser=sql_parser,
+                            table_resolver=table_resolver,
+                            parsed_models=parsed_models,
                         )
-
-                        # Resolve table references
-                        for ref_table in source_tables:
-                            full_ref = table_resolver.resolve_table_reference(
-                                ref_table, parsed_models
-                            )
-                            if full_ref and full_ref != table_name:
-                                all_test_deps.add(full_ref)
-
-                        # Test depends on the table it's testing
-                        all_test_deps.add(table_name)
-
-                    except Exception as e:
-                        logger.warning(
-                            f"Failed to parse test {test_name} for table {table_name}: {e}"
+                        test_dependencies[test_node] = test_deps
+                        logger.debug(
+                            f"Table-level test {test_node} depends on: {test_deps}"
                         )
-                        # Still add the table as a dependency even if parsing fails
-                        all_test_deps.add(table_name)
-
-                test_dependencies[test_node] = list(all_test_deps)
-                logger.debug(
-                    f"Test {test_name} depends on tables: {test_dependencies[test_node]}"
-                )
 
         except ImportError as e:
             logger.warning(f"Could not import test discovery: {e}")
@@ -206,6 +201,86 @@ class DependencyGraphBuilder:
             logger.warning(f"Error parsing test dependencies: {e}")
 
         return test_dependencies
+
+    def _parse_test_instance_dependencies(
+        self,
+        test_name: str,
+        table_name: str,
+        column_name: Optional[str],
+        discovered_tests: Dict[str, Any],
+        sql_parser,
+        table_resolver,
+        parsed_models: Dict[str, ParsedModel],
+    ) -> List[str]:
+        """
+        Parse dependencies for a single test instance.
+
+        Args:
+            test_name: Name of the test
+            table_name: Table this test is applied to
+            column_name: Column name (None for table-level tests)
+            discovered_tests: Dictionary of discovered SQL tests
+            sql_parser: SQLParser instance
+            table_resolver: TableResolver instance
+            parsed_models: Parsed SQL models
+
+        Returns:
+            List of table dependencies for this test instance
+        """
+        test_deps = set()
+
+        # Standard tests (not SQL tests) only depend on the table being tested
+        if test_name not in discovered_tests:
+            # Standard test - depends only on the table
+            test_deps.add(table_name)
+            return list(test_deps)
+
+        # SQL test - parse the SQL to find dependencies
+        sql_test = discovered_tests[test_name]
+        try:
+            # Load test SQL
+            test_sql = sql_test._load_sql_content()
+
+            # Substitute @table_name and {{ table_name }} with actual table
+            substituted_sql = test_sql.replace("@table_name", table_name)
+            substituted_sql = substituted_sql.replace("{{ table_name }}", table_name)
+            substituted_sql = substituted_sql.replace("{{table_name}}", table_name)
+
+            # Substitute @column_name if this is a column-level test
+            if column_name:
+                substituted_sql = substituted_sql.replace("@column_name", column_name)
+                substituted_sql = substituted_sql.replace("{{ column_name }}", column_name)
+                substituted_sql = substituted_sql.replace("{{column_name}}", column_name)
+
+            # Parse with SQLParser (reuses existing sqlglot code!)
+            parsed = sql_parser.parse(
+                substituted_sql, file_path=str(sql_test.sql_file_path)
+            )
+
+            # Extract source tables from parsed result
+            source_tables = (
+                parsed.get("code", {}).get("sql", {}).get("source_tables", [])
+            )
+
+            # Resolve table references
+            for ref_table in source_tables:
+                full_ref = table_resolver.resolve_table_reference(
+                    ref_table, parsed_models
+                )
+                if full_ref and full_ref != table_name:
+                    test_deps.add(full_ref)
+
+            # Test depends on the table it's testing
+            test_deps.add(table_name)
+
+        except Exception as e:
+            logger.warning(
+                f"Failed to parse test {test_name} for table {table_name}: {e}"
+            )
+            # Still add the table as a dependency even if parsing fails
+            test_deps.add(table_name)
+
+        return list(test_deps)
 
     def _extract_metadata(self, model_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Extract metadata from model data."""

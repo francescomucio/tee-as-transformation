@@ -78,6 +78,7 @@ class UniqueTest(StandardTest):
             # Unknown params
             unknown_params = set(params.keys())
             raise ValueError(f"Unknown parameters for unique test: {unknown_params}")
+        # If no params and no column_name at table level, that's valid (checks all columns)
 
     def get_test_query(
         self,
@@ -113,80 +114,22 @@ class UniqueTest(StandardTest):
             # Case 2: Table-level test with composite columns
             columns = params["columns"]
         else:
-            # Should not reach here if validate_params works correctly
-            raise ValueError(
-                "unique test requires either: "
-                "1) a column_name (for single column uniqueness), or "
-                "2) params={'columns': [...]} at table level (for composite uniqueness)"
-            )
+            # Case 3: Table-level test without columns specified - check all columns (entire row uniqueness)
+            # Try to get columns from adapter if available
+            columns = None
+            try:
+                if hasattr(adapter, "get_table_columns") and adapter.connection:
+                    columns = adapter.get_table_columns(table_name)
+            except Exception:
+                # If getting columns fails, adapter will handle None
+                pass
 
         # Delegate SQL generation to adapter for database-specific syntax
         return adapter.generate_unique_test_query(table_name, columns)
 
 
-class NoDuplicatesTest(StandardTest):
-    """
-    Test that verifies no duplicate rows exist in a table.
-
-    This is a model-level test that checks if entire rows are duplicates.
-    Different from `unique` test which checks specific columns.
-    """
-
-    def __init__(self):
-        super().__init__("no_duplicates", severity=TestSeverity.ERROR)
-
-    def validate_params(
-        self, params: Optional[Dict[str, Any]] = None, column_name: Optional[str] = None
-    ) -> None:
-        """
-        Validate no_duplicates test parameters.
-
-        Args:
-            params: Test parameters (none required currently)
-            column_name: Should be None for model-level tests
-
-        Raises:
-            ValueError: If parameters are invalid
-        """
-        self._validate_model_level_only(column_name)
-        # Future: could support params like {"columns": [...]} to check specific columns
-        # But for now, we check all columns (entire rows)
-        self._validate_unknown_params(params, set())
-
-    def get_test_query(
-        self,
-        adapter,
-        table_name: str,
-        column_name: Optional[str] = None,
-        params: Optional[Dict[str, Any]] = None,
-    ) -> str:
-        """
-        Generate SQL query to find duplicate rows using adapter.
-
-        Args:
-            adapter: Database adapter instance
-            table_name: Fully qualified table name
-            column_name: Should be None (this is a model-level test)
-            params: Optional parameters (not used currently)
-
-        Returns:
-            SQL query string
-        """
-        self._validate_model_level_only(column_name)
-
-        # Try to get columns from adapter if available
-        # This allows database-specific optimizations
-        columns = None
-        try:
-            # Check if adapter has get_table_columns method and is connected
-            if hasattr(adapter, "get_table_columns") and adapter.connection:
-                columns = adapter.get_table_columns(table_name)
-        except Exception:
-            # If getting columns fails, fall back to default implementation
-            pass
-
-        # Delegate SQL generation to adapter for database-specific syntax
-        return adapter.generate_no_duplicates_test_query(table_name, columns)
+# NoDuplicatesTest has been removed - use UniqueTest at table level without columns
+# to check entire row uniqueness (equivalent to no_duplicates)
 
 
 class RowCountGreaterThanZeroTest(StandardTest):
@@ -476,14 +419,13 @@ class RelationshipsTest(StandardTest):
 # Register standard tests
 NOT_NULL = NotNullTest()
 UNIQUE = UniqueTest()
-NO_DUPLICATES = NoDuplicatesTest()
+# NO_DUPLICATES removed - use UNIQUE at table level without columns instead
 ROW_COUNT_GT_0 = RowCountGreaterThanZeroTest()
 ACCEPTED_VALUES = AcceptedValuesTest()
 RELATIONSHIPS = RelationshipsTest()
 
 TestRegistry.register(NOT_NULL)
 TestRegistry.register(UNIQUE)
-TestRegistry.register(NO_DUPLICATES)
 TestRegistry.register(ROW_COUNT_GT_0)
 TestRegistry.register(ACCEPTED_VALUES)
 TestRegistry.register(RELATIONSHIPS)

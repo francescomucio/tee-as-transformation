@@ -2,9 +2,9 @@
 Parse command implementation.
 """
 
-from ..context import CommandContext
-from ..selection import ModelSelector
-from ... import parse_models_only
+from tee.cli.context import CommandContext
+from tee.cli.selection import ModelSelector
+from tee import parse_models_only
 
 
 def cmd_parse(args):

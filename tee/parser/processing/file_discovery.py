@@ -6,12 +6,12 @@ import logging
 from pathlib import Path
 from typing import List, Dict, Any
 
-from ..shared.constants import (
+from tee.parser.shared.constants import (
     SUPPORTED_SQL_EXTENSIONS,
     SUPPORTED_PYTHON_EXTENSIONS,
     DEFAULT_MODELS_FOLDER,
 )
-from ..shared.exceptions import FileDiscoveryError
+from tee.parser.shared.exceptions import FileDiscoveryError
 
 # Configure logging
 logger = logging.getLogger(__name__)

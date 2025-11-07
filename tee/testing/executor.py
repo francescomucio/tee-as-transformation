@@ -2,15 +2,13 @@
 Test execution engine that integrates with model execution.
 """
 
-from __future__ import annotations
-
 import logging
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from .base import TestRegistry, TestResult, TestSeverity
 from .test_discovery import TestDiscovery
-from ..typing.metadata import TestDefinition
-from ..adapters.base import DatabaseAdapter
+from tee.typing.metadata import TestDefinition
+from tee.adapters.base import DatabaseAdapter
 
 
 class TestExecutor:
@@ -29,11 +27,13 @@ class TestExecutor:
         self.adapter = adapter
         self.project_folder = Path(project_folder) if project_folder else None
         self.logger = logging.getLogger(self.__class__.__name__)
+        self._used_test_names: set[str] = set()
+        self._test_discovery: Optional[TestDiscovery] = None
 
         # Discover and register SQL tests from tests/ folder
         if self.project_folder:
-            test_discovery = TestDiscovery(self.project_folder)
-            test_discovery.register_discovered_tests()
+            self._test_discovery = TestDiscovery(self.project_folder)
+            self._test_discovery.register_discovered_tests()
 
     def execute_tests_for_model(
         self,
@@ -167,6 +167,9 @@ class TestExecutor:
                 error=None,
             )
 
+        # Track that this test was used
+        self._used_test_names.add(test_name)
+
         # Execute test
         try:
             result = test.execute(
@@ -254,6 +257,11 @@ class TestExecutor:
             r for r in all_results if not r.passed and r.severity == TestSeverity.ERROR
         ]
 
+        # Check for unused generic SQL tests
+        unused_warnings = self._check_unused_generic_tests(parsed_models)
+        if unused_warnings:
+            warnings.extend(unused_warnings)
+
         return {
             "test_results": all_results,
             "passed": len([r for r in all_results if r.passed]),
@@ -262,6 +270,94 @@ class TestExecutor:
             "warnings": warnings,
             "total": len(all_results),
         }
+
+    def _check_unused_generic_tests(self, parsed_models: Dict[str, Any]) -> List[str]:
+        """
+        Check for unused generic SQL tests and return warning messages.
+        
+        Generic tests are SQL tests that use placeholders like @table_name or {{ table_name }}.
+        These tests must be referenced in model metadata to be used.
+        
+        Returns:
+            List of warning messages for unused generic tests
+        """
+        if not self._test_discovery:
+            return []
+        
+        warnings = []
+        discovered_tests = self._test_discovery.discover_tests()
+        
+        # Get all test names referenced in model metadata
+        referenced_test_names = set()
+        for model_data in parsed_models.values():
+            metadata = self._extract_metadata(model_data)
+            if not metadata:
+                continue
+            
+            # Check model-level tests
+            if "tests" in metadata and metadata["tests"]:
+                for test_def in metadata["tests"]:
+                    if isinstance(test_def, str):
+                        referenced_test_names.add(test_def)
+                    elif isinstance(test_def, dict):
+                        test_name = test_def.get("name") or test_def.get("test")
+                        if test_name:
+                            referenced_test_names.add(test_name)
+            
+            # Check column-level tests
+            if "schema" in metadata and metadata["schema"]:
+                for column_def in metadata["schema"]:
+                    if "tests" in column_def and column_def["tests"]:
+                        for test_def in column_def["tests"]:
+                            if isinstance(test_def, str):
+                                referenced_test_names.add(test_def)
+                            elif isinstance(test_def, dict):
+                                test_name = test_def.get("name") or test_def.get("test")
+                                if test_name:
+                                    referenced_test_names.add(test_name)
+        
+        # Check each discovered SQL test
+        for test_name, sql_test in discovered_tests.items():
+            # Skip if test was used during execution
+            if test_name in self._used_test_names:
+                continue
+            
+            # Skip if test is referenced in metadata (might be used in future runs)
+            if test_name in referenced_test_names:
+                continue
+            
+            # Check if this is a generic test (has placeholders)
+            if self._is_generic_test(sql_test):
+                warnings.append(
+                    f"Generic SQL test '{test_name}' is never used. "
+                    f"Add it to model metadata to apply it to tables. "
+                    f"File: {sql_test.sql_file_path.relative_to(self.project_folder) if self.project_folder else sql_test.sql_file_path}"
+                )
+        
+        return warnings
+    
+    def _is_generic_test(self, sql_test) -> bool:
+        """
+        Check if a SQL test is generic (uses placeholders) vs singular (hardcoded table name).
+        
+        Generic tests use @table_name, {{ table_name }}, or similar placeholders.
+        Singular tests have hardcoded table names.
+        """
+        try:
+            sql_content = sql_test._load_sql_content()
+            # Check for common placeholder patterns
+            placeholder_patterns = [
+                "@table_name",
+                "{{ table_name }}",
+                "{{table_name}}",
+                "@column_name",
+                "{{ column_name }}",
+                "{{column_name}}",
+            ]
+            return any(pattern in sql_content for pattern in placeholder_patterns)
+        except Exception:
+            # If we can't load the SQL, assume it's generic to be safe
+            return True
 
     def _extract_metadata(self, model_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Extract metadata from model data (similar to ExecutionEngine._extract_metadata)."""

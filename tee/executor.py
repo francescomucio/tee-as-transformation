@@ -1,16 +1,15 @@
 """
-Tee Executor
+t4t Executor
 
 Handles the complete workflow of parsing and executing SQL models based on project configuration.
 """
 
-from __future__ import annotations
-
 import logging
 from typing import Dict, Any, Optional, Union, List, TYPE_CHECKING
-from .parser import ProjectParser
-from .engine import ModelExecutor
-from .testing import TestExecutor
+from tee.parser import ProjectParser
+from tee.engine import ModelExecutor
+from tee.testing import TestExecutor
+from tee.executor_helpers import build_helpers
 
 if TYPE_CHECKING:
     from tee.adapters import AdapterConfig
@@ -47,11 +46,10 @@ def execute_models(
     # Adapters will handle their own validation and config creation
 
     print("\n" + "=" * 50)
-    print("TEE: PARSING AND EXECUTING SQL MODELS")
+    print("t4t: PARSING AND EXECUTING SQL MODELS")
     print("=" * 50)
 
     # Step 1: Parse SQL models
-    logger.info("Parsing SQL models...")
     parser = ProjectParser(project_folder, connection_config, variables)
 
     print("\nCollecting and parsing SQL models...")
@@ -161,11 +159,9 @@ def execute_models(
                 # Add test results to execution results
                 results["test_results"] = test_results
             else:
-                logger.warning("Cannot execute tests: adapter not available")
                 print("⚠️  Cannot execute tests: adapter not available")
 
         except Exception as e:
-            logger.error(f"Error executing tests: {e}")
             print(f"⚠️  Error executing tests: {e}")
             # Don't fail the entire run if tests fail
 
@@ -216,9 +212,137 @@ def execute_models(
         return results
 
     except Exception as e:
-        logger.error(f"Error during execution: {e}")
         print(f"Error during execution: {e}")
         raise
+
+
+def build_models(
+    project_folder: str,
+    connection_config: Union[Dict[str, Any], AdapterConfig],
+    save_analysis: bool = True,
+    variables: Optional[Dict[str, Any]] = None,
+    select_patterns: Optional[List[str]] = None,
+    exclude_patterns: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    """
+    Build models with interleaved test execution, stopping on test failures.
+
+    This function executes models and tests interleaved:
+    1. Execute a model
+    2. Run its tests immediately
+    3. If any ERROR severity test fails, stop execution
+    4. Skip dependents of failed models
+
+    Args:
+        project_folder: Path to the project folder containing SQL models
+        connection_config: Database connection configuration
+        save_analysis: Whether to save parsing analysis to files
+        variables: Optional variables for SQL substitution
+        select_patterns: Optional list of patterns to select models
+        exclude_patterns: Optional list of patterns to exclude models
+
+    Returns:
+        Dictionary containing execution results and analysis info
+
+    Raises:
+        SystemExit: If tests fail with ERROR severity
+    """
+    print("\n" + "=" * 50)
+    print("t4t: BUILDING MODELS WITH TESTS")
+    print("=" * 50)
+
+    # Step 1: Set up build context (parse, graph, filters)
+    parser, parsed_models, graph, execution_order = build_helpers.setup_build_context(
+        project_folder, connection_config, variables, select_patterns, exclude_patterns
+    )
+
+    # Step 2: Initialize executors
+    print("\n" + "=" * 50)
+    print("BUILDING MODELS AND TESTS")
+    print("=" * 50)
+
+    model_executor = None
+    failed_models = set()
+    skipped_models = set()
+    all_test_results = []
+
+    try:
+        model_executor, test_executor = build_helpers.initialize_build_executors(
+            project_folder, connection_config, variables
+        )
+
+        # Evaluate Python models before execution
+        parsed_models = parser.orchestrator.evaluate_python_models(
+            parsed_models, variables=variables
+        )
+
+        # Step 3: Execute models and tests interleaved
+        for node_name in execution_order:
+            if build_helpers.should_skip_model(node_name, skipped_models, failed_models, graph):
+                # Mark as skipped if it depends on a failed model
+                if node_name not in skipped_models and not node_name.startswith("test:"):
+                    node_deps = graph["dependencies"].get(node_name, [])
+                    if any(dep in failed_models for dep in node_deps if not dep.startswith("test:")):
+                        skipped_models.add(node_name)
+                continue
+
+            try:
+                # Execute the model
+                model_results = build_helpers.execute_single_model(
+                    node_name, parsed_models, model_executor
+                )
+
+                # Handle model execution result
+                if not build_helpers.handle_model_execution_result(
+                    node_name, model_results, failed_models, parser, skipped_models
+                ):
+                    continue
+
+                # Execute tests for this model
+                test_results = build_helpers.execute_tests_for_model(
+                    node_name, parsed_models, model_executor, test_executor
+                )
+
+                if test_results:
+                    # Handle test results (raises SystemExit on ERROR failures)
+                    build_helpers.handle_test_results(
+                        node_name, test_results, failed_models, parser, skipped_models
+                    )
+                    all_test_results.extend(test_results)
+
+            except SystemExit:
+                raise
+            except Exception as e:
+                failed_models.add(node_name)
+                error_msg = str(e)
+                print(f"  ❌ Model execution failed: {error_msg}")
+                build_helpers.mark_dependents_as_skipped(node_name, parser, skipped_models)
+                print(f"\n❌ Build stopped: Model {node_name} failed")
+                raise SystemExit(1)
+
+        # Step 4: Save analysis files if requested
+        if save_analysis:
+            parser.save_to_json()
+            print("\nAnalysis files saved to output folder")
+
+        # Step 5: Compile and return results
+        results = build_helpers.compile_build_results(
+            execution_order, failed_models, skipped_models, all_test_results,
+            parsed_models, graph
+        )
+        build_helpers.print_build_summary(results, failed_models, skipped_models)
+
+        return results
+
+    except SystemExit:
+        raise
+    except Exception as e:
+        print(f"Error during build: {e}")
+        raise
+    finally:
+        # Always disconnect
+        if model_executor and model_executor.execution_engine:
+            model_executor.execution_engine.disconnect()
 
 
 def parse_models_only(
@@ -245,11 +369,10 @@ def parse_models_only(
     # Adapters will handle their own validation and config creation
 
     print("\n" + "=" * 50)
-    print("TEE: PARSING SQL MODELS")
+    print("t4t: PARSING SQL MODELS")
     print("=" * 50)
 
     # Parse SQL models
-    logger.info("Parsing SQL models...")
     parser = ProjectParser(project_folder, connection_config, variables, project_config)
 
     print("\nCollecting and parsing SQL models...")

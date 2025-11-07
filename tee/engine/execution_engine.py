@@ -9,7 +9,7 @@ from typing import Dict, Any, List, Optional, Union
 import logging
 from datetime import datetime, UTC
 
-from ..adapters import get_adapter, AdapterConfig
+from tee.adapters import get_adapter, AdapterConfig
 from .config import load_database_config
 from .model_state import ModelStateManager
 

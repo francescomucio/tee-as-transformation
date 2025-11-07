@@ -6,7 +6,7 @@ import re
 import logging
 from typing import List
 
-from ..shared.exceptions import ParserError
+from tee.parser.shared.exceptions import ParserError
 
 # Configure logging
 logger = logging.getLogger(__name__)

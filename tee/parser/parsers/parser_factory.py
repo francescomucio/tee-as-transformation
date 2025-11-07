@@ -8,8 +8,8 @@ from typing import Dict, Type
 from .base import BaseParser
 from .sql_parser import SQLParser
 from .python_parser import PythonParser
-from ..shared.constants import SUPPORTED_SQL_EXTENSIONS, SUPPORTED_PYTHON_EXTENSIONS
-from ..shared.exceptions import ParserError
+from tee.parser.shared.constants import SUPPORTED_SQL_EXTENSIONS, SUPPORTED_PYTHON_EXTENSIONS
+from tee.parser.shared.exceptions import ParserError
 
 
 class ParserFactory:
