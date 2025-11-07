@@ -12,6 +12,7 @@ Welcome to the Tee for Transform (t4t) documentation. t4t is a powerful Python f
 ### 📖 User Guide
 - [Overview](user-guide/overview.md) - Core concepts and architecture
 - [Execution Engine](user-guide/execution-engine.md) - Running SQL models
+- [Seeds](user-guide/seeds.md) - Loading static data files (CSV, JSON, TSV)
 - [Data Quality Tests](user-guide/data-quality-tests.md) - Automated data validation
 - [Incremental Materialization](user-guide/incremental-materialization.md) - Efficient data processing
 - [Database Adapters](user-guide/database-adapters.md) - Multi-database support
@@ -34,6 +35,7 @@ Welcome to the Tee for Transform (t4t) documentation. t4t is a powerful Python f
 - **Multi-Database Support**: DuckDB, Snowflake, PostgreSQL, and more
 - **SQL Dialect Conversion**: Write in PostgreSQL, run on any database
 - **Dependency-Aware Execution**: Automatic model dependency resolution
+- **Seeds**: Load static data files (CSV, JSON, TSV) into database tables
 - **Data Quality Tests**: Automated data validation with 6 standard tests and custom SQL tests (dbt-style)
 - **Incremental Materialization**: Efficient data processing with append, merge, and delete+insert strategies
 - **Comprehensive Tagging**: dbt-style tags and database object tags for tables, views, and schemas

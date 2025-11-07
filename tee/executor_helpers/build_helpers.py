@@ -5,9 +5,11 @@ This module contains helper functions used by the build_models function
 to keep the main executor.py focused on the public API.
 """
 
+from pathlib import Path
 from typing import Dict, Any, Optional, Union, List, TYPE_CHECKING
 from tee.parser import ProjectParser
 from tee.engine import ModelExecutor
+from tee.engine.seeds import SeedDiscovery, SeedLoader
 from tee.testing import TestExecutor
 
 if TYPE_CHECKING:
@@ -72,12 +74,44 @@ def initialize_build_executors(
     )
     
     model_executor.execution_engine.connect()
+    
+    # Load seeds before executing models
+    _load_seeds_for_build(model_executor, project_folder)
 
     test_executor = TestExecutor(
         model_executor.execution_engine.adapter, project_folder=project_folder
     )
     
     return model_executor, test_executor
+
+
+def _load_seeds_for_build(model_executor: ModelExecutor, project_folder: str) -> None:
+    """Load seed files from the seeds folder into database tables."""
+    seeds_folder = Path(project_folder) / "seeds"
+    
+    # Discover seed files
+    seed_discovery = SeedDiscovery(seeds_folder)
+    seed_files = seed_discovery.discover_seed_files()
+    
+    if not seed_files:
+        return
+    
+    print(f"\nLoading {len(seed_files)} seed file(s)...")
+    
+    # Load seeds using the adapter
+    seed_loader = SeedLoader(model_executor.execution_engine.adapter)
+    seed_results = seed_loader.load_all_seeds(seed_files)
+    
+    # Log results
+    if seed_results["loaded_tables"]:
+        print(f"  ✅ Loaded {len(seed_results['loaded_tables'])} seed(s)")
+        for table in seed_results["loaded_tables"]:
+            print(f"    - {table}")
+    
+    if seed_results["failed_tables"]:
+        print(f"  ⚠️  Failed to load {len(seed_results['failed_tables'])} seed(s)")
+        for failure in seed_results["failed_tables"]:
+            print(f"    - {failure['file']}: {failure['error']}")
 
 
 def should_skip_model(

@@ -5,7 +5,7 @@ Command-line interface for the t4t SQL model execution framework.
 """
 
 import argparse
-from tee.cli.commands import cmd_run, cmd_parse, cmd_test, cmd_debug, cmd_help, cmd_build
+from tee.cli.commands import cmd_run, cmd_parse, cmd_test, cmd_debug, cmd_help, cmd_build, cmd_seed
 
 
 def add_common_args(parser: argparse.ArgumentParser) -> None:
@@ -60,6 +60,7 @@ Examples:
   tcli build ./my_project                  # Build models with tests (stops on failure)
   tcli parse ./my_project                  # Parse models in ./my_project
   tcli test ./my_project                   # Run tests on models in ./my_project
+  tcli seed ./my_project                   # Load seed files into database
   tcli debug ./my_project                  # Test database connectivity
   tcli run ./my_project -v                 # Run with verbose output
   tcli run ./my_project --vars '{"env": "prod"}'  # Run with variables (JSON)
@@ -115,6 +116,13 @@ Examples:
     add_common_args(build_parser)
     add_selection_args(build_parser)
     build_parser.set_defaults(func=cmd_build)
+
+    # Seed command
+    seed_parser = subparsers.add_parser(
+        "seed", help="Load seed files (CSV, JSON, TSV) into database tables"
+    )
+    add_common_args(seed_parser)
+    seed_parser.set_defaults(func=cmd_seed)
 
     # Help command
     help_parser = subparsers.add_parser("help", help="Show help information")

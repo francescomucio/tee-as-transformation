@@ -123,9 +123,32 @@ Reference in metadata:
 
 See [Data Quality Tests](user-guide/data-quality-tests.md) for more information.
 
+## Adding Seeds
+
+You can load static data files (CSV, JSON, TSV) into your database before running models:
+
+```bash
+# Create seeds folder
+mkdir seeds
+
+# Add a seed file
+echo "id,name
+1,Alice
+2,Bob" > seeds/users.csv
+
+# Seeds are loaded automatically when you run models
+tcli run ./my_project
+
+# Or load seeds independently
+tcli seed ./my_project
+```
+
+See [Seeds](user-guide/seeds.md) for more information.
+
 ## Next Steps
 
 - [Configuration](configuration.md) - Learn about advanced configuration options
+- [Seeds](user-guide/seeds.md) - Load static data files into your database
 - [Database Adapters](user-guide/database-adapters.md) - Explore multi-database support
 - [Data Quality Tests](user-guide/data-quality-tests.md) - Comprehensive testing guide
 - [Tags and Metadata](user-guide/tags-and-metadata.md) - Organize and filter models with tags
