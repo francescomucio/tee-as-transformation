@@ -60,7 +60,7 @@ metadata: ModelMetadataDict = {
     ],
     "tests": [
         "row_count_gt_0",
-        "no_duplicates"
+        "unique"  # Checks entire row uniqueness (all columns)
     ]
 }
 ```
@@ -245,7 +245,7 @@ For the example above, you would see:
 - ✅ `accepted_values` on `status` (both tables)
 - ✅ `relationships` on `orders.user_id` → `users.user_id`
 - ✅ `row_count_gt_0` on both tables
-- ✅ `no_duplicates` on `users`
+- ✅ `unique` on `users` (entire row uniqueness)
 
 **Custom SQL Tests:**
 - ✅ `column_not_negative` on `orders.amount`

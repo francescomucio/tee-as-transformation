@@ -189,8 +189,16 @@ Verifies values in a column are unique. Also supports composite uniqueness at th
 }
 ```
 
+**Entire row uniqueness (table level, no columns specified):**
+```python
+{
+    "description": "My table",
+    "tests": ["unique"]  # Checks uniqueness across all columns (entire row)
+}
+```
+
 **Parameters:**
-- `columns` (optional, for table-level): List of columns for composite uniqueness
+- `columns` (optional, for table-level): List of columns for composite uniqueness. If omitted at table level, checks all columns (entire row uniqueness)
 
 **Severity:** ERROR (default)
 
@@ -291,21 +299,21 @@ Verifies a table has at least one row.
 
 ---
 
-#### `no_duplicates`
-Verifies no duplicate rows exist in a table. This checks if entire rows are duplicates, not just specific columns.
+#### `unique` (Table-Level - Entire Row)
+Verifies no duplicate rows exist in a table. When applied at the table level without specifying columns, it checks if entire rows are duplicates (all columns).
 
 ```python
 {
     "description": "My table",
-    "tests": ["no_duplicates"]
+    "tests": ["unique"]  # Checks entire row uniqueness (all columns)
 }
 ```
 
-**Parameters:** None
+**Parameters:** None (when checking all columns)
 
 **Severity:** ERROR (default)
 
-**Note:** Different from `unique` test which checks specific columns. This test checks if entire rows are duplicates.
+**Note:** This is the same `unique` test, but applied at table level without columns. It's equivalent to checking uniqueness across all columns in the table.
 
 ---
 
@@ -588,6 +596,88 @@ You'll see a warning like this:
 
 ---
 
+## Test Library Export (OTS Format)
+
+When you parse a project with `tcli parse`, t4t automatically exports your SQL tests to an OTS-compliant test library file. This allows your tests to be shared and used by other OTS-compliant tools.
+
+### Automatic Export
+
+The test library is automatically generated when parsing a project:
+
+```bash
+tcli parse examples/t_project
+```
+
+This creates a test library file in the `output/` folder:
+- **File name**: `{project_name}_test_library.ots.json`
+- **Location**: `examples/t_project/output/t_project_test_library.ots.json`
+- **Format**: JSON (consistent with OTS module format)
+
+### Test Library Structure
+
+The exported test library follows the OTS specification format:
+
+```json
+{
+  "test_library_version": "1.0",
+  "description": "Test library for t_project project",
+  "generic_tests": {
+    "check_minimum_rows": {
+      "type": "sql",
+      "level": "table",
+      "description": "Check that a table has at least a minimum number of rows",
+      "sql": "SELECT 1 as violation\nFROM @table_name\nGROUP BY 1\nHAVING COUNT(*) < @min_rows:10",
+      "parameters": {
+        "min_rows": {
+          "type": "number",
+          "default": 10,
+          "description": "Parameter min_rows"
+        }
+      }
+    }
+  },
+  "singular_tests": {
+    "test_my_first_table": {
+      "type": "sql",
+      "level": "table",
+      "description": "Singular SQL test for my_first_table",
+      "sql": "SELECT id, name\nFROM my_schema.my_first_table\nWHERE name LIKE '%invalid%'",
+      "target_transformation": "my_schema.my_first_table"
+    }
+  }
+}
+```
+
+### OTS Module Integration
+
+When OTS modules are exported, they include a reference to the test library:
+
+```json
+{
+  "ots_version": "0.1.0",
+  "module_name": "t_project.my_schema",
+  "test_library_path": "t_project_test_library.ots.json",
+  "target": {...},
+  "transformations": [...]
+}
+```
+
+This allows OTS-compliant tools to discover and use your test definitions.
+
+### What Gets Exported
+
+- **Generic SQL Tests**: Tests with placeholders like `@table_name` are exported to `generic_tests`
+- **Singular SQL Tests**: Tests with hardcoded table names are exported to `singular_tests`
+- **Metadata Extraction**: 
+  - Description extracted from SQL comments
+  - Parameters extracted from `@param:default` syntax
+  - Test level (table/column) inferred from SQL content
+  - Target transformation extracted for singular tests
+
+**Note:** Standard tests (like `not_null`, `unique`) are not exported to the test library, as they are defined in the OTS specification itself.
+
+---
+
 ## Running Tests
 
 ### Automatic Execution
@@ -717,7 +807,7 @@ metadata: ModelMetadataDict = {
     ],
     "tests": [
         "row_count_gt_0",
-        "no_duplicates"
+        "unique"  # Checks entire row uniqueness (all columns)
     ]
 }
 ```
@@ -742,7 +832,7 @@ tcli test examples/t_project --severity my_schema.orders.status.accepted_values=
 2. **Use Relationships**: Validate foreign key integrity with `relationships` tests
 3. **Test Data Quality**: Use `accepted_values` for enumerated fields
 4. **Monitor Table Health**: Use `row_count_gt_0` to ensure tables aren't empty
-5. **Check for Duplicates**: Use `no_duplicates` for fact tables
+5. **Check for Duplicates**: Use `unique` at table level (without columns) for fact tables to check entire row uniqueness
 6. **Set Appropriate Severity**: Use WARNING for non-critical checks
 7. **Test in CI/CD**: Include `tcli test` in your CI/CD pipeline
 
