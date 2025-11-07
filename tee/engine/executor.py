@@ -99,9 +99,6 @@ class ModelExecutor:
             self.execution_engine.connect()
             self.logger.info("Connected to database successfully")
 
-            # Load seeds before executing models
-            self._load_seeds()
-
             # Get parsed models and execution order from parser (or use provided filtered versions)
             if parsed_models is None:
                 parsed_models = parser.collect_models()

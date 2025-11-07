@@ -125,7 +125,7 @@ See [Data Quality Tests](user-guide/data-quality-tests.md) for more information.
 
 ## Adding Seeds
 
-You can load static data files (CSV, JSON, TSV) into your database before running models:
+You can load static data files (CSV, JSON, TSV) into your database:
 
 ```bash
 # Create seeds folder
@@ -136,12 +136,12 @@ echo "id,name
 1,Alice
 2,Bob" > seeds/users.csv
 
-# Seeds are loaded automatically when you run models
-tcli run ./my_project
-
-# Or load seeds independently
+# Load seeds explicitly before running models
 tcli seed ./my_project
+tcli run ./my_project
 ```
+
+**Note**: The `build` command automatically loads seeds, but `run` requires explicit seed loading.
 
 See [Seeds](user-guide/seeds.md) for more information.
 

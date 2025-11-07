@@ -8,7 +8,7 @@ The seeds functionality provides:
 - **Automatic Discovery**: Automatically finds seed files in the `seeds/` folder
 - **Multiple Formats**: Supports CSV, JSON, and TSV files
 - **Schema Support**: Organize seeds by schema using subfolders
-- **Automatic Loading**: Seeds are loaded automatically before models run
+- **Explicit Loading**: Load seeds with `tcli seed` or automatically with `tcli build`
 - **Standalone Command**: Load seeds independently with `tcli seed`
 
 ## Quick Start
@@ -58,26 +58,23 @@ id	amount	status
 3	150.25	pending
 ```
 
-### 3. Seeds Are Loaded Automatically
+### 3. Load Seeds
 
-When you run `tcli run` or `tcli build`, seeds are automatically loaded before your models execute:
+Seeds must be loaded explicitly using the `seed` command:
 
 ```bash
+# Load seeds before running models
+tcli seed ./my_project
 tcli run ./my_project
 ```
 
-Output:
-```
-Loading seeds from project: ./my_project
+Or load seeds and run models in one step:
 
-Found 3 seed file(s) to load
-Successfully loaded 3 seed(s)
-  - users: 3 rows
-  - products: 3 rows
-  - orders: 3 rows
-
-Executing models...
+```bash
+tcli seed ./my_project && tcli run ./my_project
 ```
+
+**Note**: The `build` command automatically loads seeds before building models, but `run` does not.
 
 ### 4. Use Seeds in Your Models
 
@@ -392,7 +389,17 @@ Useful for development and testing environments.
 
 ## Integration with Models
 
-Seeds are loaded **before** models execute, making them available as dependencies:
+Load seeds **before** running models to make them available as dependencies:
+
+```bash
+# Step 1: Load seeds
+tcli seed ./my_project
+
+# Step 2: Run models (seeds are now available)
+tcli run ./my_project
+```
+
+Then your models can reference seed tables:
 
 ```sql
 -- models/enriched_orders.sql
@@ -406,9 +413,7 @@ JOIN users u ON u.id = o.user_id
 JOIN products p ON p.id = o.product_id
 ```
 
-The execution order is:
-1. Load seeds (users, products, orders)
-2. Execute models (enriched_orders can reference seed tables)
+**Note**: The `build` command automatically loads seeds, so you only need to run `tcli build ./my_project`.
 
 ## Advanced Usage
 
@@ -450,10 +455,10 @@ LEFT JOIN reference.statuses s ON s.code = u.status_code
 ## Summary
 
 Seeds provide a simple way to load static reference data into your database:
-- ✅ Automatic discovery and loading
+- ✅ Automatic discovery of seed files
 - ✅ Support for CSV, JSON, and TSV formats
 - ✅ Schema organization with subfolders
-- ✅ Integrated with model execution
+- ✅ Explicit loading with `tcli seed` or automatic with `tcli build`
 - ✅ Standalone command for testing
 
 Use seeds for reference data, configuration, and small static datasets that your models depend on.
