@@ -87,7 +87,7 @@ Built-in testing framework with:
 
 - Standard tests: `not_null`, `unique`, `accepted_values`, `relationships`, `row_count_gt_0`, `row_count_eq`
 - Custom SQL tests
-- Severity levels: `error` or `warning`
+- Severity levels: `error` or `warning` (configured in metadata files)
 - Automatic test execution after model runs
 
 ## Architecture

@@ -133,11 +133,12 @@ t4t run ./my_project --select my_model --exclude tag:deprecated
 ```
 
 **What it does:**
-1. Parses all SQL models in the `models/` directory
-2. Resolves dependencies automatically
-3. Executes models in the correct order
-4. Materializes results as tables/views in the database
-5. Automatically runs tests after model execution
+1. Compiles project to OTS modules (parses SQL/Python models, loads imported OTS modules)
+2. Loads compiled OTS modules from `output/ots_modules/`
+3. Resolves dependencies automatically
+4. Executes models in the correct order
+5. Materializes results as tables/views in the database
+6. Automatically runs tests after model execution
 
 ---
 
@@ -213,11 +214,13 @@ t4t build ./my_project --select my_model
 ```
 
 **What it does:**
-1. Executes models in dependency order
-2. Runs tests after each model execution
-3. Stops on first ERROR severity test failure
-4. Continues on WARNING severity test failures
-5. Automatically loads seeds before execution
+1. Compiles project to OTS modules (parses SQL/Python models, loads imported OTS modules)
+2. Loads compiled OTS modules from `output/ots_modules/`
+3. Executes models in dependency order
+4. Runs tests after each model execution
+5. Stops on first ERROR severity test failure
+6. Continues on WARNING severity test failures
+7. Automatically loads seeds before execution
 
 **Exit codes:**
 - `0` - All models and tests passed
@@ -242,7 +245,6 @@ t4t test <project_folder> [options]
 - `--vars <JSON>` - Variables to pass to models (JSON format)
 - `-s, --select <pattern>` - Select models by pattern (can be used multiple times)
 - `-e, --exclude <pattern>` - Exclude models by pattern (can be used multiple times)
-- `--severity <override>` - Override test severity (format: `test_name=error|warning` or `table.column.test_name=error|warning`). Can be used multiple times.
 
 **Examples:**
 ```bash
@@ -252,15 +254,6 @@ t4t test ./my_project
 # Run tests with variables
 t4t test ./my_project --vars '{"env": "prod"}'
 
-# Override test severity
-t4t test ./my_project --severity not_null=warning
-
-# Override severity for specific table/column/test
-t4t test ./my_project --severity my_table.id.unique=warning
-
-# Multiple severity overrides
-t4t test ./my_project --severity not_null=warning --severity unique=error
-
 # Test specific models
 t4t test ./my_project --select my_schema.*
 
@@ -268,14 +261,11 @@ t4t test ./my_project --select my_schema.*
 t4t test ./my_project -v
 ```
 
-**Severity Override Format:**
-- `test_name=severity` - Override for all instances of a test
-- `table.test_name=severity` - Override for a specific table
-- `table.column.test_name=severity` - Override for a specific column test
-
-**Severity values:**
-- `error` - Test failure stops execution (default for most tests)
-- `warning` - Test failure is reported but doesn't stop execution
+**What it does:**
+1. Compiles project to OTS modules (parses SQL/Python models, loads imported OTS modules)
+2. Loads compiled OTS modules from `output/ots_modules/`
+3. Builds dependency graph
+4. Runs all data quality tests
 
 **Exit codes:**
 - `0` - All tests passed
@@ -368,6 +358,134 @@ t4t debug ./my_project -v
 
 ---
 
+### `compile` - Compile Project to OTS Modules
+
+Compile t4t project to Open Transformation Specification (OTS) modules and test libraries.
+
+**Usage:**
+```bash
+t4t compile <project_folder> [options]
+```
+
+**Arguments:**
+- `project_folder` (required) - Path to the project folder containing `project.toml`
+
+**Options:**
+- `-v, --verbose` - Enable verbose output
+- `--vars <JSON>` - Variables to pass to models (JSON format)
+- `-f, --format <format>` - Output format: `json` or `yaml` (default: `json`)
+
+**Examples:**
+```bash
+# Compile to JSON (default)
+t4t compile ./my_project
+
+# Compile to YAML
+t4t compile ./my_project --format yaml
+
+# Compile with variables
+t4t compile ./my_project --vars '{"env": "prod"}'
+```
+
+**What it does:**
+1. Parses all SQL/Python models in the `models/` directory
+2. Discovers and validates imported OTS modules in `models/`
+3. Detects conflicts (duplicate `transformation_id`)
+4. Merges all models (SQL, Python, and imported OTS)
+5. Converts to OTS format
+6. Validates compiled modules
+7. Exports OTS modules to `output/ots_modules/`
+8. Exports merged test library to `output/ots_modules/`
+
+**Output:**
+- OTS modules: `{database}__{schema}.ots.json` (or `.ots.yaml`)
+- Test library: `{project_name}_test_library.ots.json` (or `.ots.yaml`)
+
+**Note:** The `run`, `build`, and `test` commands automatically compile before execution. Use `compile` when you want to generate OTS modules without executing.
+
+---
+
+### `ots` - OTS Module Commands
+
+Commands for working with Open Transformation Specification (OTS) modules.
+
+#### `ots run` - Execute OTS Modules
+
+Execute OTS modules directly without compilation.
+
+**Usage:**
+```bash
+t4t ots run <ots_path> [options]
+```
+
+**Arguments:**
+- `ots_path` (required) - Path to OTS module file (`.ots.json`, `.ots.yaml`, `.ots.yml`) or directory containing OTS modules
+
+**Options:**
+- `--project-folder <path>` - Optional project folder for connection config and merging with existing models
+- `-v, --verbose` - Enable verbose output
+- `--vars <JSON>` - Variables to pass to models (JSON format)
+- `-s, --select <pattern>` - Select models by pattern (can be used multiple times)
+- `-e, --exclude <pattern>` - Exclude models by pattern (can be used multiple times)
+
+**Examples:**
+```bash
+# Execute a single OTS module
+t4t ots run ./output/ots_modules/my_db__schema1.ots.json
+
+# Execute all OTS modules in a directory
+t4t ots run ./output/ots_modules/
+
+# Execute with project folder (merges with existing models)
+t4t ots run ./external_modules/ --project-folder ./my_project
+
+# Execute with variables
+t4t ots run ./modules/ --vars '{"env": "prod"}'
+```
+
+**What it does:**
+1. Loads OTS modules from the specified path
+2. Optionally merges with existing models from project folder
+3. Builds dependency graph
+4. Executes transformations in dependency order
+
+---
+
+#### `ots validate` - Validate OTS Modules
+
+Validate OTS module files for compliance with the OTS specification.
+
+**Usage:**
+```bash
+t4t ots validate <ots_path> [options]
+```
+
+**Arguments:**
+- `ots_path` (required) - Path to OTS module file (`.ots.json`, `.ots.yaml`, `.ots.yml`) or directory containing OTS modules
+
+**Options:**
+- `-v, --verbose` - Enable verbose output
+
+**Examples:**
+```bash
+# Validate a single OTS module
+t4t ots validate ./output/ots_modules/my_db__schema1.ots.json
+
+# Validate all OTS modules in a directory
+t4t ots validate ./output/ots_modules/
+
+# Validate with verbose output
+t4t ots validate ./module.ots.yaml -v
+```
+
+**What it validates:**
+- OTS version compatibility (supports 0.1.0 and below)
+- Schema location matches file path
+- Required fields and structure
+- Module format (JSON/YAML)
+
+---
+
 ### `help` - Show Help Information
 
 Display help information for the CLI.
@@ -392,21 +510,26 @@ t4t --help
 # Show help for specific command
 t4t init --help
 t4t run --help
-t4t test --help
+t4t compile --help
+t4t ots --help
+t4t ots run --help
 ```
 
 ---
 
 ## Command Comparison
 
-| Command | Executes Models | Runs Tests | Loads Seeds | Stops on Test Failure |
-|---------|----------------|------------|-------------|----------------------|
-| `run` | ✅ | ✅ (after models) | ❌ | ❌ |
-| `build` | ✅ | ✅ (interleaved) | ✅ | ✅ |
-| `test` | ❌ | ✅ | ❌ | ✅ (ERROR only) |
-| `parse` | ❌ | ❌ | ❌ | N/A |
-| `seed` | ❌ | ❌ | ✅ | N/A |
-| `debug` | ❌ | ❌ | ❌ | N/A |
+| Command | Compiles | Executes Models | Runs Tests | Loads Seeds | Stops on Test Failure |
+|---------|----------|----------------|------------|-------------|----------------------|
+| `compile` | ✅ | ❌ | ❌ | ❌ | N/A |
+| `run` | ✅ | ✅ | ✅ (after models) | ❌ | ❌ |
+| `build` | ✅ | ✅ | ✅ (interleaved) | ✅ | ✅ |
+| `test` | ✅ | ❌ | ✅ | ❌ | ✅ (ERROR only) |
+| `parse` | ❌ | ❌ | ❌ | ❌ | N/A |
+| `seed` | ❌ | ❌ | ❌ | ✅ | N/A |
+| `debug` | ❌ | ❌ | ❌ | ❌ | N/A |
+| `ots run` | ❌ | ✅ | ❌ | ❌ | ❌ |
+| `ots validate` | ❌ | ❌ | ❌ | ❌ | N/A |
 
 ## Exit Codes
 

@@ -341,11 +341,7 @@ Verifies no duplicate rows exist in a table. When applied at the table level wit
 ]
 ```
 
-**Via CLI:**
-```bash
-t4t test examples/t_project --severity not_null=warning
-t4t test examples/t_project --severity my_table.name.not_null=error
-```
+**Note:** Severity can be set in metadata files, but CLI severity overrides are no longer available. Use metadata files to configure test severity.
 
 ---
 
@@ -598,20 +594,20 @@ You'll see a warning like this:
 
 ## Test Library Export (OTS Format)
 
-When you parse a project with `t4t parse`, t4t automatically exports your SQL tests to an OTS-compliant test library file. This allows your tests to be shared and used by other OTS-compliant tools.
+When you compile a project with `t4t compile`, t4t automatically exports your SQL tests to an OTS-compliant test library file. This allows your tests to be shared and used by other OTS-compliant tools.
 
 ### Automatic Export
 
-The test library is automatically generated when parsing a project:
+The test library is automatically generated when compiling a project:
 
 ```bash
-t4t parse examples/t_project
+t4t compile examples/t_project
 ```
 
-This creates a test library file in the `output/` folder:
-- **File name**: `{project_name}_test_library.ots.json`
-- **Location**: `examples/t_project/output/t_project_test_library.ots.json`
-- **Format**: JSON (consistent with OTS module format)
+This creates a test library file in the `output/ots_modules/` folder:
+- **File name**: `{project_name}_test_library.ots.json` (or `.ots.yaml` if using YAML format)
+- **Location**: `examples/t_project/output/ots_modules/t_project_test_library.ots.json`
+- **Format**: JSON or YAML (consistent with OTS module format)
 
 ### Test Library Structure
 
@@ -713,8 +709,8 @@ t4t test examples/t_project
 # Run with verbose output
 t4t test examples/t_project --verbose
 
-# Override test severity
-t4t test examples/t_project --severity not_null=warning
+# Run tests (severity is configured in metadata files)
+t4t test examples/t_project
 
 # Run with variables (JSON format)
 t4t test ./examples/t_project --vars '{"start_date": "2024-01-01"}'
@@ -812,14 +808,22 @@ metadata: ModelMetadataDict = {
 }
 ```
 
-### Running with Severity Overrides
+### Configuring Test Severity
 
-```bash
-# Make all not_null tests warnings
-t4t test examples/t_project --severity not_null=warning
+Test severity is configured in metadata files (`.py` files) using the `severity` field. See the [Test Severity Levels](#test-severity-levels) section for details on how to set severity in metadata.
 
-# Make specific test a warning
-t4t test examples/t_project --severity my_schema.orders.status.accepted_values=warning
+Example:
+```python
+{
+    "name": "optional_field",
+    "datatype": "string",
+    "tests": [
+        {
+            "name": "not_null",
+            "severity": "warning"  # Configured in metadata, not via CLI
+        }
+    ]
+}
 ```
 
 ---

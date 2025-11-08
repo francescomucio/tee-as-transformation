@@ -227,13 +227,13 @@ Test Results:
 ✅ All tests passed!
 ```
 
-### Run Tests with Severity Overrides
+### Run Tests
 
 ```bash
-t4t test t_project --severity check_minimum_rows=warning
+t4t test t_project
 ```
 
-This makes the `check_minimum_rows` test a warning instead of an error, so it won't fail the build.
+Test severity is configured in metadata files. To make a test a warning instead of an error, set the `severity` field to `"warning"` in the test's metadata.
 
 ## Test Results Breakdown
 
