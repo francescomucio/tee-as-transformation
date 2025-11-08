@@ -4,18 +4,46 @@ t4t CLI Main Module
 Command-line interface for the t4t SQL model execution framework.
 """
 
-import sys
 import typer
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Literal
 
 from tee.cli.commands import cmd_run, cmd_parse, cmd_test, cmd_debug, cmd_help, cmd_build, cmd_seed, cmd_init, cmd_compile
 from tee.cli.commands import ots as ots_commands
+from tee.adapters import list_available_adapters, is_adapter_supported
+
+
+# Type aliases for better type safety and IDE support
+OutputFormat = Literal["json", "yaml"]
+DatabaseType = Literal["duckdb", "snowflake", "postgresql", "bigquery"]
 
 
 class AlphabeticalOrderGroup(typer.core.TyperGroup):
     """Custom Typer Group that lists commands in alphabetical order."""
     def list_commands(self, ctx):
         return sorted(self.commands.keys())
+
+
+def validate_format(value: str) -> OutputFormat:
+    """Validate format option (json or yaml)."""
+    if value not in ["json", "yaml"]:
+        raise typer.BadParameter(
+            typer.style("Error: ", fg=typer.colors.RED, bold=True) +
+            f"Invalid format '{value}'. Must be 'json' or 'yaml'."
+        )
+    return value  # type: ignore[return-value]
+
+
+def validate_database_type(value: str) -> DatabaseType:
+    """Validate database type option."""
+    db_type = value.lower()
+    if not is_adapter_supported(db_type):
+        available = ", ".join(sorted(list_available_adapters()))
+        raise typer.BadParameter(
+            typer.style("Error: ", fg=typer.colors.RED, bold=True) +
+            f"Unsupported database type '{db_type}'. "
+            f"Supported: {available}"
+        )
+    return db_type  # type: ignore[return-value]
 
 
 # Create Typer app with alphabetical command ordering
@@ -25,7 +53,16 @@ app = typer.Typer(
     add_completion=False,
     rich_markup_mode="rich",
     cls=AlphabeticalOrderGroup,
+    invoke_without_command=True,
 )
+
+
+@app.callback()
+def main_callback(ctx: typer.Context) -> None:
+    """Main CLI callback - shows help when no command is provided."""
+    if ctx.invoked_subcommand is None:
+        typer.echo(ctx.get_help())
+        raise typer.Exit()
 
 # Common option definitions to reduce duplication
 PROJECT_FOLDER_ARG = typer.Argument(None, help="Path to the project folder containing project.toml")
@@ -50,7 +87,7 @@ def run(
     vars: Optional[str] = VARS_OPTION,
     select: Optional[List[str]] = SELECT_OPTION,
     exclude: Optional[List[str]] = EXCLUDE_OPTION,
-):
+) -> None:
     """Parse and execute SQL models."""
     _check_required_argument(ctx, "project_folder", project_folder)
     cmd_run(
@@ -70,7 +107,7 @@ def parse(
     vars: Optional[str] = VARS_OPTION,
     select: Optional[List[str]] = SELECT_OPTION,
     exclude: Optional[List[str]] = EXCLUDE_OPTION,
-):
+) -> None:
     """Parse SQL models and store metadata (no execution)."""
     _check_required_argument(ctx, "project_folder", project_folder)
     cmd_parse(
@@ -88,7 +125,7 @@ def debug(
     project_folder: Optional[str] = PROJECT_FOLDER_ARG,
     verbose: bool = VERBOSE_OPTION,
     vars: Optional[str] = VARS_OPTION,
-):
+) -> None:
     """Test database connectivity and configuration."""
     _check_required_argument(ctx, "project_folder", project_folder)
     cmd_debug(
@@ -106,7 +143,7 @@ def test(
     vars: Optional[str] = VARS_OPTION,
     select: Optional[List[str]] = SELECT_OPTION,
     exclude: Optional[List[str]] = EXCLUDE_OPTION,
-):
+) -> None:
     """Run data quality tests on models."""
     _check_required_argument(ctx, "project_folder", project_folder)
     cmd_test(
@@ -126,7 +163,7 @@ def build(
     vars: Optional[str] = VARS_OPTION,
     select: Optional[List[str]] = SELECT_OPTION,
     exclude: Optional[List[str]] = EXCLUDE_OPTION,
-):
+) -> None:
     """Build models with tests (stops on test failure)."""
     _check_required_argument(ctx, "project_folder", project_folder)
     cmd_build(
@@ -144,7 +181,7 @@ def seed(
     project_folder: Optional[str] = PROJECT_FOLDER_ARG,
     verbose: bool = VERBOSE_OPTION,
     vars: Optional[str] = VARS_OPTION,
-):
+) -> None:
     """Load seed files (CSV, JSON, TSV) into database tables."""
     _check_required_argument(ctx, "project_folder", project_folder)
     cmd_seed(
@@ -158,8 +195,8 @@ def seed(
 def init(
     ctx: typer.Context,
     project_name: Optional[str] = typer.Argument(None, help="Name of the project (will create a folder with this name)"),
-    database_type: str = typer.Option("duckdb", "-d", "--database-type", help="Database type (duckdb, snowflake, postgresql, bigquery)"),
-):
+    database_type: DatabaseType = typer.Option("duckdb", "-d", "--database-type", help="Database type (duckdb, snowflake, postgresql, bigquery)", callback=validate_database_type),
+) -> None:
     """Initialize a new t4t project."""
     _check_required_argument(ctx, "project_name", project_name)
     cmd_init(
@@ -174,13 +211,10 @@ def compile(
     project_folder: Optional[str] = PROJECT_FOLDER_ARG,
     vars: Optional[str] = VARS_OPTION,
     verbose: bool = VERBOSE_OPTION,
-    format: str = typer.Option("json", "-f", "--format", help="Output format: json or yaml"),
-):
+    format: OutputFormat = typer.Option("json", "-f", "--format", help="Output format: json or yaml", callback=validate_format),
+) -> None:
     """Compile t4t project to OTS modules."""
     _check_required_argument(ctx, "project_folder", project_folder)
-    if format not in ["json", "yaml"]:
-        typer.echo(f"Error: Invalid format '{format}'. Must be 'json' or 'yaml'.", err=True)
-        raise typer.Exit(1)
     cmd_compile(
         project_folder=project_folder,
         vars=vars,
@@ -190,7 +224,7 @@ def compile(
 
 
 @app.command()
-def help():
+def help() -> None:
     """Show help information."""
     cmd_help()
 
@@ -222,7 +256,7 @@ def ots_run(
     verbose: bool = VERBOSE_OPTION,
     select: Optional[List[str]] = SELECT_OPTION,
     exclude: Optional[List[str]] = EXCLUDE_OPTION,
-):
+) -> None:
     """Execute OTS modules."""
     _check_required_argument(ctx, "ots_path", ots_path)
     ots_commands.cmd_ots_run(
@@ -240,7 +274,7 @@ def ots_validate(
     ctx: typer.Context,
     ots_path: Optional[str] = typer.Argument(None, help="Path to OTS module file (.ots.json) or directory"),
     verbose: bool = VERBOSE_OPTION,
-):
+) -> None:
     """Validate OTS modules."""
     _check_required_argument(ctx, "ots_path", ots_path)
     ots_commands.cmd_ots_validate(
@@ -253,19 +287,8 @@ def ots_validate(
 app.add_typer(ots_app)
 
 
-def main():
+def main() -> None:
     """Main CLI entry point."""
-    # If no arguments provided, show help (same as --help)
-    if len(sys.argv) == 1:
-        sys.argv.append("--help")
-    
-    # If only --help or -h is provided, or no command is given, show help
-    elif len(sys.argv) == 2 and sys.argv[1] in ["--help", "-h"]:
-        pass  # Typer will handle --help
-    elif len(sys.argv) > 1 and sys.argv[1].startswith("-") and sys.argv[1] not in ["--help", "-h"]:
-        # Invalid flag without command, show help
-        sys.argv = [sys.argv[0], "--help"]
-    
     app()
 
 

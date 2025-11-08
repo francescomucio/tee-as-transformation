@@ -2,6 +2,7 @@
 Debug command implementation.
 """
 
+import typer
 from typing import Optional
 from tee.cli.context import CommandContext
 from tee.engine.connection_manager import ConnectionManager
@@ -11,7 +12,7 @@ def cmd_debug(
     project_folder: str,
     vars: Optional[str] = None,
     verbose: bool = False,
-):
+) -> None:
     """Execute the debug command to test database connectivity."""
     ctx = CommandContext(
         project_folder=project_folder,
@@ -21,7 +22,7 @@ def cmd_debug(
     connection_manager = None
     
     try:
-        print(f"Testing database connectivity for project: {project_folder}")
+        typer.echo(f"Testing database connectivity for project: {project_folder}")
         ctx.print_variables_info()
 
         # Create unified connection manager
@@ -31,42 +32,42 @@ def cmd_debug(
             variables=ctx.vars,
         )
 
-        print("\n" + "=" * 50)
-        print("DATABASE CONNECTION TEST")
-        print("=" * 50)
+        typer.echo("\n" + "=" * 50)
+        typer.echo("DATABASE CONNECTION TEST")
+        typer.echo("=" * 50)
 
         # Test connection
         if connection_manager.test_connection():
-            print("✅ Database connection successful!")
+            typer.echo("✅ Database connection successful!")
 
             # Get database info
             db_info = connection_manager.get_database_info()
             if db_info:
-                print("\nDatabase Information:")
-                print(f"  Type: {db_info.get('database_type', 'Unknown')}")
-                print(f"  Adapter: {db_info.get('adapter_type', 'Unknown')}")
+                typer.echo("\nDatabase Information:")
+                typer.echo(f"  Type: {db_info.get('database_type', 'Unknown')}")
+                typer.echo(f"  Adapter: {db_info.get('adapter_type', 'Unknown')}")
                 if "version" in db_info:
-                    print(f"  Version: {db_info['version']}")
+                    typer.echo(f"  Version: {db_info['version']}")
                 if "host" in db_info:
-                    print(f"  Host: {db_info['host']}")
+                    typer.echo(f"  Host: {db_info['host']}")
                 if "database" in db_info:
-                    print(f"  Database: {db_info['database']}")
+                    typer.echo(f"  Database: {db_info['database']}")
                 if "warehouse" in db_info:
-                    print(f"  Warehouse: {db_info['warehouse']}")
+                    typer.echo(f"  Warehouse: {db_info['warehouse']}")
                 if "role" in db_info:
-                    print(f"  Role: {db_info['role']}")
+                    typer.echo(f"  Role: {db_info['role']}")
 
             # Test supported materializations
-            print("\nSupported Materializations:")
+            typer.echo("\nSupported Materializations:")
             materializations = connection_manager.get_supported_materializations()
             for mat in materializations:
-                print(f"  - {mat}")
+                typer.echo(f"  - {mat}")
 
-            print("\n✅ All connectivity tests passed!")
+            typer.echo("\n✅ All connectivity tests passed!")
 
         else:
-            print("❌ Database connection failed!")
-            print("Please check your connection configuration in project.toml")
+            typer.echo("❌ Database connection failed!", err=True)
+            typer.echo("Please check your connection configuration in project.toml", err=True)
 
     except Exception as e:
         ctx.handle_error(e)

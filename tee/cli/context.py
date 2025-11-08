@@ -2,7 +2,7 @@
 Command context for shared setup across CLI commands.
 """
 
-import sys
+import typer
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
@@ -63,24 +63,26 @@ class CommandContext:
         if show_traceback is None:
             show_traceback = self.verbose
         
-        print(f"Error: {error}")
+        # Use rich formatting for error messages
+        error_prefix = typer.style("Error: ", fg=typer.colors.RED, bold=True)
+        typer.echo(f"{error_prefix}{error}", err=True)
         if show_traceback:
             import traceback
             traceback.print_exc()
-        sys.exit(1)
+        raise typer.Exit(1)
 
     def print_variables_info(self) -> None:
         """Print variables information if verbose or if variables are set."""
         if self.vars:
             if self.verbose:
-                print(f"Variables: {self.vars}")
-            print(f"Using variables: {self.vars}")
+                typer.echo(f"Variables: {self.vars}")
+            typer.echo(f"Using variables: {self.vars}")
 
     def print_selection_info(self) -> None:
         """Print selection criteria information if verbose."""
         if self.verbose:
             if self.select_patterns:
-                print(f"Selection criteria: {self.select_patterns}")
+                typer.echo(f"Selection criteria: {self.select_patterns}")
             if self.exclude_patterns:
-                print(f"Exclusion criteria: {self.exclude_patterns}")
+                typer.echo(f"Exclusion criteria: {self.exclude_patterns}")
 

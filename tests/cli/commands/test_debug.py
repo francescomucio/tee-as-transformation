@@ -93,11 +93,11 @@ class TestDebugCommand:
         mock_connection_manager.test_connection.return_value = False
         mock_connection_manager_class.return_value = mock_connection_manager
 
-        # Capture stdout
-        with patch("sys.stdout", new=StringIO()) as fake_out:
+        # Capture both stdout and stderr (typer.echo with err=True writes to stderr)
+        with patch("sys.stdout", new=StringIO()) as fake_out, patch("sys.stderr", new=StringIO()) as fake_err:
             cmd_debug(mock_args)
 
-        output = fake_out.getvalue()
+        output = fake_out.getvalue() + fake_err.getvalue()
         assert "Database connection failed!" in output
         assert "Please check your connection configuration" in output
 

@@ -6,6 +6,7 @@ import pytest
 import tempfile
 from pathlib import Path
 from unittest.mock import patch, MagicMock
+from click.exceptions import Exit as ClickExit
 
 from tee.cli.commands.seed import cmd_seed
 
@@ -113,8 +114,8 @@ class TestSeedCommand:
                     vars=None,
                     verbose=False,
                 )
-            except SystemExit:
-                # CommandContext.handle_error calls sys.exit(1)
+            except (SystemExit, ClickExit):
+                # CommandContext.handle_error raises typer.Exit(1) which is click.exceptions.Exit
                 pass
 
     @patch('tee.cli.commands.seed.SeedLoader')
@@ -224,14 +225,15 @@ class TestSeedCommand:
         mock_loader_class.return_value = mock_loader
         
         from io import StringIO
-        with patch('sys.stdout', new=StringIO()) as fake_out:
+        # Capture both stdout and stderr (typer.echo with err=True writes to stderr)
+        with patch('sys.stdout', new=StringIO()) as fake_out, patch('sys.stderr', new=StringIO()) as fake_err:
             cmd_seed(
                 project_folder=str(temp_project_dir),
                 vars=None,
                 verbose=False,
             )
         
-        output = fake_out.getvalue()
+        output = fake_out.getvalue() + fake_err.getvalue()
         assert "Failed to load" in output
         assert "bad.csv" in output
 

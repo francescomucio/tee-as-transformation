@@ -2,6 +2,7 @@
 Run command implementation.
 """
 
+import typer
 from typing import Optional, List
 from tee.cli.context import CommandContext
 from tee.engine.connection_manager import ConnectionManager
@@ -14,7 +15,7 @@ def cmd_run(
     verbose: bool = False,
     select: Optional[List[str]] = None,
     exclude: Optional[List[str]] = None,
-):
+) -> None:
     """Execute the run command."""
     ctx = CommandContext(
         project_folder=project_folder,
@@ -26,7 +27,7 @@ def cmd_run(
     connection_manager = None
     
     try:
-        print(f"Running t4t on project: {project_folder}")
+        typer.echo(f"Running t4t on project: {project_folder}")
         ctx.print_variables_info()
         ctx.print_selection_info()
 
@@ -54,20 +55,20 @@ def cmd_run(
         failed_count = len(results["failed_tables"])
         warning_count = len(results.get("warnings", []))
 
-        print(
+        typer.echo(
             f"\nCompleted! Executed {successful_count} out of {total_tables} tables successfully."
         )
         if failed_count > 0 or warning_count > 0:
-            print(f"  ✅ Successful: {successful_count} tables")
+            typer.echo(f"  ✅ Successful: {successful_count} tables")
             if failed_count > 0:
-                print(f"  ❌ Failed: {failed_count} tables")
+                typer.echo(f"  ❌ Failed: {failed_count} tables")
             if warning_count > 0:
-                print(f"  ⚠️  Warnings: {warning_count} warnings")
+                typer.echo(f"  ⚠️  Warnings: {warning_count} warnings")
         else:
-            print(f"  ✅ All {successful_count} tables executed successfully!")
+            typer.echo(f"  ✅ All {successful_count} tables executed successfully!")
 
         if ctx.verbose:
-            print(f"Analysis info: {results.get('analysis', {})}")
+            typer.echo(f"Analysis info: {results.get('analysis', {})}")
 
     except Exception as e:
         ctx.handle_error(e)

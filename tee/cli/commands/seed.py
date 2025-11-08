@@ -2,6 +2,7 @@
 Seed command implementation.
 """
 
+import typer
 from typing import Optional
 from pathlib import Path
 from tee.cli.context import CommandContext
@@ -13,7 +14,7 @@ def cmd_seed(
     project_folder: str,
     vars: Optional[str] = None,
     verbose: bool = False,
-):
+) -> None:
     """Execute the seed command to load seed files into the database."""
     ctx = CommandContext(
         project_folder=project_folder,
@@ -22,14 +23,14 @@ def cmd_seed(
     )
     
     try:
-        print(f"Loading seeds from project: {project_folder}")
+        typer.echo(f"Loading seeds from project: {project_folder}")
         
         # Get seeds folder
         seeds_folder = ctx.project_path / "seeds"
         
         if not seeds_folder.exists():
-            print(f"⚠️  Seeds folder not found: {seeds_folder}")
-            print("   Create a 'seeds' folder in your project to use this feature.")
+            typer.echo(f"⚠️  Seeds folder not found: {seeds_folder}")
+            typer.echo("   Create a 'seeds' folder in your project to use this feature.")
             return
         
         # Discover seed files
@@ -37,17 +38,17 @@ def cmd_seed(
         seed_files = seed_discovery.discover_seed_files()
         
         if not seed_files:
-            print("ℹ️  No seed files found in seeds folder")
-            print(f"   Supported formats: CSV, TSV, JSON")
-            print(f"   Example: seeds/users.csv or seeds/my_schema/orders.json")
+            typer.echo("ℹ️  No seed files found in seeds folder")
+            typer.echo(f"   Supported formats: CSV, TSV, JSON")
+            typer.echo(f"   Example: seeds/users.csv or seeds/my_schema/orders.json")
             return
         
-        print(f"\nFound {len(seed_files)} seed file(s):")
+        typer.echo(f"\nFound {len(seed_files)} seed file(s):")
         for file_path, schema_name in seed_files:
             if schema_name:
-                print(f"  - {file_path.relative_to(seeds_folder)} → {schema_name}.{file_path.stem}")
+                typer.echo(f"  - {file_path.relative_to(seeds_folder)} → {schema_name}.{file_path.stem}")
             else:
-                print(f"  - {file_path.relative_to(seeds_folder)} → {file_path.stem}")
+                typer.echo(f"  - {file_path.relative_to(seeds_folder)} → {file_path.stem}")
         
         # Create execution engine to get adapter
         execution_engine = ExecutionEngine(
@@ -59,36 +60,36 @@ def cmd_seed(
         try:
             # Connect to database
             execution_engine.connect()
-            print(f"\nConnected to database: {execution_engine.adapter.config.type}")
+            typer.echo(f"\nConnected to database: {execution_engine.adapter.config.type}")
             
             # Load seeds
-            print("\nLoading seeds...")
+            typer.echo("\nLoading seeds...")
             seed_loader = SeedLoader(execution_engine.adapter)
             seed_results = seed_loader.load_all_seeds(seed_files)
             
             # Print results
-            print("\n" + "=" * 50)
-            print("SEED LOADING RESULTS")
-            print("=" * 50)
+            typer.echo("\n" + "=" * 50)
+            typer.echo("SEED LOADING RESULTS")
+            typer.echo("=" * 50)
             
             if seed_results["loaded_tables"]:
-                print(f"\n✅ Successfully loaded {len(seed_results['loaded_tables'])} seed(s):")
+                typer.echo(f"\n✅ Successfully loaded {len(seed_results['loaded_tables'])} seed(s):")
                 for table in seed_results["loaded_tables"]:
                     # Get table info to show row count
                     try:
                         table_info = execution_engine.adapter.get_table_info(table)
                         row_count = table_info.get("row_count", 0)
-                        print(f"  - {table}: {row_count} rows")
+                        typer.echo(f"  - {table}: {row_count} rows")
                     except Exception as e:
-                        print(f"  - {table} (could not get row count: {e})")
+                        typer.echo(f"  - {table} (could not get row count: {e})")
             
             if seed_results["failed_tables"]:
-                print(f"\n❌ Failed to load {len(seed_results['failed_tables'])} seed(s):")
+                typer.echo(f"\n❌ Failed to load {len(seed_results['failed_tables'])} seed(s):", err=True)
                 for failure in seed_results["failed_tables"]:
-                    print(f"  - {failure['file']}: {failure['error']}")
+                    typer.echo(f"  - {failure['file']}: {failure['error']}", err=True)
             
             if not seed_results["failed_tables"]:
-                print("\n✅ All seeds loaded successfully!")
+                typer.echo("\n✅ All seeds loaded successfully!")
             
         finally:
             execution_engine.disconnect()

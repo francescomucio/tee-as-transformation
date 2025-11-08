@@ -137,16 +137,19 @@ class TestCompileCommand:
 
         mock_compile.side_effect = CompilationError("Test compilation error")
 
-        # Capture stdout
-        with patch("sys.stdout", new=StringIO()) as fake_out:
-            cmd_compile(
-                project_folder=mock_args.project_folder,
-                vars=mock_args.vars,
-                verbose=mock_args.verbose,
-                format=mock_args.format,
-            )
+        # Capture both stdout and stderr (typer.echo with err=True writes to stderr)
+        with patch("sys.stdout", new=StringIO()) as fake_out, patch("sys.stderr", new=StringIO()) as fake_err:
+            try:
+                cmd_compile(
+                    project_folder=mock_args.project_folder,
+                    vars=mock_args.vars,
+                    verbose=mock_args.verbose,
+                    format=mock_args.format,
+                )
+            except SystemExit:
+                pass  # Expected from handle_error
 
-        output = fake_out.getvalue()
+        output = fake_out.getvalue() + fake_err.getvalue()
         assert "Compilation failed:" in output
         mock_ctx.handle_error.assert_called_once()
 

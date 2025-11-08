@@ -2,17 +2,21 @@
 Compile command implementation.
 """
 
-from typing import Optional
+import typer
+from typing import Optional, Literal
 from tee.cli.context import CommandContext
 from tee.compiler import compile_project, CompilationError
+
+# Type alias for output format
+OutputFormat = Literal["json", "yaml"]
 
 
 def cmd_compile(
     project_folder: str,
     vars: Optional[str] = None,
     verbose: bool = False,
-    format: str = "json",
-):
+    format: OutputFormat = "json",
+) -> None:
     """
     Compile t4t project to OTS modules.
     
@@ -37,7 +41,7 @@ def cmd_compile(
     )
     
     try:
-        print(f"Compiling project: {project_folder}")
+        typer.echo(f"Compiling project: {project_folder}")
         ctx.print_variables_info()
         
         # Compile project
@@ -49,17 +53,17 @@ def cmd_compile(
             format=format,
         )
         
-        print(f"\n✅ Compilation complete!")
-        print(f"   Parsed models: {results['parsed_models_count']}")
-        print(f"   Imported OTS: {results['imported_ots_count']}")
-        print(f"   Total transformations: {results['total_transformations']}")
-        print(f"   OTS modules: {results['ots_modules_count']}")
-        print(f"   Output: {results['output_folder']}")
+        typer.echo(f"\n✅ Compilation complete!")
+        typer.echo(f"   Parsed models: {results['parsed_models_count']}")
+        typer.echo(f"   Imported OTS: {results['imported_ots_count']}")
+        typer.echo(f"   Total transformations: {results['total_transformations']}")
+        typer.echo(f"   OTS modules: {results['ots_modules_count']}")
+        typer.echo(f"   Output: {results['output_folder']}")
         
     except CompilationError as e:
-        print(f"\n❌ Compilation failed: {e}")
+        typer.echo(f"\n❌ Compilation failed: {e}", err=True)
         ctx.handle_error(e)
     except Exception as e:
-        print(f"\n❌ Unexpected error: {e}")
+        typer.echo(f"\n❌ Unexpected error: {e}", err=True)
         ctx.handle_error(e)
 

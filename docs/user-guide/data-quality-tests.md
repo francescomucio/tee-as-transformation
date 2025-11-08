@@ -56,7 +56,7 @@ t4t test examples/t_project
 
 ## Test Definition Formats
 
-Tests can be defined in multiple formats depending on whether they need parameters or severity overrides. Tests can be applied at both the **column level** (within a column definition) and the **table level** (at the model root).
+Tests can be defined in multiple formats depending on whether they need parameters or severity configuration. Tests can be applied at both the **column level** (within a column definition) and the **table level** (at the model root).
 
 ### Simple String Format
 
@@ -112,9 +112,9 @@ For parameterized tests that require configuration:
 }
 ```
 
-### With Severity Override
+### With Severity Configuration
 
-Override test severity for non-critical checks:
+Configure test severity for non-critical checks:
 
 **Column-level example:**
 ```python

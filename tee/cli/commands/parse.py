@@ -2,6 +2,7 @@
 Parse command implementation.
 """
 
+import typer
 from typing import Optional, List
 from tee.cli.context import CommandContext
 from tee.cli.selection import ModelSelector
@@ -14,7 +15,7 @@ def cmd_parse(
     verbose: bool = False,
     select: Optional[List[str]] = None,
     exclude: Optional[List[str]] = None,
-):
+) -> None:
     """Execute the parse command."""
     ctx = CommandContext(
         project_folder=project_folder,
@@ -25,7 +26,7 @@ def cmd_parse(
     )
     
     try:
-        print(f"Parsing models in project: {project_folder}")
+        typer.echo(f"Parsing models in project: {project_folder}")
         ctx.print_variables_info()
         ctx.print_selection_info()
         
@@ -53,13 +54,13 @@ def cmd_parse(
             analysis["total_models"] = len(filtered_models)
             analysis["total_tables"] = len(filtered_models)
             
-            print(f"\nFiltered to {len(filtered_models)} models (from {len(parsed_models)} total)")
+            typer.echo(f"\nFiltered to {len(filtered_models)} models (from {len(parsed_models)} total)")
 
-        print(f"\nAnalysis complete! Found {analysis['total_tables']} tables.")
-        print(f"Execution order: {' -> '.join(analysis['execution_order'])}")
+        typer.echo(f"\nAnalysis complete! Found {analysis['total_tables']} tables.")
+        typer.echo(f"Execution order: {' -> '.join(analysis['execution_order'])}")
 
         if ctx.verbose:
-            print(f"Full analysis: {analysis}")
+            typer.echo(f"Full analysis: {analysis}")
 
     except Exception as e:
         ctx.handle_error(e)

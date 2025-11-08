@@ -2,12 +2,15 @@
 Init command implementation.
 """
 
-import sys
+import typer
 import shutil
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Literal
 
 from tee.adapters import list_available_adapters, is_adapter_supported
+
+# Type alias for database type
+DatabaseType = Literal["duckdb", "snowflake", "postgresql", "bigquery"]
 
 
 def _get_default_connection_config(db_type: str, project_name: str) -> Dict[str, Any]:
@@ -98,40 +101,40 @@ materialization_change_behavior = "warn"  # Options: "warn", "error", "ignore"
 
 def cmd_init(
     project_name: str,
-    database_type: str = "duckdb",
-):
+    database_type: DatabaseType = "duckdb",
+) -> None:
     """Execute the init command to initialize a new project."""
+    # database_type is already validated by Typer callback
     db_type = database_type.lower()
-    
-    # Validate database type
-    if not is_adapter_supported(db_type):
-        available = ", ".join(sorted(list_available_adapters()))
-        print(f"Error: Unsupported database type '{db_type}'")
-        print(f"Supported database types: {available}")
-        sys.exit(1)
     
     # Validate project name (basic validation)
     if not project_name or project_name.strip() != project_name:
-        print("Error: Project name cannot be empty or contain leading/trailing whitespace")
-        sys.exit(1)
+        error_msg = typer.style("Error: ", fg=typer.colors.RED, bold=True) + \
+                   "Project name cannot be empty or contain leading/trailing whitespace"
+        typer.echo(error_msg, err=True)
+        raise typer.Exit(1)
     
     # Create project directory (resolve to absolute path for creation)
     project_path = Path(project_name).resolve()
     
     if project_path.exists():
-        print(f"Error: Directory '{project_name}' already exists")
-        sys.exit(1)
+        error_msg = typer.style("Error: ", fg=typer.colors.RED, bold=True) + \
+                   f"Directory '{project_name}' already exists"
+        typer.echo(error_msg, err=True)
+        raise typer.Exit(1)
     
     # Create project directory (with race condition handling)
     try:
         project_path.mkdir(parents=True, exist_ok=False)
     except FileExistsError:
         # Directory was created between check and mkdir (race condition)
-        print(f"Error: Directory '{project_name}' already exists")
-        sys.exit(1)
+        error_msg = typer.style("Error: ", fg=typer.colors.RED, bold=True) + \
+                   f"Directory '{project_name}' already exists"
+        typer.echo(error_msg, err=True)
+        raise typer.Exit(1)
     
     try:
-        print(f"Created project directory: {project_name}/")
+        typer.echo(f"Created project directory: {project_name}/")
         
         # Create default directories
         directories = ["models", "tests", "seeds"]
@@ -141,31 +144,35 @@ def cmd_init(
         for dir_name in directories:
             dir_path = project_path / dir_name
             dir_path.mkdir()
-            print(f"Created directory: {project_name}/{dir_name}/")
+            typer.echo(f"Created directory: {project_name}/{dir_name}/")
         
         # Generate and write project.toml
         toml_content = _generate_project_toml(project_name, db_type)
         toml_path = project_path / "project.toml"
         toml_path.write_text(toml_content, encoding="utf-8")
-        print(f"Created configuration file: {project_name}/project.toml")
+        typer.echo(f"Created configuration file: {project_name}/project.toml")
         
-        print(f"\n✅ Project '{project_name}' initialized successfully!")
-        print(f"\nNext steps:")
-        print(f"  1. Edit {project_name}/project.toml to configure your database connection")
-        print(f"  2. Add SQL models to {project_name}/models/")
-        print(f"  3. Add seed files to {project_name}/seeds/")
-        print(f"  4. Run: t4t run {project_name}")
+        typer.echo(f"\n✅ Project '{project_name}' initialized successfully!")
+        typer.echo(f"\nNext steps:")
+        typer.echo(f"  1. Edit {project_name}/project.toml to configure your database connection")
+        typer.echo(f"  2. Add SQL models to {project_name}/models/")
+        typer.echo(f"  3. Add seed files to {project_name}/seeds/")
+        typer.echo(f"  4. Run: t4t run {project_name}")
         
     except OSError as e:
         # Handle filesystem errors (permissions, disk full, etc.)
         if project_path.exists():
             shutil.rmtree(project_path)
-        print(f"Error: Failed to create project directory: {e}")
-        sys.exit(1)
+        error_msg = typer.style("Error: ", fg=typer.colors.RED, bold=True) + \
+                   f"Failed to create project directory: {e}"
+        typer.echo(error_msg, err=True)
+        raise typer.Exit(1)
     except Exception as e:
         # Cleanup on error
         if project_path.exists():
             shutil.rmtree(project_path)
-        print(f"Error: Failed to initialize project: {e}")
-        sys.exit(1)
+        error_msg = typer.style("Error: ", fg=typer.colors.RED, bold=True) + \
+                   f"Failed to initialize project: {e}"
+        typer.echo(error_msg, err=True)
+        raise typer.Exit(1)
 

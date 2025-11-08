@@ -5,6 +5,8 @@ Unit tests for build command.
 import pytest
 import sys
 import tempfile
+import typer
+from click.exceptions import Exit as ClickExit
 from pathlib import Path
 from unittest.mock import Mock, patch
 from io import StringIO
@@ -81,7 +83,9 @@ class TestBuildCommand:
                 cmd_build(mock_args)
             except SystemExit as e:
                 # Should exit with 0 on success
-                assert e.code == 0
+                # typer.Exit uses .exit_code, SystemExit uses .code
+                exit_code = getattr(e, 'exit_code', getattr(e, 'code', 0))
+                assert exit_code == 0
 
         output = fake_out.getvalue()
         assert "Building project:" in output
@@ -139,7 +143,8 @@ class TestBuildCommand:
                 cmd_build(mock_args)
             except SystemExit as e:
                 # Should exit with 1 on failure
-                assert e.code == 1
+                exit_code = getattr(e, 'exit_code', getattr(e, 'code', 0))
+                assert exit_code == 1
 
         output = fake_out.getvalue()
         assert "Failed tests: 1" in output
@@ -183,7 +188,8 @@ class TestBuildCommand:
                 cmd_build(mock_args)
             except SystemExit as e:
                 # Should exit with 1 on failure
-                assert e.code == 1
+                exit_code = getattr(e, 'exit_code', getattr(e, 'code', 0))
+                assert exit_code == 1
 
         output = fake_out.getvalue()
         assert "Failed models: 1" in output
@@ -227,7 +233,8 @@ class TestBuildCommand:
                 cmd_build(mock_args)
             except SystemExit as e:
                 # Should exit with 0 (warnings don't fail the build)
-                assert e.code == 0
+                exit_code = getattr(e, 'exit_code', getattr(e, 'code', 0))
+                assert exit_code == 0
 
         output = fake_out.getvalue()
         assert "All 1 tables executed successfully!" in output
@@ -258,9 +265,12 @@ class TestBuildCommand:
         with patch("sys.stdout", new=StringIO()) as fake_out:
             try:
                 cmd_build(mock_args)
-            except SystemExit as e:
+            except (SystemExit, ClickExit) as e:
                 # Should exit with 130 for KeyboardInterrupt
-                assert e.code == 130
+                # typer.Exit raises click.exceptions.Exit which is a SystemExit subclass
+                # click.exceptions.Exit uses .exit_code attribute
+                exit_code = getattr(e, 'exit_code', getattr(e, 'code', 0))
+                assert exit_code == 130, f"Expected exit code 130, got {exit_code}"
 
         output = fake_out.getvalue()
         assert "Build interrupted by user" in output

@@ -11,6 +11,20 @@ from pathlib import Path
 class TestCLIHelpBehavior:
     """Test that commands show help when called without required arguments."""
 
+    def test_t4t_without_command_shows_help(self):
+        """Test that 't4t' without any command shows help."""
+        exit_code, stdout, stderr = self._run_command([])
+        
+        assert exit_code == 0
+        output = stdout + stderr
+        # Should show main help with all commands listed
+        assert "Usage: t4t" in output or "t4t" in output
+        assert "COMMAND" in output or "Commands" in output
+        assert "build" in output.lower()
+        assert "compile" in output.lower()
+        assert "run" in output.lower()
+        assert "test" in output.lower()
+
     def _run_command(self, command: list) -> tuple[int, str, str]:
         """Run a CLI command and return exit code, stdout, stderr."""
         try:

@@ -2,7 +2,7 @@
 Test command implementation.
 """
 
-import sys
+import typer
 from pathlib import Path
 from typing import Optional, List
 
@@ -19,7 +19,7 @@ def cmd_test(
     verbose: bool = False,
     select: Optional[List[str]] = None,
     exclude: Optional[List[str]] = None,
-):
+) -> None:
     """Execute the test command."""
     ctx = CommandContext(
         project_folder=project_folder,
@@ -30,14 +30,14 @@ def cmd_test(
     )
     
     try:
-        print(f"Running tests for project: {project_folder}")
+        typer.echo(f"Running tests for project: {project_folder}")
         ctx.print_variables_info()
         ctx.print_selection_info()
         
         # Step 1: Compile project to OTS modules
-        print("\n" + "=" * 50)
-        print("t4t: COMPILING PROJECT TO OTS MODULES")
-        print("=" * 50)
+        typer.echo("\n" + "=" * 50)
+        typer.echo("t4t: COMPILING PROJECT TO OTS MODULES")
+        typer.echo("=" * 50)
         try:
             from tee.compiler import compile_project
             compile_results = compile_project(
@@ -46,15 +46,15 @@ def cmd_test(
                 variables=ctx.vars,
                 project_config=ctx.config,
             )
-            print(f"✅ Compilation complete: {compile_results['ots_modules_count']} OTS module(s)")
+            typer.echo(f"✅ Compilation complete: {compile_results['ots_modules_count']} OTS module(s)")
         except Exception as e:
-            print(f"❌ Compilation failed: {e}")
+            typer.echo(f"❌ Compilation failed: {e}", err=True)
             raise
         
         # Step 2: Load OTS modules
-        print("\n" + "=" * 50)
-        print("t4t: LOADING COMPILED OTS MODULES")
-        print("=" * 50)
+        typer.echo("\n" + "=" * 50)
+        typer.echo("t4t: LOADING COMPILED OTS MODULES")
+        typer.echo("=" * 50)
         
         from pathlib import Path
         from tee.parser.input import OTSModuleReader, OTSConverter
@@ -77,7 +77,7 @@ def cmd_test(
             except Exception as e:
                 raise RuntimeError(f"Failed to load OTS module {ots_file}: {e}")
         
-        print(f"✅ Loaded {len(parsed_models)} transformations from {len(ots_files)} OTS module(s)")
+        typer.echo(f"✅ Loaded {len(parsed_models)} transformations from {len(ots_files)} OTS module(s)")
         
         # Step 3: Build dependency graph
         parser = ProjectParser(str(ctx.project_path), ctx.config["connection"], ctx.vars, ctx.config)
@@ -93,7 +93,7 @@ def cmd_test(
             )
             
             parsed_models, execution_order = selector.filter_models(parsed_models, execution_order)
-            print(f"Filtered to {len(parsed_models)} models")
+            typer.echo(f"Filtered to {len(parsed_models)} models")
 
         # Create model executor and initialize execution engine to get adapter
         # Resolve relative paths in connection config relative to project folder
@@ -118,9 +118,9 @@ def cmd_test(
                 execution_engine.adapter, project_folder=str(ctx.project_path)
             )
 
-            print("\n" + "=" * 50)
-            print("EXECUTING TESTS")
-            print("=" * 50)
+            typer.echo("\n" + "=" * 50)
+            typer.echo("EXECUTING TESTS")
+            typer.echo("=" * 50)
 
             # Execute all tests
             test_results = test_executor.execute_all_tests(
@@ -129,35 +129,35 @@ def cmd_test(
             )
 
             # Print test results
-            print(f"\nTest Results:")
-            print(f"  Total tests: {test_results['total']}")
-            print(f"  ✅ Passed: {test_results['passed']}")
-            print(f"  ❌ Failed: {test_results['failed']}")
+            typer.echo(f"\nTest Results:")
+            typer.echo(f"  Total tests: {test_results['total']}")
+            typer.echo(f"  ✅ Passed: {test_results['passed']}")
+            typer.echo(f"  ❌ Failed: {test_results['failed']}")
 
             if test_results["warnings"]:
-                print(f"\n  ⚠️  Warnings ({len(test_results['warnings'])}):")
+                typer.echo(f"\n  ⚠️  Warnings ({len(test_results['warnings'])}):")
                 for warning in test_results["warnings"]:
-                    print(f"    - {warning}")
+                    typer.echo(f"    - {warning}")
 
             if test_results["errors"]:
-                print(f"\n  ❌ Errors ({len(test_results['errors'])}):")
+                typer.echo(f"\n  ❌ Errors ({len(test_results['errors'])}):")
                 for error in test_results["errors"]:
-                    print(f"    - {error}")
+                    typer.echo(f"    - {error}")
 
             # Show individual test results if verbose
             if ctx.verbose and test_results["test_results"]:
-                print("\nDetailed Results:")
+                typer.echo("\nDetailed Results:")
                 for result in test_results["test_results"]:
-                    print(f"  {result}")
+                    typer.echo(f"  {result}")
 
             # Exit with error code if there are test errors
             if test_results["errors"]:
-                print("\n❌ Test execution failed with errors")
-                sys.exit(1)
+                typer.echo("\n❌ Test execution failed with errors", err=True)
+                raise typer.Exit(1)
             elif test_results["warnings"]:
-                print("\n⚠️  Test execution completed with warnings")
+                typer.echo("\n⚠️  Test execution completed with warnings")
             else:
-                print("\n✅ All tests passed!")
+                typer.echo("\n✅ All tests passed!")
 
         finally:
             if execution_engine:

@@ -190,15 +190,16 @@ class TestTestCommand:
         }
         mock_executor_class.return_value = mock_executor
 
-        # Capture stdout
-        with patch("sys.stdout", new=StringIO()) as fake_out:
+        # Capture both stdout and stderr (typer.echo with err=True writes to stderr)
+        with patch("sys.stdout", new=StringIO()) as fake_out, patch("sys.stderr", new=StringIO()) as fake_err:
             try:
                 cmd_test(mock_args)
-            except SystemExit as e:
+            except (SystemExit, typer.Exit) as e:
                 # Should exit with 1 on failure
-                assert e.code == 1
+                exit_code = getattr(e, 'exit_code', getattr(e, 'code', 0))
+                assert exit_code == 1
 
-        output = fake_out.getvalue()
+        output = fake_out.getvalue() + fake_err.getvalue()
         assert "Failed: 1" in output
         assert "Errors (1):" in output
         assert "Test execution failed with errors" in output

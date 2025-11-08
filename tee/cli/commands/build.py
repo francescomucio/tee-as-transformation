@@ -3,7 +3,7 @@ Build command implementation.
 
 Builds models with interleaved test execution, stopping on test failures.
 """
-import sys
+import typer
 from typing import Optional, List
 from tee.cli.context import CommandContext
 from tee.engine.connection_manager import ConnectionManager
@@ -16,7 +16,7 @@ def cmd_build(
     verbose: bool = False,
     select: Optional[List[str]] = None,
     exclude: Optional[List[str]] = None,
-):
+) -> None:
     """Execute the build command."""
     ctx = CommandContext(
         project_folder=project_folder,
@@ -28,7 +28,7 @@ def cmd_build(
     connection_manager = None
     
     try:
-        print(f"Building project: {project_folder}")
+        typer.echo(f"Building project: {project_folder}")
         ctx.print_variables_info()
         ctx.print_selection_info()
 
@@ -58,30 +58,29 @@ def cmd_build(
         passed_tests = results.get("test_results", {}).get("passed", 0)
         failed_tests = results.get("test_results", {}).get("failed", 0)
 
-        print(
+        typer.echo(
             f"\nCompleted! Executed {successful_count} out of {total_tables} tables successfully."
         )
-        print(f"Tests: {passed_tests} passed, {failed_tests} failed out of {total_tests} total")
+        typer.echo(f"Tests: {passed_tests} passed, {failed_tests} failed out of {total_tests} total")
         
         if failed_count > 0 or failed_tests > 0:
             if failed_count > 0:
-                print(f"  ❌ Failed models: {failed_count}")
+                typer.echo(f"  ❌ Failed models: {failed_count}")
             if failed_tests > 0:
-                print(f"  ❌ Failed tests: {failed_tests}")
-            sys.exit(1)
+                typer.echo(f"  ❌ Failed tests: {failed_tests}")
+            raise typer.Exit(1)
         else:
-            print(f"  ✅ All {successful_count} tables executed successfully!")
-            print(f"  ✅ All {total_tests} tests passed!")
+            typer.echo(f"  ✅ All {successful_count} tables executed successfully!")
+            typer.echo(f"  ✅ All {total_tests} tests passed!")
 
         if ctx.verbose:
-            print(f"Analysis info: {results.get('analysis', {})}")
+            typer.echo(f"Analysis info: {results.get('analysis', {})}")
 
     except KeyboardInterrupt:
-        print("\n\n⚠️  Build interrupted by user")
-        sys.exit(130)
+        typer.echo("\n\n⚠️  Build interrupted by user")
+        raise typer.Exit(130)
     except Exception as e:
         ctx.handle_error(e)
-        sys.exit(1)
     finally:
         # Cleanup
         if connection_manager:
