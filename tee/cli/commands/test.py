@@ -11,7 +11,6 @@ from tee.cli.selection import ModelSelector
 from tee.parser import ProjectParser
 from tee.engine.execution_engine import ExecutionEngine
 from tee.testing import TestExecutor
-from tee.testing.base import TestSeverity
 
 
 def cmd_test(
@@ -20,7 +19,6 @@ def cmd_test(
     verbose: bool = False,
     select: Optional[List[str]] = None,
     exclude: Optional[List[str]] = None,
-    severity: Optional[List[str]] = None,
 ):
     """Execute the test command."""
     ctx = CommandContext(
@@ -36,9 +34,55 @@ def cmd_test(
         ctx.print_variables_info()
         ctx.print_selection_info()
         
-        # Parse models to get metadata
-        parser = ProjectParser(str(ctx.project_path), ctx.config["connection"], ctx.vars)
-        parsed_models = parser.collect_models()
+        # Step 1: Compile project to OTS modules
+        print("\n" + "=" * 50)
+        print("t4t: COMPILING PROJECT TO OTS MODULES")
+        print("=" * 50)
+        try:
+            from tee.compiler import compile_project
+            compile_results = compile_project(
+                project_folder=str(ctx.project_path),
+                connection_config=ctx.config["connection"],
+                variables=ctx.vars,
+                project_config=ctx.config,
+            )
+            print(f"✅ Compilation complete: {compile_results['ots_modules_count']} OTS module(s)")
+        except Exception as e:
+            print(f"❌ Compilation failed: {e}")
+            raise
+        
+        # Step 2: Load OTS modules
+        print("\n" + "=" * 50)
+        print("t4t: LOADING COMPILED OTS MODULES")
+        print("=" * 50)
+        
+        from pathlib import Path
+        from tee.parser.input import OTSModuleReader, OTSConverter
+        
+        output_folder = ctx.project_path / "output" / "ots_modules"
+        reader = OTSModuleReader()
+        converter = OTSConverter()
+        
+        ots_files = list(output_folder.glob("*.ots.json")) + list(output_folder.glob("*.ots.yaml")) + list(output_folder.glob("*.ots.yml"))
+        
+        if not ots_files:
+            raise RuntimeError(f"No OTS modules found in {output_folder}. Compilation may have failed.")
+        
+        parsed_models = {}
+        for ots_file in ots_files:
+            try:
+                module = reader.read_module(ots_file)
+                module_models = converter.convert_module(module)
+                parsed_models.update(module_models)
+            except Exception as e:
+                raise RuntimeError(f"Failed to load OTS module {ots_file}: {e}")
+        
+        print(f"✅ Loaded {len(parsed_models)} transformations from {len(ots_files)} OTS module(s)")
+        
+        # Step 3: Build dependency graph
+        parser = ProjectParser(str(ctx.project_path), ctx.config["connection"], ctx.vars, ctx.config)
+        parser.parsed_models = parsed_models
+        graph = parser.build_dependency_graph()
         execution_order = parser.get_execution_order()
         
         # Apply selection filtering if specified
@@ -49,7 +93,7 @@ def cmd_test(
             )
             
             parsed_models, execution_order = selector.filter_models(parsed_models, execution_order)
-            print(f"Filtered to {len(parsed_models)} models (from {len(parser.collect_models())} total)")
+            print(f"Filtered to {len(parsed_models)} models")
 
         # Create model executor and initialize execution engine to get adapter
         # Resolve relative paths in connection config relative to project folder
@@ -69,20 +113,6 @@ def cmd_test(
             # Connect adapter
             execution_engine.connect()
 
-            # Parse severity overrides from CLI
-            severity_overrides = {}
-            if severity:
-                for override in severity:
-                    if "=" in override:
-                        key, severity_str = override.split("=", 1)
-                        try:
-                            severity = TestSeverity(severity_str.lower())
-                            severity_overrides[key.strip()] = severity
-                        except ValueError:
-                            print(
-                                f"⚠️  Invalid severity '{severity_str}', skipping override for '{key}'"
-                            )
-
             # Create test executor (discover SQL tests from tests/ folder)
             test_executor = TestExecutor(
                 execution_engine.adapter, project_folder=str(ctx.project_path)
@@ -96,7 +126,6 @@ def cmd_test(
             test_results = test_executor.execute_all_tests(
                 parsed_models=parsed_models,
                 execution_order=execution_order,
-                severity_overrides=severity_overrides,
             )
 
             # Print test results

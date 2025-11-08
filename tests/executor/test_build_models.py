@@ -5,6 +5,7 @@ Unit tests for build_models function.
 import pytest
 import tempfile
 from pathlib import Path
+from typing import Dict, Any
 from unittest.mock import Mock, patch
 
 from tee.executor import build_models
@@ -25,7 +26,7 @@ class TestBuildModels:
         """Create mock connection configuration."""
         return {
             "type": "duckdb",
-            "database": ":memory:",
+            "path": ":memory:",
         }
 
     def _setup_parser_mock(self, parsed_models, execution_order, graph=None):
@@ -52,6 +53,42 @@ class TestBuildModels:
         mock_execution_engine.adapter = Mock()
         return mock_execution_engine
 
+    def _setup_real_project(self, temp_dir, models_sql: Dict[str, str], connection_config: Dict[str, Any]) -> Path:
+        """Helper to set up a real project structure with models and compile to OTS."""
+        # Create project structure
+        models_dir = temp_dir / "models"
+        models_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Create project.toml
+        project_toml = temp_dir / "project.toml"
+        path_config = f'path = "{connection_config.get("path", ":memory:")}"' if "path" in connection_config else ""
+        project_toml.write_text(
+            f'name = "test_project"\n[connection]\ntype = "{connection_config["type"]}"\n{path_config}\n'
+        )
+        
+        # Create SQL model files
+        for table_name, sql in models_sql.items():
+            # Extract schema and table from table_name (format: schema.table)
+            if "." in table_name:
+                schema, table = table_name.split(".", 1)
+                schema_dir = models_dir / schema
+                schema_dir.mkdir(exist_ok=True)
+                model_file = schema_dir / f"{table}.sql"
+            else:
+                model_file = models_dir / f"{table_name}.sql"
+            model_file.write_text(sql)
+        
+        # Actually compile the project to create real OTS modules
+        from tee.compiler import compile_project
+        compile_results = compile_project(
+            project_folder=str(temp_dir),
+            connection_config=connection_config,
+            variables={},
+            project_config={"name": "test_project", "connection": connection_config},
+        )
+        
+        return temp_dir
+
     @patch("tee.executor_helpers.build_helpers.ModelExecutor")
     @patch("tee.executor_helpers.build_helpers.ProjectParser")
     @patch("tee.executor_helpers.build_helpers.TestExecutor")
@@ -59,14 +96,23 @@ class TestBuildModels:
     def test_build_models_success(
         self, mock_execution_engine_class, mock_test_executor_class, mock_parser_class, mock_model_executor_class, temp_dir, mock_connection_config
     ):
-        """Test successful build_models execution."""
+        """Test successful build_models execution with real compilation."""
+        # Set up real project with SQL models
+        models_sql = {
+            "schema1.table1": "SELECT 1 as id, 'test' as name",
+            "schema1.table2": "SELECT id, name FROM schema1.table1",
+        }
+        project_path = self._setup_real_project(temp_dir, models_sql, mock_connection_config)
+        
+        # The real compilation has already happened, so build_models will load real OTS modules
+        # We still need to mock the execution parts
         parsed_models = {
             "schema1.table1": {"model_metadata": {"metadata": {}}},
             "schema1.table2": {"model_metadata": {"metadata": {}}},
         }
         execution_order = ["schema1.table1", "schema1.table2"]
         
-        # Setup parser mock
+        # Setup parser mock (for dependency graph building)
         mock_parser = self._setup_parser_mock(parsed_models, execution_order)
         mock_parser_class.return_value = mock_parser
 
@@ -98,12 +144,13 @@ class TestBuildModels:
         mock_test_executor.execute_tests_for_model.return_value = []
         mock_test_executor_class.return_value = mock_test_executor
 
-        # Execute
+        # Execute (build_models will compile first, then load real OTS modules)
         results = build_models(
-            project_folder=str(temp_dir),
+            project_folder=str(project_path),
             connection_config=mock_connection_config,
             save_analysis=False,
             variables={},
+            project_config={"name": "test_project", "connection": mock_connection_config},
         )
 
         # Verify results
@@ -119,13 +166,20 @@ class TestBuildModels:
         self, mock_execution_engine_class, mock_test_executor_class, mock_parser_class, mock_model_executor_class, temp_dir, mock_connection_config
     ):
         """Test that build_models stops on ERROR severity test failure."""
+        # Set up real project with SQL models
+        models_sql = {
+            "schema1.table1": "SELECT 1 as id, 'test' as name",
+            "schema1.table2": "SELECT id, name FROM schema1.table1",
+        }
+        project_path = self._setup_real_project(temp_dir, models_sql, mock_connection_config)
+        
         parsed_models = {
             "schema1.table1": {"model_metadata": {"metadata": {"tests": ["not_null"]}}},
             "schema1.table2": {"model_metadata": {"metadata": {}}},
         }
         execution_order = ["schema1.table1", "schema1.table2"]
         
-        # Setup parser mock
+        # Setup parser mock (for dependency graph building)
         mock_parser = self._setup_parser_mock(parsed_models, execution_order)
         mock_parser.get_table_dependents.return_value = ["schema1.table2"]
         mock_parser_class.return_value = mock_parser
@@ -169,10 +223,11 @@ class TestBuildModels:
         # Execute - should raise SystemExit
         with pytest.raises(SystemExit) as exc_info:
             build_models(
-                project_folder=str(temp_dir),
+                project_folder=str(project_path),
                 connection_config=mock_connection_config,
                 save_analysis=False,
                 variables={},
+                project_config={"name": "test_project", "connection": mock_connection_config},
             )
 
         # Should exit with code 1
@@ -189,13 +244,20 @@ class TestBuildModels:
         self, mock_execution_engine_class, mock_test_executor_class, mock_parser_class, mock_model_executor_class, temp_dir, mock_connection_config
     ):
         """Test that build_models continues on WARNING severity test failures."""
+        # Set up real project with SQL models
+        models_sql = {
+            "schema1.table1": "SELECT 1 as id, 'test' as name",
+            "schema1.table2": "SELECT id, name FROM schema1.table1",
+        }
+        project_path = self._setup_real_project(temp_dir, models_sql, mock_connection_config)
+        
         parsed_models = {
             "schema1.table1": {"model_metadata": {"metadata": {"tests": ["check_minimum_rows"]}}},
             "schema1.table2": {"model_metadata": {"metadata": {}}},
         }
         execution_order = ["schema1.table1", "schema1.table2"]
         
-        # Setup parser mock
+        # Setup parser mock (for dependency graph building)
         mock_parser = self._setup_parser_mock(parsed_models, execution_order)
         mock_parser_class.return_value = mock_parser
 
@@ -240,10 +302,11 @@ class TestBuildModels:
 
         # Execute - should not raise SystemExit
         results = build_models(
-            project_folder=str(temp_dir),
+            project_folder=str(project_path),
             connection_config=mock_connection_config,
             save_analysis=False,
             variables={},
+            project_config={"name": "test_project", "connection": mock_connection_config},
         )
 
         # Should complete successfully
@@ -259,13 +322,20 @@ class TestBuildModels:
         self, mock_execution_engine_class, mock_test_executor_class, mock_parser_class, mock_model_executor_class, temp_dir, mock_connection_config
     ):
         """Test that build_models stops on model execution failure."""
+        # Set up real project with SQL models
+        models_sql = {
+            "schema1.table1": "SELECT 1 as id, 'test' as name",
+            "schema1.table2": "SELECT id, name FROM schema1.table1",
+        }
+        project_path = self._setup_real_project(temp_dir, models_sql, mock_connection_config)
+        
         parsed_models = {
             "schema1.table1": {"model_metadata": {"metadata": {}}},
             "schema1.table2": {"model_metadata": {"metadata": {}}},
         }
         execution_order = ["schema1.table1", "schema1.table2"]
         
-        # Setup parser mock
+        # Setup parser mock (for dependency graph building)
         mock_parser = self._setup_parser_mock(parsed_models, execution_order)
         mock_parser.get_table_dependents.return_value = ["schema1.table2"]
         mock_parser_class.return_value = mock_parser
@@ -297,10 +367,11 @@ class TestBuildModels:
         # Execute - model failure should be handled gracefully (continue to next)
         # The build will complete but with failed models
         results = build_models(
-            project_folder=str(temp_dir),
+            project_folder=str(project_path),
             connection_config=mock_connection_config,
             save_analysis=False,
             variables={},
+            project_config={"name": "test_project", "connection": mock_connection_config},
         )
 
         # Should have failed tables
@@ -315,6 +386,14 @@ class TestBuildModels:
         self, mock_execution_engine_class, mock_test_executor_class, mock_parser_class, mock_model_executor_class, temp_dir, mock_connection_config
     ):
         """Test that build_models skips dependents when a model fails."""
+        # Set up real project with SQL models
+        models_sql = {
+            "schema1.table1": "SELECT 1 as id, 'test' as name",
+            "schema1.table2": "SELECT id, name FROM schema1.table1",
+            "schema1.table3": "SELECT id, name FROM schema1.table2",
+        }
+        project_path = self._setup_real_project(temp_dir, models_sql, mock_connection_config)
+        
         parsed_models = {
             "schema1.table1": {"model_metadata": {"metadata": {}}},
             "schema1.table2": {"model_metadata": {"metadata": {}}},
@@ -322,7 +401,7 @@ class TestBuildModels:
         }
         execution_order = ["schema1.table1", "schema1.table2", "schema1.table3"]
         
-        # Setup parser mock
+        # Setup parser mock (for dependency graph building)
         mock_parser = self._setup_parser_mock(parsed_models, execution_order)
         mock_parser.get_table_dependents.return_value = ["schema1.table2", "schema1.table3"]
         mock_parser_class.return_value = mock_parser
@@ -352,10 +431,11 @@ class TestBuildModels:
 
         # Execute - model failure should be handled gracefully
         results = build_models(
-            project_folder=str(temp_dir),
+            project_folder=str(project_path),
             connection_config=mock_connection_config,
             save_analysis=False,
             variables={},
+            project_config={"name": "test_project", "connection": mock_connection_config},
         )
 
         # Should have failed tables and skipped dependents
@@ -371,13 +451,20 @@ class TestBuildModels:
         self, mock_execution_engine_class, mock_test_executor_class, mock_parser_class, mock_model_executor_class, temp_dir, mock_connection_config
     ):
         """Test that build_models executes tests immediately after each model."""
+        # Set up real project with SQL models
+        models_sql = {
+            "schema1.table1": "SELECT 1 as id, 'test' as name",
+            "schema1.table2": "SELECT id, name FROM schema1.table1",
+        }
+        project_path = self._setup_real_project(temp_dir, models_sql, mock_connection_config)
+        
         parsed_models = {
             "schema1.table1": {"model_metadata": {"metadata": {"tests": ["not_null"]}}},
             "schema1.table2": {"model_metadata": {"metadata": {"tests": ["unique"]}}},
         }
         execution_order = ["schema1.table1", "schema1.table2"]
         
-        # Setup parser mock
+        # Setup parser mock (for dependency graph building)
         mock_parser = self._setup_parser_mock(parsed_models, execution_order)
         mock_parser_class.return_value = mock_parser
 
@@ -422,10 +509,11 @@ class TestBuildModels:
 
         # Execute
         results = build_models(
-            project_folder=str(temp_dir),
+            project_folder=str(project_path),
             connection_config=mock_connection_config,
             save_analysis=False,
             variables={},
+            project_config={"name": "test_project", "connection": mock_connection_config},
         )
 
         # Verify tests were called for each model
@@ -453,6 +541,13 @@ class TestBuildModels:
         self, mock_execution_engine_class, mock_test_executor_class, mock_parser_class, mock_model_executor_class, temp_dir, mock_connection_config
     ):
         """Test that build_models skips test nodes in execution order."""
+        # Set up real project with SQL models
+        models_sql = {
+            "schema1.table1": "SELECT 1 as id, 'test' as name",
+            "schema1.table2": "SELECT id, name FROM schema1.table1",
+        }
+        project_path = self._setup_real_project(temp_dir, models_sql, mock_connection_config)
+        
         parsed_models = {
             "schema1.table1": {"model_metadata": {"metadata": {}}},
             "schema1.table2": {"model_metadata": {"metadata": {}}},
@@ -464,7 +559,7 @@ class TestBuildModels:
             "schema1.table2",
         ]
         
-        # Setup parser mock
+        # Setup parser mock (for dependency graph building)
         graph = {
             "nodes": ["schema1.table1", "test:schema1.table1.not_null", "schema1.table2"],
             "dependencies": {
@@ -505,10 +600,11 @@ class TestBuildModels:
 
         # Execute
         results = build_models(
-            project_folder=str(temp_dir),
+            project_folder=str(project_path),
             connection_config=mock_connection_config,
             save_analysis=False,
             variables={},
+            project_config={"name": "test_project", "connection": mock_connection_config},
         )
 
         # Verify that execute_models was only called for non-test nodes

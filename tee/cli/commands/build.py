@@ -47,6 +47,7 @@ def cmd_build(
             variables=ctx.vars,
             select_patterns=ctx.select_patterns,
             exclude_patterns=ctx.exclude_patterns,
+            project_config=ctx.config,
         )
 
         # Calculate statistics

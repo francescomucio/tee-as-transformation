@@ -81,6 +81,7 @@ class TestRunCommand:
             variables={},
             select_patterns=None,
             exclude_patterns=None,
+            project_config=mock_ctx.config,
         )
 
     @patch("tee.cli.commands.run.execute_models")

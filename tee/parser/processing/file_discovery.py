@@ -102,18 +102,61 @@ class FileDiscovery:
                 raise
             raise FileDiscoveryError(f"Failed to discover Python files: {e}")
 
-    def discover_all_files(self) -> Dict[str, List[Path]]:
+    def discover_ots_modules(self) -> List[Path]:
         """
-        Discover all supported files in the models folder.
+        Discover all OTS module files in the models folder.
 
         Returns:
-            Dict with 'sql' and 'python' keys containing lists of file paths
+            List of OTS module file paths (.ots.json, .ots.yaml, .ots.yml)
 
         Raises:
             FileDiscoveryError: If file discovery fails
         """
         try:
-            return {"sql": self.discover_sql_files(), "python": self.discover_python_files()}
+            cache_key = "ots_modules"
+            if cache_key in self._file_cache:
+                return self._file_cache[cache_key]
+
+            if not self.models_folder.exists():
+                # Return empty list if models folder doesn't exist (not an error for OTS)
+                return []
+
+            ots_files = []
+            # Discover JSON and YAML OTS modules
+            ots_files.extend(self.models_folder.rglob("*.ots.json"))
+            ots_files.extend(self.models_folder.rglob("*.ots.yaml"))
+            ots_files.extend(self.models_folder.rglob("*.ots.yml"))
+
+            # Sort for consistent ordering
+            ots_files.sort()
+
+            # Cache the result
+            self._file_cache[cache_key] = ots_files
+
+            logger.debug(f"Discovered {len(ots_files)} OTS module files")
+            return ots_files
+
+        except Exception as e:
+            if isinstance(e, FileDiscoveryError):
+                raise
+            raise FileDiscoveryError(f"Failed to discover OTS module files: {e}")
+
+    def discover_all_files(self) -> Dict[str, List[Path]]:
+        """
+        Discover all supported files in the models folder.
+
+        Returns:
+            Dict with 'sql', 'python', and 'ots' keys containing lists of file paths
+
+        Raises:
+            FileDiscoveryError: If file discovery fails
+        """
+        try:
+            return {
+                "sql": self.discover_sql_files(),
+                "python": self.discover_python_files(),
+                "ots": self.discover_ots_modules(),
+            }
         except Exception as e:
             if isinstance(e, FileDiscoveryError):
                 raise

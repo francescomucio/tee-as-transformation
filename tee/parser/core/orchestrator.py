@@ -73,9 +73,22 @@ class ParserOrchestrator:
 
             # Discover all files
             files = self.file_discovery.discover_all_files()
-            logger.info(f"Discovered {files['sql']} SQL files and {files['python']} Python files")
+            logger.info(
+                f"Discovered {len(files['sql'])} SQL files, "
+                f"{len(files['python'])} Python files, "
+                f"and {len(files['ots'])} OTS module files"
+            )
 
             parsed_models = {}
+
+            # Load OTS modules first (imported modules - will be merged during compile)
+            # Note: During normal parsing, we just collect them for later compilation
+            # Conflict detection and merging happens during compile phase
+            if files["ots"]:
+                logger.info("Found imported OTS modules (will be processed during compile phase)")
+                # Store OTS file paths for later processing during compile
+                # For now, we'll skip loading them here - they'll be loaded during compile
+                # This prevents conflicts during regular parsing
 
             # Parse SQL files
             for sql_file in files["sql"]:

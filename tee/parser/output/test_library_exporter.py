@@ -36,7 +36,7 @@ class TestLibraryExporter:
 
         Args:
             output_folder: Path to output folder
-            format: Output format ("json" - YAML support removed for consistency)
+            format: Output format ("json" or "yaml")
 
         Returns:
             Path to the exported test library file
@@ -75,16 +75,23 @@ class TestLibraryExporter:
             if singular_tests:
                 test_library["singular_tests"] = singular_tests
 
-            # Generate filename with .ots.json extension for consistency with OTS modules
-            filename = f"{self.project_name}_test_library.ots.json"
+            # Generate filename with appropriate extension
+            if format == "yaml":
+                filename = f"{self.project_name}_test_library.ots.yaml"
+            else:
+                filename = f"{self.project_name}_test_library.ots.json"
             output_file = output_folder / filename
 
             # Ensure output directory exists
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
-            # Write file as JSON (consistent with OTS module format)
+            # Write file in the specified format
             with open(output_file, "w", encoding="utf-8") as f:
-                json.dump(test_library, f, indent=2, ensure_ascii=False)
+                if format == "yaml":
+                    import yaml
+                    yaml.dump(test_library, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+                else:
+                    json.dump(test_library, f, indent=2, ensure_ascii=False)
 
             logger.info(f"Exported test library to {output_file}")
             print(f"✅ Test library saved to {output_file}")

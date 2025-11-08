@@ -5,6 +5,7 @@ Handles the complete workflow of parsing and executing SQL models based on proje
 """
 
 import logging
+from pathlib import Path
 from typing import Dict, Any, Optional, Union, List, TYPE_CHECKING
 from tee.parser import ProjectParser
 from tee.engine import ModelExecutor
@@ -22,42 +23,89 @@ def execute_models(
     variables: Optional[Dict[str, Any]] = None,
     select_patterns: Optional[List[str]] = None,
     exclude_patterns: Optional[List[str]] = None,
+    project_config: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
-    Execute SQL models by parsing them and running them in dependency order.
+    Execute SQL models by compiling to OTS modules and running them in dependency order.
 
     This function handles the complete workflow:
-    1. Parse SQL models from the project folder
-    2. Build dependency graph and determine execution order
-    3. Execute models using the execution engine
-    4. Optionally save analysis files
+    1. Compile project to OTS modules (if needed)
+    2. Load OTS modules from output/ots_modules/
+    3. Build dependency graph and determine execution order
+    4. Execute models using the execution engine
+    5. Optionally save analysis files
 
     Args:
         project_folder: Path to the project folder containing SQL models
         connection_config: Database connection configuration
         save_analysis: Whether to save parsing analysis to files
+        variables: Optional variables for SQL substitution
+        select_patterns: Optional list of patterns to select models
+        exclude_patterns: Optional list of patterns to exclude models
+        project_config: Optional project configuration
 
     Returns:
         Dictionary containing execution results and analysis info
     """
     logger = logging.getLogger(__name__)
-
-    # Keep raw config dict for adapter validation
-    # Adapters will handle their own validation and config creation
-
+    
+    # Step 0: Compile project to OTS modules first
     print("\n" + "=" * 50)
-    print("t4t: PARSING AND EXECUTING SQL MODELS")
+    print("t4t: COMPILING PROJECT TO OTS MODULES")
     print("=" * 50)
+    try:
+        from tee.compiler import compile_project
+        compile_results = compile_project(
+            project_folder=project_folder,
+            connection_config=connection_config,
+            variables=variables,
+            project_config=project_config,
+        )
+        print(f"✅ Compilation complete: {compile_results['ots_modules_count']} OTS module(s)")
+    except Exception as e:
+        logger.error(f"Compilation failed: {e}")
+        raise
+    
+    output_folder = Path(project_folder) / "output" / "ots_modules"
+    
+    # Step 1: Load OTS modules from output folder
+    print("\n" + "=" * 50)
+    print("t4t: LOADING COMPILED OTS MODULES")
+    print("=" * 50)
+    
+    from tee.parser.input import OTSModuleReader, OTSConverter
+    reader = OTSModuleReader()
+    converter = OTSConverter()
+    
+    ots_files = list(output_folder.glob("*.ots.json")) + list(output_folder.glob("*.ots.yaml")) + list(output_folder.glob("*.ots.yml"))
+    
+    if not ots_files:
+        raise RuntimeError(f"No OTS modules found in {output_folder}. Compilation may have failed.")
+    
+    parsed_models = {}
+    for ots_file in ots_files:
+        try:
+            module = reader.read_module(ots_file)
+            module_models = converter.convert_module(module)
+            parsed_models.update(module_models)
+            logger.info(f"Loaded OTS module: {ots_file.name}")
+        except Exception as e:
+            logger.error(f"Failed to load OTS module {ots_file}: {e}")
+            raise
+    
+    print(f"✅ Loaded {len(parsed_models)} transformations from {len(ots_files)} OTS module(s)")
 
-    # Step 1: Parse SQL models
-    parser = ProjectParser(project_folder, connection_config, variables)
-
-    print("\nCollecting and parsing SQL models...")
-    parsed_models = parser.collect_models()
-    print(f"Found {len(parsed_models)} SQL files")
-
-    # Step 2: Build dependency graph and get execution order
-    print("\nBuilding dependency graph...")
+    # Step 1: Build dependency graph from loaded OTS modules
+    print("\n" + "=" * 50)
+    print("t4t: BUILDING DEPENDENCY GRAPH")
+    print("=" * 50)
+    
+    # Create a parser instance for dependency graph building
+    parser = ProjectParser(project_folder, connection_config, variables, project_config)
+    # Inject the parsed models from OTS modules
+    parser.parsed_models = parsed_models
+    
+    print("\nBuilding dependency graph from compiled OTS modules...")
     graph = parser.build_dependency_graph()
     execution_order = parser.get_execution_order()
     print(f"Found {len(graph['nodes'])} tables")
@@ -223,15 +271,18 @@ def build_models(
     variables: Optional[Dict[str, Any]] = None,
     select_patterns: Optional[List[str]] = None,
     exclude_patterns: Optional[List[str]] = None,
+    project_config: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     Build models with interleaved test execution, stopping on test failures.
 
     This function executes models and tests interleaved:
-    1. Execute a model
-    2. Run its tests immediately
-    3. If any ERROR severity test fails, stop execution
-    4. Skip dependents of failed models
+    1. Compile project to OTS modules (if needed)
+    2. Load OTS modules and build dependency graph
+    3. Execute a model
+    4. Run its tests immediately
+    5. If any ERROR severity test fails, stop execution
+    6. Skip dependents of failed models
 
     Args:
         project_folder: Path to the project folder containing SQL models
@@ -240,6 +291,7 @@ def build_models(
         variables: Optional variables for SQL substitution
         select_patterns: Optional list of patterns to select models
         exclude_patterns: Optional list of patterns to exclude models
+        project_config: Optional project configuration
 
     Returns:
         Dictionary containing execution results and analysis info
@@ -247,13 +299,32 @@ def build_models(
     Raises:
         SystemExit: If tests fail with ERROR severity
     """
+    logger = logging.getLogger(__name__)
+    
     print("\n" + "=" * 50)
     print("t4t: BUILDING MODELS WITH TESTS")
     print("=" * 50)
 
-    # Step 1: Set up build context (parse, graph, filters)
-    parser, parsed_models, graph, execution_order = build_helpers.setup_build_context(
-        project_folder, connection_config, variables, select_patterns, exclude_patterns
+    # Step 1: Compile project to OTS modules first
+    print("\n" + "=" * 50)
+    print("t4t: COMPILING PROJECT TO OTS MODULES")
+    print("=" * 50)
+    try:
+        from tee.compiler import compile_project
+        compile_results = compile_project(
+            project_folder=project_folder,
+            connection_config=connection_config,
+            variables=variables,
+            project_config=project_config,
+        )
+        print(f"✅ Compilation complete: {compile_results['ots_modules_count']} OTS module(s)")
+    except Exception as e:
+        logger.error(f"Compilation failed: {e}")
+        raise
+    
+    # Step 2: Load OTS modules and set up build context
+    parser, parsed_models, graph, execution_order = build_helpers.setup_build_context_from_ots(
+        project_folder, connection_config, variables, select_patterns, exclude_patterns, project_config
     )
 
     # Step 2: Initialize executors

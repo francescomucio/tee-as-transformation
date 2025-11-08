@@ -5,7 +5,8 @@ JSON export functionality for parsed models and dependency graphs.
 import json
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Literal
+import yaml
 
 from tee.parser.shared.types import ParsedModel, DependencyGraph
 from tee.parser.shared.exceptions import OutputGenerationError
@@ -146,7 +147,8 @@ class JSONExporter:
     def export_ots_modules(
         self, 
         parsed_models: Dict[str, ParsedModel], 
-        test_library_path: Optional[Path] = None
+        test_library_path: Optional[Path] = None,
+        format: Literal["json", "yaml"] = "json"
     ) -> Dict[str, Path]:
         """
         Export parsed models as OTS Modules.
@@ -155,6 +157,8 @@ class JSONExporter:
 
         Args:
             parsed_models: Parsed models to export
+            test_library_path: Optional path to test library file
+            format: Output format ("json" or "yaml")
 
         Returns:
             Dictionary mapping module names to output file paths
@@ -177,23 +181,29 @@ class JSONExporter:
             results = {}
             for module_name, module_data in modules.items():
                 # Create filename with double underscore between database and schema
-                # e.g., "t_project.my_schema" -> "t_project__my_schema.ots.json"
-                filename = f"{module_name.replace('.', '__')}.ots.json"
+                # e.g., "t_project.my_schema" -> "t_project__my_schema.ots.json" or ".ots.yaml"
+                if format == "yaml":
+                    filename = f"{module_name.replace('.', '__')}.ots.yaml"
+                else:
+                    filename = f"{module_name.replace('.', '__')}.ots.json"
                 output_file = self.output_folder / filename
 
                 # Ensure output directory exists
                 output_file.parent.mkdir(parents=True, exist_ok=True)
 
-                # Write module to file
+                # Write module to file in the specified format
                 with open(output_file, "w", encoding="utf-8") as f:
-                    json.dump(module_data, f, indent=2, ensure_ascii=False)
+                    if format == "yaml":
+                        yaml.dump(module_data, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+                    else:
+                        json.dump(module_data, f, indent=2, ensure_ascii=False)
 
                 results[module_name] = output_file
-                logger.info(f"Exported OTS module '{module_name}' to {output_file}")
-                print(f"✅ OTS module '{module_name}' saved to {output_file}")
+                logger.info(f"Exported OTS module '{module_name}' to {output_file} ({format.upper()})")
+                print(f"✅ OTS module '{module_name}' saved to {output_file} ({format.upper()})")
                 print(f"   Contains {len(module_data['transformations'])} transformations")
 
-            print(f"\n✨ Exported {len(results)} OTS module(s)")
+            print(f"\n✨ Exported {len(results)} OTS module(s) ({format.upper()})")
 
             return results
 

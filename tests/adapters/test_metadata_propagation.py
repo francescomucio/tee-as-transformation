@@ -56,7 +56,20 @@ class TestMetadataPropagation:
             project_folder = "examples/t_project_sno"
 
             # Execute models
-            results = execute_models(project_folder, config, save_analysis=False)
+            # Load project config if available
+            from tee.cli.utils import load_project_config
+            project_config = None
+            try:
+                project_config = load_project_config(project_folder)
+            except Exception:
+                pass
+            
+            results = execute_models(
+                project_folder=project_folder,
+                connection_config=config,
+                save_analysis=False,
+                project_config=project_config,
+            )
 
             # Check if the main table was created (which has metadata)
             assert "my_schema.my_first_table" in results["executed_tables"]
@@ -234,7 +247,20 @@ path = "{db_path}"
                 
                 # Execute models
                 config = {"type": "duckdb", "path": db_path}
-                results = execute_models(str(project_dir), config, save_analysis=False)
+                # Load project config if available
+                from tee.cli.utils import load_project_config
+                project_config = None
+                try:
+                    project_config = load_project_config(str(project_dir))
+                except Exception:
+                    pass
+                
+                results = execute_models(
+                    project_folder=str(project_dir),
+                    connection_config=config,
+                    save_analysis=False,
+                    project_config=project_config,
+                )
                 
                 # Verify the model was executed
                 assert "test_schema.priority_test" in results["executed_tables"]
