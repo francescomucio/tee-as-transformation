@@ -50,18 +50,26 @@ def compile_project(
     1. Parses SQL/Python models
     2. Loads and validates imported OTS modules
     3. Detects conflicts (duplicate transformation_id)
-    4. Merges everything and converts to OTS format
-    5. Validates compiled modules
-    6. Exports to output/ots_modules/
+    4. Merges all models (SQL, Python, and imported OTS)
+    5. Builds dependency graph and saves analysis files
+    6. Converts to OTS format
+    7. Validates compiled modules
+    8. Exports to output/ots_modules/
 
     Args:
         project_folder: Path to the project folder
         connection_config: Database connection configuration
         variables: Optional variables for SQL substitution
         project_config: Optional project configuration
+        format: Output format for OTS modules ("json" or "yaml")
 
     Returns:
-        Dictionary with compilation results
+        Dictionary with compilation results including:
+        - parsed_models: Merged parsed models
+        - dependency_graph: Built dependency graph
+        - execution_order: Execution order list
+        - ots_modules_count: Number of OTS modules created
+        - exported_paths: Paths to exported OTS modules
 
     Raises:
         CompilationError: If compilation fails
@@ -154,6 +162,26 @@ def compile_project(
         print(f"✅ Merged {len(parsed_models)} SQL/Python models with {len(imported_ots_models)} imported OTS transformations")
         print(f"   Total: {len(all_models)} transformations")
 
+        # Step 4.5: Build dependency graph and save analysis files
+        print("\n" + "=" * 50)
+        print("STEP 4.5: Building dependency graph")
+        print("=" * 50)
+        
+        # Inject merged models into parser for dependency graph building
+        parser.parsed_models = all_models
+        graph = parser.build_dependency_graph()
+        execution_order = parser.get_execution_order()
+        print(f"✅ Built dependency graph with {len(graph['nodes'])} nodes")
+        print(f"   Execution order: {' -> '.join(execution_order)}")
+        
+        # Save analysis files (dependency graph JSON, Mermaid diagram, Markdown report)
+        print("\nSaving analysis files...")
+        parser.save_dependency_graph()
+        parser.save_mermaid_diagram()
+        parser.save_markdown_report()
+        parser.save_to_json()
+        print("✅ Analysis files saved to output folder")
+
         # Step 5: Convert to OTS modules
         print("\n" + "=" * 50)
         print("STEP 5: Converting to OTS modules")
@@ -232,6 +260,9 @@ def compile_project(
             "ots_modules_count": len(ots_modules),
             "exported_paths": exported_paths,
             "output_folder": str(output_folder),
+            "dependency_graph": graph,
+            "execution_order": execution_order,
+            "parsed_models": all_models,
         }
 
     except (CompilationError, ParserError) as e:

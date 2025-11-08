@@ -49,15 +49,6 @@ class TestCLIHelpBehavior:
         assert "PROJECT_FOLDER" in output or "project_folder" in output
         assert "Parse and execute SQL models" in output
 
-    def test_parse_without_argument_shows_help(self):
-        """Test that 't4t parse' without argument shows help."""
-        exit_code, stdout, stderr = self._run_command(["parse"])
-        
-        assert exit_code == 0
-        output = stdout + stderr
-        assert "parse" in output.lower()
-        assert "PROJECT_FOLDER" in output or "project_folder" in output
-
     def test_test_without_argument_shows_help(self):
         """Test that 't4t test' without argument shows help."""
         exit_code, stdout, stderr = self._run_command(["test"])

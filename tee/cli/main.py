@@ -7,7 +7,7 @@ Command-line interface for the t4t SQL model execution framework.
 import typer
 from typing import Optional, List, Any, Literal
 
-from tee.cli.commands import cmd_run, cmd_parse, cmd_test, cmd_debug, cmd_help, cmd_build, cmd_seed, cmd_init, cmd_compile
+from tee.cli.commands import cmd_run, cmd_test, cmd_debug, cmd_help, cmd_build, cmd_seed, cmd_init, cmd_compile
 from tee.cli.commands import ots as ots_commands
 from tee.adapters import list_available_adapters, is_adapter_supported
 
@@ -91,26 +91,6 @@ def run(
     """Parse and execute SQL models."""
     _check_required_argument(ctx, "project_folder", project_folder)
     cmd_run(
-        project_folder=project_folder,
-        vars=vars,
-        verbose=verbose,
-        select=select,
-        exclude=exclude,
-    )
-
-
-@app.command()
-def parse(
-    ctx: typer.Context,
-    project_folder: Optional[str] = PROJECT_FOLDER_ARG,
-    verbose: bool = VERBOSE_OPTION,
-    vars: Optional[str] = VARS_OPTION,
-    select: Optional[List[str]] = SELECT_OPTION,
-    exclude: Optional[List[str]] = EXCLUDE_OPTION,
-) -> None:
-    """Parse SQL models and store metadata (no execution)."""
-    _check_required_argument(ctx, "project_folder", project_folder)
-    cmd_parse(
         project_folder=project_folder,
         vars=vars,
         verbose=verbose,

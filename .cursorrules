@@ -35,14 +35,15 @@ This is a Python 3.14 project for managing SQL data transformations, managed wit
 - Use `uv lock` to update lock file
 
 ### Running Code and Tests
-- **ALWAYS use `uv run` for all Python execution** - NEVER use `python` or `pytest` directly
-- Use `uv run tcli <command>` for CLI commands (e.g., `uv run tcli run`, `uv run tcli build`, `uv run tcli test`)
+- **CRITICAL: ALWAYS use `uv run` for ALL Python execution** - NEVER use `python`, `pytest`, or `python3` directly
+- **When running tests, ALWAYS use `uv run python -m pytest` or `uv run pytest`**
+- **When running CLI commands, ALWAYS use `uv run t4t <command>`** (not `t4t` directly)
+- Use `uv run t4t <command>` for CLI commands (e.g., `uv run t4t run`, `uv run t4t build`, `uv run t4t test`, `uv run t4t compile`)
 - Use `uv run python <script_name>` for Python scripts
-- Use `uv run pytest` for running tests (or `uv run python -m pytest`)
+- Use `uv run pytest` or `uv run python -m pytest` for running tests
 - Use `uv run pytest tests/ -v` for verbose test output
 - Use `uv run pytest tests/ -k <test_name>` for specific tests
 - Use `uv run python -c "code"` for one-liner Python execution
-- Use `uv run python -m pytest` as an alternative to `uv run pytest`
 
 ### Virtual Environment
 - uv automatically manages virtual environments (`.venv/` directory)
@@ -81,11 +82,11 @@ uv add --dev pytest
 uv sync
 
 # CLI Commands (t4t)
-uv run tcli run ./my_project          # Run models
-uv run tcli build ./my_project        # Build models with tests
-uv run tcli test ./my_project         # Run tests
-uv run tcli parse ./my_project        # Parse models
-uv run tcli debug ./my_project        # Test database connection
+uv run t4t run ./my_project          # Run models
+uv run t4t build ./my_project        # Build models with tests
+uv run t4t test ./my_project         # Run tests
+uv run t4t compile ./my_project      # Compile to OTS modules
+uv run t4t debug ./my_project        # Test database connection
 
 # Run a Python script
 uv run python script.py
@@ -127,7 +128,7 @@ uv pip list
 
 ## Module Structure
 - `tee/` - Main package
-  - `tee/cli/` - CLI commands (`run`, `build`, `test`, `parse`, `debug`)
+  - `tee/cli/` - CLI commands (`run`, `build`, `test`, `compile`, `debug`)
   - `tee/parser/` - SQL parsing, dependency graph, and analysis
   - `tee/engine/` - Execution engine for running SQL models
   - `tee/testing/` - Data quality testing framework (standard tests, SQL tests)

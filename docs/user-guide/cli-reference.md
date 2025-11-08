@@ -143,46 +143,6 @@ t4t run ./my_project --select my_model --exclude tag:deprecated
 
 ---
 
-### `parse` - Parse Models Without Execution
-
-Parse SQL models and analyze dependencies without executing them.
-
-**Usage:**
-```bash
-t4t parse <project_folder> [options]
-```
-
-**Arguments:**
-- `project_folder` (required) - Path to the project folder containing `project.toml`
-
-**Options:**
-- `-v, --verbose` - Enable verbose output (shows full analysis)
-- `--vars <JSON>` - Variables to pass to models (JSON format)
-- `-s, --select <pattern>` - Select models by pattern (can be used multiple times)
-- `-e, --exclude <pattern>` - Exclude models by pattern (can be used multiple times)
-
-**Examples:**
-```bash
-# Parse all models
-t4t parse ./my_project
-
-# Parse with variables
-t4t parse ./my_project --vars '{"env": "dev"}'
-
-# Parse specific models
-t4t parse ./my_project --select my_schema.*
-
-# Verbose output
-t4t parse ./my_project -v
-```
-
-**Output:**
-- Total number of models found
-- Execution order
-- Dependency graph (if verbose)
-- Model metadata
-
----
 
 ### `build` - Build Models with Tests
 
@@ -399,7 +359,7 @@ t4t compile ./my_project --vars '{"env": "prod"}'
 - OTS modules: `{database}__{schema}.ots.json` (or `.ots.yaml`)
 - Test library: `{project_name}_test_library.ots.json` (or `.ots.yaml`)
 
-**Note:** The `run`, `build`, and `test` commands automatically compile before execution. Use `compile` when you want to generate OTS modules without executing. Use `parse` for quick analysis without compilation.
+**Note:** The `run`, `build`, and `test` commands automatically compile before execution. Use `compile` when you want to generate OTS modules and analysis files without executing.
 
 ---
 
@@ -519,7 +479,6 @@ t4t ots run --help
 | `run` | ✅ | ✅ | ❌ | ❌ | N/A |
 | `build` | ✅ | ✅ | ✅ (interleaved) | ✅ | ✅ |
 | `test` | ✅ | ❌ | ✅ | ❌ | ✅ (ERROR only) |
-| `parse` | ❌ | ❌ | ❌ | ❌ | N/A |
 | `seed` | ❌ | ❌ | ❌ | ✅ | N/A |
 | `debug` | ❌ | ❌ | ❌ | ❌ | N/A |
 | `ots run` | ❌ | ✅ | ❌ | ❌ | ❌ |

@@ -65,8 +65,7 @@ The command-line interface built with Typer:
 High-level orchestration of the complete workflow:
 
 - **`executor.py`** - Main execution functions
-  - `execute_models()` - Full workflow: parse → execute → test
-  - `parse_models_only()` - Parse without execution
+  - `execute_models()` - Full workflow: compile → execute models
   - `build_models()` - Build with interleaved tests
 - **`executor_helpers/`** - Helper functions for build workflows
 

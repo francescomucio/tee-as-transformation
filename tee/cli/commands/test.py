@@ -47,43 +47,26 @@ def cmd_test(
                 project_config=ctx.config,
             )
             typer.echo(f"✅ Compilation complete: {compile_results['ots_modules_count']} OTS module(s)")
+            
+            # Extract graph and execution order from compile results
+            graph = compile_results.get("dependency_graph")
+            execution_order = compile_results.get("execution_order", [])
+            parsed_models = compile_results.get("parsed_models", {})
+            
+            if not graph or not execution_order:
+                raise RuntimeError("Compilation did not return dependency graph or execution order")
+            
+            typer.echo(f"✅ Using dependency graph from compilation: {len(graph['nodes'])} nodes")
+            typer.echo(f"   Execution order: {' -> '.join(execution_order)}")
+            
         except Exception as e:
             typer.echo(f"❌ Compilation failed: {e}", err=True)
             raise
         
-        # Step 2: Load OTS modules
-        typer.echo("\n" + "=" * 50)
-        typer.echo("t4t: LOADING COMPILED OTS MODULES")
-        typer.echo("=" * 50)
-        
-        from pathlib import Path
-        from tee.parser.input import OTSModuleReader, OTSConverter
-        
-        output_folder = ctx.project_path / "output" / "ots_modules"
-        reader = OTSModuleReader()
-        converter = OTSConverter()
-        
-        ots_files = list(output_folder.glob("*.ots.json")) + list(output_folder.glob("*.ots.yaml")) + list(output_folder.glob("*.ots.yml"))
-        
-        if not ots_files:
-            raise RuntimeError(f"No OTS modules found in {output_folder}. Compilation may have failed.")
-        
-        parsed_models = {}
-        for ots_file in ots_files:
-            try:
-                module = reader.read_module(ots_file)
-                module_models = converter.convert_module(module)
-                parsed_models.update(module_models)
-            except Exception as e:
-                raise RuntimeError(f"Failed to load OTS module {ots_file}: {e}")
-        
-        typer.echo(f"✅ Loaded {len(parsed_models)} transformations from {len(ots_files)} OTS module(s)")
-        
-        # Step 3: Build dependency graph
+        # Step 2: Create parser instance for test execution
         parser = ProjectParser(str(ctx.project_path), ctx.config["connection"], ctx.vars, ctx.config)
         parser.parsed_models = parsed_models
-        graph = parser.build_dependency_graph()
-        execution_order = parser.get_execution_order()
+        parser.graph = graph
         
         # Apply selection filtering if specified
         if ctx.select_patterns or ctx.exclude_patterns:

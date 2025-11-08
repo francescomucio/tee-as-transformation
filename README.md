@@ -125,15 +125,15 @@ uv run t4t run ./my_project
 uv run t4t run ./my_project --vars '{"env": "prod", "start_date": "2024-01-01"}'
 ```
 
-### Parse Models
-Parse and analyze SQL models without execution:
+### Compile Models
+Compile and analyze SQL models without execution:
 
 ```bash
-# Parse models and show dependency analysis
-uv run t4t parse ./my_project
+# Compile models and show dependency analysis
+uv run t4t compile ./my_project
 
-# Parse with variables (JSON format)
-uv run t4t parse ./my_project --vars '{"env": "dev"}'
+# Compile with variables (JSON format)
+uv run t4t compile ./my_project --vars '{"env": "dev"}'
 ```
 
 ### Debug Connection
@@ -193,7 +193,7 @@ uv run t4t help
 uv run t4t init --help
 uv run t4t run --help
 uv run t4t build --help
-uv run t4t parse --help
+uv run t4t compile --help
 uv run t4t debug --help
 uv run t4t test --help
 ```

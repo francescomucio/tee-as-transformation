@@ -64,54 +64,26 @@ def execute_models(
             project_config=project_config,
         )
         print(f"✅ Compilation complete: {compile_results['ots_modules_count']} OTS module(s)")
+        
+        # Extract graph and execution order from compile results
+        graph = compile_results.get("dependency_graph")
+        execution_order = compile_results.get("execution_order", [])
+        parsed_models = compile_results.get("parsed_models", {})
+        
+        if not graph or not execution_order:
+            raise RuntimeError("Compilation did not return dependency graph or execution order")
+        
+        print(f"✅ Using dependency graph from compilation: {len(graph['nodes'])} nodes")
+        print(f"   Execution order: {' -> '.join(execution_order)}")
+        
     except Exception as e:
         logger.error(f"Compilation failed: {e}")
         raise
     
-    output_folder = Path(project_folder) / "output" / "ots_modules"
-    
-    # Step 1: Load OTS modules from output folder
-    print("\n" + "=" * 50)
-    print("t4t: LOADING COMPILED OTS MODULES")
-    print("=" * 50)
-    
-    from tee.parser.input import OTSModuleReader, OTSConverter
-    reader = OTSModuleReader()
-    converter = OTSConverter()
-    
-    ots_files = list(output_folder.glob("*.ots.json")) + list(output_folder.glob("*.ots.yaml")) + list(output_folder.glob("*.ots.yml"))
-    
-    if not ots_files:
-        raise RuntimeError(f"No OTS modules found in {output_folder}. Compilation may have failed.")
-    
-    parsed_models = {}
-    for ots_file in ots_files:
-        try:
-            module = reader.read_module(ots_file)
-            module_models = converter.convert_module(module)
-            parsed_models.update(module_models)
-            logger.info(f"Loaded OTS module: {ots_file.name}")
-        except Exception as e:
-            logger.error(f"Failed to load OTS module {ots_file}: {e}")
-            raise
-    
-    print(f"✅ Loaded {len(parsed_models)} transformations from {len(ots_files)} OTS module(s)")
-
-    # Step 1: Build dependency graph from loaded OTS modules
-    print("\n" + "=" * 50)
-    print("t4t: BUILDING DEPENDENCY GRAPH")
-    print("=" * 50)
-    
-    # Create a parser instance for dependency graph building
+    # Create parser instance for model execution (needed by ModelExecutor)
     parser = ProjectParser(project_folder, connection_config, variables, project_config)
-    # Inject the parsed models from OTS modules
     parser.parsed_models = parsed_models
-    
-    print("\nBuilding dependency graph from compiled OTS modules...")
-    graph = parser.build_dependency_graph()
-    execution_order = parser.get_execution_order()
-    print(f"Found {len(graph['nodes'])} tables")
-    print(f"Execution order: {' -> '.join(execution_order)}")
+    parser.graph = graph
 
     # Step 2.5: Apply selection filtering if specified
     filtered_parsed_models = None
@@ -261,13 +233,26 @@ def build_models(
             project_config=project_config,
         )
         print(f"✅ Compilation complete: {compile_results['ots_modules_count']} OTS module(s)")
+        
+        # Extract graph and execution order from compile results
+        graph = compile_results.get("dependency_graph")
+        execution_order = compile_results.get("execution_order", [])
+        parsed_models = compile_results.get("parsed_models", {})
+        
+        if not graph or not execution_order:
+            raise RuntimeError("Compilation did not return dependency graph or execution order")
+        
+        print(f"✅ Using dependency graph from compilation: {len(graph['nodes'])} nodes")
+        print(f"   Execution order: {' -> '.join(execution_order)}")
+        
     except Exception as e:
         logger.error(f"Compilation failed: {e}")
         raise
     
-    # Step 2: Load OTS modules and set up build context
-    parser, parsed_models, graph, execution_order = build_helpers.setup_build_context_from_ots(
-        project_folder, connection_config, variables, select_patterns, exclude_patterns, project_config
+    # Step 2: Set up build context using compile results
+    parser, parsed_models, graph, execution_order = build_helpers.setup_build_context_from_compile(
+        project_folder, connection_config, variables, select_patterns, exclude_patterns, 
+        project_config, parsed_models, graph, execution_order
     )
 
     # Step 2: Initialize executors
@@ -359,55 +344,3 @@ def build_models(
             model_executor.execution_engine.disconnect()
 
 
-def parse_models_only(
-    project_folder: str,
-    connection_config: Union[Dict[str, Any], AdapterConfig],
-    variables: Optional[Dict[str, Any]] = None,
-    project_config: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
-    """
-    Parse SQL models and build dependency graph without executing them.
-
-    Args:
-        project_folder: Path to the project folder containing SQL models
-        connection_config: Database connection configuration
-        variables: Optional variables for SQL substitution
-        project_config: Optional project configuration for OTS export
-
-    Returns:
-        Dictionary containing parsing results and dependency information
-    """
-    logger = logging.getLogger(__name__)
-
-    # Keep raw config dict for adapter validation
-    # Adapters will handle their own validation and config creation
-
-    print("\n" + "=" * 50)
-    print("t4t: PARSING SQL MODELS")
-    print("=" * 50)
-
-    # Parse SQL models
-    parser = ProjectParser(project_folder, connection_config, variables, project_config)
-
-    print("\nCollecting and parsing SQL models...")
-    parsed_models = parser.collect_models()
-    print(f"Found {len(parsed_models)} SQL files")
-
-    # Build dependency graph
-    print("\nBuilding dependency graph...")
-    graph = parser.build_dependency_graph()
-    execution_order = parser.get_execution_order()
-    print(f"Found {len(graph['nodes'])} tables")
-    print(f"Execution order: {' -> '.join(execution_order)}")
-
-    # Save analysis files
-    parser.save_to_json()
-    print("Analysis files saved to output folder")
-
-    return {
-        "parsed_models": parsed_models,
-        "dependency_graph": graph,
-        "execution_order": execution_order,
-        "total_models": len(parsed_models),
-        "total_tables": len(graph["nodes"]),
-    }

@@ -16,55 +16,27 @@ if TYPE_CHECKING:
     from tee.adapters import AdapterConfig
 
 
-def setup_build_context_from_ots(
+def setup_build_context_from_compile(
     project_folder: str,
     connection_config: Union[Dict[str, Any], AdapterConfig],
     variables: Optional[Dict[str, Any]],
     select_patterns: Optional[List[str]],
     exclude_patterns: Optional[List[str]],
-    project_config: Optional[Dict[str, Any]] = None,
+    project_config: Optional[Dict[str, Any]],
+    parsed_models: Dict[str, Any],
+    graph: Dict[str, Any],
+    execution_order: List[str],
 ) -> tuple[ProjectParser, Dict[str, Any], Dict[str, Any], List[str]]:
     """
-    Set up build context: load OTS modules, build graph, and apply filters.
+    Set up build context using compile results (graph and models).
     
     Returns:
         Tuple of (parser, parsed_models, graph, execution_order)
     """
-    from pathlib import Path
-    from tee.parser.input import OTSModuleReader, OTSConverter
-    
-    output_folder = Path(project_folder) / "output" / "ots_modules"
-    
-    print("\nLoading compiled OTS modules...")
-    reader = OTSModuleReader()
-    converter = OTSConverter()
-    
-    ots_files = list(output_folder.glob("*.ots.json")) + list(output_folder.glob("*.ots.yaml")) + list(output_folder.glob("*.ots.yml"))
-    
-    if not ots_files:
-        raise RuntimeError(f"No OTS modules found in {output_folder}. Compilation may have failed.")
-    
-    parsed_models = {}
-    for ots_file in ots_files:
-        try:
-            module = reader.read_module(ots_file)
-            module_models = converter.convert_module(module)
-            parsed_models.update(module_models)
-        except Exception as e:
-            raise RuntimeError(f"Failed to load OTS module {ots_file}: {e}")
-    
-    print(f"✅ Loaded {len(parsed_models)} transformations from {len(ots_files)} OTS module(s)")
-
-    # Create parser for dependency graph building
+    # Create parser instance and inject models/graph from compile
     parser = ProjectParser(project_folder, connection_config, variables, project_config)
-    # Inject the parsed models from OTS modules
     parser.parsed_models = parsed_models
-
-    print("\nBuilding dependency graph...")
-    graph = parser.build_dependency_graph()
-    execution_order = parser.get_execution_order()
-    print(f"Found {len(graph['nodes'])} nodes")
-    print(f"Execution order: {' -> '.join(execution_order)}")
+    parser.graph = graph
 
     # Apply selection filters if provided
     if select_patterns or exclude_patterns:

@@ -204,13 +204,15 @@ See the converted SQL with verbose mode:
 t4t run ./my_project -v
 ```
 
-### Parse Command
+### Compile Command
 
-Parse models to see conversion without execution:
+Compile models to see conversion and analysis without execution:
 
 ```bash
-t4t parse ./my_project -v
+t4t compile ./my_project
 ```
+
+This will generate OTS modules and analysis files (including dependency graph) without executing models.
 
 ### Check Conversion Results
 
