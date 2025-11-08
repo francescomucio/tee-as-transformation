@@ -224,9 +224,9 @@ def compile(
 
 
 @app.command()
-def help() -> None:
+def help(ctx: typer.Context) -> None:
     """Show help information."""
-    cmd_help()
+    cmd_help(ctx)
 
 
 # OTS command group with alphabetical ordering

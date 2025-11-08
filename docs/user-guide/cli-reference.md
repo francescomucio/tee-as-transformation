@@ -488,22 +488,18 @@ t4t ots validate ./module.ots.yaml -v
 
 ### `help` - Show Help Information
 
-Display help information for the CLI.
+Display help information for the CLI. This command shows the same output as `t4t --help`.
 
 **Usage:**
 ```bash
-t4t help
-```
-
-**Alternative:**
-```bash
-t4t --help              # Show general help
-t4t <command> --help    # Show command-specific help
+t4t help              # Equivalent to 't4t --help'
+t4t --help            # Show general help (same as 't4t help')
+t4t <command> --help  # Show command-specific help
 ```
 
 **Examples:**
 ```bash
-# Show general help
+# Show general help (both commands are equivalent)
 t4t help
 t4t --help
 
