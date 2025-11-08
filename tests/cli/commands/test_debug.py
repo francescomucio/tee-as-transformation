@@ -67,7 +67,7 @@ class TestDebugCommand:
         assert "DATABASE CONNECTION TEST" in output
         assert "Database connection successful!" in output
         assert "Database Information:" in output
-        assert "Type: DuckDB" in output
+        assert "database_type: DuckDB" in output
         assert "Supported Materializations:" in output
         assert "All connectivity tests passed!" in output
 
@@ -132,10 +132,10 @@ class TestDebugCommand:
             cmd_debug(mock_args)
 
         output = fake_out.getvalue()
-        assert "Host: account.snowflakecomputing.com" in output
-        assert "Database: MY_DB" in output
-        assert "Warehouse: MY_WAREHOUSE" in output
-        assert "Role: MY_ROLE" in output
+        assert "host: account.snowflakecomputing.com" in output
+        assert "database: MY_DB" in output
+        assert "warehouse: MY_WAREHOUSE" in output
+        assert "role: MY_ROLE" in output
 
     @patch("tee.cli.commands.debug.ConnectionManager")
     @patch("tee.cli.commands.debug.CommandContext")

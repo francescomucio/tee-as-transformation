@@ -44,18 +44,8 @@ def cmd_debug(
             db_info = connection_manager.get_database_info()
             if db_info:
                 typer.echo("\nDatabase Information:")
-                typer.echo(f"  Type: {db_info.get('database_type', 'Unknown')}")
-                typer.echo(f"  Adapter: {db_info.get('adapter_type', 'Unknown')}")
-                if "version" in db_info:
-                    typer.echo(f"  Version: {db_info['version']}")
-                if "host" in db_info:
-                    typer.echo(f"  Host: {db_info['host']}")
-                if "database" in db_info:
-                    typer.echo(f"  Database: {db_info['database']}")
-                if "warehouse" in db_info:
-                    typer.echo(f"  Warehouse: {db_info['warehouse']}")
-                if "role" in db_info:
-                    typer.echo(f"  Role: {db_info['role']}")
+                for key, value in db_info.items():
+                    typer.echo(f"  {key}: {value}")
 
             # Test supported materializations
             typer.echo("\nSupported Materializations:")
