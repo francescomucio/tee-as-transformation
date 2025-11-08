@@ -35,6 +35,8 @@ def execute_models(
     4. Execute models using the execution engine
     5. Optionally save analysis files
 
+    Note: This function does NOT execute tests. Use `t4t test` or `t4t build` to run tests.
+
     Args:
         project_folder: Path to the project folder containing SQL models
         connection_config: Database connection configuration
@@ -159,60 +161,6 @@ def execute_models(
             parser.save_to_json()
             print("Analysis files saved to output folder")
 
-        # Step 5: Execute tests after models are created
-        # Note: execution_engine.disconnect() is called in execute_models finally block,
-        # so we need to reconnect the adapter for tests
-        print("\n" + "=" * 50)
-        print("EXECUTING TESTS")
-        print("=" * 50)
-
-        test_results = None
-        try:
-            # Reconnect adapter for tests
-            if model_executor.execution_engine and model_executor.execution_engine.adapter:
-                # Reconnect if needed
-                try:
-                    model_executor.execution_engine.connect()
-                except Exception as e:
-                    logger.debug(f"Adapter already connected or connection error: {e}")
-
-                # Create test executor
-                test_executor = TestExecutor(
-                    model_executor.execution_engine.adapter, project_folder=project_folder
-                )
-
-                # Execute all tests (use filtered models if selection was applied)
-                test_models = filtered_parsed_models if filtered_parsed_models else parser.collect_models()
-                test_order = filtered_execution_order if filtered_execution_order else execution_order
-                test_results = test_executor.execute_all_tests(
-                    parsed_models=test_models, execution_order=test_order
-                )
-
-                # Print test results
-                print(f"\nTest Results:")
-                print(f"  Total tests: {test_results['total']}")
-                print(f"  Passed: {test_results['passed']}")
-                print(f"  Failed: {test_results['failed']}")
-
-                if test_results["warnings"]:
-                    print(f"\n  ⚠️  Warnings: {len(test_results['warnings'])}")
-                    for warning in test_results["warnings"]:
-                        print(f"    - {warning}")
-
-                if test_results["errors"]:
-                    print(f"\n  ❌ Errors: {len(test_results['errors'])}")
-                    for error in test_results["errors"]:
-                        print(f"    - {error}")
-
-                # Add test results to execution results
-                results["test_results"] = test_results
-            else:
-                print("⚠️  Cannot execute tests: adapter not available")
-
-        except Exception as e:
-            print(f"⚠️  Error executing tests: {e}")
-            # Don't fail the entire run if tests fail
-
         # Print results
         print("\n" + "=" * 50)
         print("EXECUTION RESULTS")
@@ -251,11 +199,6 @@ def execute_models(
             "execution_order": final_order,
             "dependency_graph": graph,
         }
-
-        # Exit with error code if there are test errors
-        # Note: We don't exit here, just log - let the caller decide
-        if test_results and test_results.get("errors"):
-            logger.error("Test execution failed with errors")
 
         return results
 

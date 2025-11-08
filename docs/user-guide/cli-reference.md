@@ -138,7 +138,8 @@ t4t run ./my_project --select my_model --exclude tag:deprecated
 3. Resolves dependencies automatically
 4. Executes models in the correct order
 5. Materializes results as tables/views in the database
-6. Automatically runs tests after model execution
+
+**Note:** The `run` command does NOT execute tests. Use `t4t test` to run tests separately, or `t4t build` to execute models with interleaved test execution.
 
 ---
 
@@ -217,10 +218,7 @@ t4t build ./my_project --select my_model
 1. Compiles project to OTS modules (parses SQL/Python models, loads imported OTS modules)
 2. Loads compiled OTS modules from `output/ots_modules/`
 3. Executes models in dependency order
-4. Runs tests after each model execution
-5. Stops on first ERROR severity test failure
-6. Continues on WARNING severity test failures
-7. Automatically loads seeds before execution
+4. Automatically loads seeds before execution
 
 **Exit codes:**
 - `0` - All models and tests passed
@@ -401,7 +399,7 @@ t4t compile ./my_project --vars '{"env": "prod"}'
 - OTS modules: `{database}__{schema}.ots.json` (or `.ots.yaml`)
 - Test library: `{project_name}_test_library.ots.json` (or `.ots.yaml`)
 
-**Note:** The `run`, `build`, and `test` commands automatically compile before execution. Use `compile` when you want to generate OTS modules without executing.
+**Note:** The `run`, `build`, and `test` commands automatically compile before execution. Use `compile` when you want to generate OTS modules without executing. Use `parse` for quick analysis without compilation.
 
 ---
 
@@ -518,7 +516,7 @@ t4t ots run --help
 | Command | Compiles | Executes Models | Runs Tests | Loads Seeds | Stops on Test Failure |
 |---------|----------|----------------|------------|-------------|----------------------|
 | `compile` | ✅ | ❌ | ❌ | ❌ | N/A |
-| `run` | ✅ | ✅ | ✅ (after models) | ❌ | ❌ |
+| `run` | ✅ | ✅ | ❌ | ❌ | N/A |
 | `build` | ✅ | ✅ | ✅ (interleaved) | ✅ | ✅ |
 | `test` | ✅ | ❌ | ✅ | ❌ | ✅ (ERROR only) |
 | `parse` | ❌ | ❌ | ❌ | ❌ | N/A |
