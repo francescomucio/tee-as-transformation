@@ -289,9 +289,7 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
             "supported_materializations": [m.value for m in self.get_supported_materializations()],
         }
 
-    def attach_tags(
-        self, object_type: str, object_name: str, tags: list[str]
-    ) -> None:
+    def attach_tags(self, object_type: str, object_name: str, tags: list[str]) -> None:
         """
         Attach tags (dbt-style, list of strings) to a database object.
 

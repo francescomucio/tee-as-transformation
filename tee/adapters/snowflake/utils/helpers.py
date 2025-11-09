@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class SnowflakeUtils:
     """Utility methods for Snowflake operations."""
 
-    def __init__(self, adapter: "DatabaseAdapter") -> None:
+    def __init__(self, adapter: DatabaseAdapter) -> None:
         """
         Initialize the utils.
 
@@ -62,17 +62,23 @@ class SnowflakeUtils:
                     self.logger.debug(f"Schema already exists: {qualified_schema_name}")
 
                 # Attach tags if schema was just created or if metadata is provided
-                if schema_metadata and (not schema_exists or schema_metadata.get("force_tag_update", False)):
+                if schema_metadata and (
+                    not schema_exists or schema_metadata.get("force_tag_update", False)
+                ):
                     try:
                         # Add tags (dbt-style, list of strings) if present
                         tags = schema_metadata.get("tags", [])
                         if tags:
-                            self.adapter.tag_manager.attach_tags("SCHEMA", qualified_schema_name, tags)
+                            self.adapter.tag_manager.attach_tags(
+                                "SCHEMA", qualified_schema_name, tags
+                            )
 
                         # Add object_tags (database-style, key-value pairs) if present
                         object_tags = schema_metadata.get("object_tags", {})
                         if object_tags and isinstance(object_tags, dict):
-                            self.adapter.tag_manager.attach_object_tags("SCHEMA", qualified_schema_name, object_tags)
+                            self.adapter.tag_manager.attach_object_tags(
+                                "SCHEMA", qualified_schema_name, object_tags
+                            )
                     except Exception as e:
                         self.logger.warning(
                             f"Could not add tags to schema {qualified_schema_name}: {e}"
@@ -145,4 +151,3 @@ class SnowflakeUtils:
                     # Continue with other columns even if one fails
         finally:
             cursor.close()
-

@@ -68,4 +68,3 @@ class MetadataMerger:
         merged.setdefault("tests", [])
 
         return merged
-

@@ -90,7 +90,14 @@ class TestLibraryExporter:
             with open(output_file, "w", encoding="utf-8") as f:
                 if format == "yaml":
                     import yaml
-                    yaml.dump(test_library, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+
+                    yaml.dump(
+                        test_library,
+                        f,
+                        default_flow_style=False,
+                        sort_keys=False,
+                        allow_unicode=True,
+                    )
                 else:
                     json.dump(test_library, f, indent=2, ensure_ascii=False)
 
@@ -131,7 +138,7 @@ class TestLibraryExporter:
         # Determine test level (table or column)
         # Check if test uses @column_name or {{ column_name }}
         has_column_placeholder = bool(
-            re.search(r'@column_name|{{\s*column_name\s*}}', cleaned_sql, re.IGNORECASE)
+            re.search(r"@column_name|{{\s*column_name\s*}}", cleaned_sql, re.IGNORECASE)
         )
         level = "column" if has_column_placeholder else "table"
 
@@ -179,12 +186,14 @@ class TestLibraryExporter:
             True if generic, False if singular
         """
         placeholder_patterns = [
-            r'@table_name',
-            r'{{\s*table_name\s*}}',
-            r'@column_name',
-            r'{{\s*column_name\s*}}',
+            r"@table_name",
+            r"{{\s*table_name\s*}}",
+            r"@column_name",
+            r"{{\s*column_name\s*}}",
         ]
-        return any(re.search(pattern, sql_content, re.IGNORECASE) for pattern in placeholder_patterns)
+        return any(
+            re.search(pattern, sql_content, re.IGNORECASE) for pattern in placeholder_patterns
+        )
 
     def _extract_description(self, sql_content: str) -> str | None:
         """
@@ -196,22 +205,31 @@ class TestLibraryExporter:
         Returns:
             Description string or None
         """
-        lines = sql_content.split('\n')
+        lines = sql_content.split("\n")
         description_lines = []
 
         for line in lines:
             line = line.strip()
             # Skip empty lines and SQL code
-            if not line or line.startswith('SELECT') or line.startswith('FROM') or line.startswith('WHERE'):
+            if (
+                not line
+                or line.startswith("SELECT")
+                or line.startswith("FROM")
+                or line.startswith("WHERE")
+            ):
                 break
             # Extract from comments
-            if line.startswith('--'):
+            if line.startswith("--"):
                 comment = line[2:].strip()
-                if comment and not comment.startswith('Usage:') and not comment.startswith('Returns'):
+                if (
+                    comment
+                    and not comment.startswith("Usage:")
+                    and not comment.startswith("Returns")
+                ):
                     description_lines.append(comment)
 
         if description_lines:
-            return ' '.join(description_lines[:3])  # Take first few comment lines
+            return " ".join(description_lines[:3])  # Take first few comment lines
 
         return None
 
@@ -225,22 +243,22 @@ class TestLibraryExporter:
         Returns:
             SQL content without comments
         """
-        lines = sql_content.split('\n')
+        lines = sql_content.split("\n")
         cleaned_lines = []
 
         for line in lines:
             # Check if line is a comment
             stripped = line.strip()
-            if stripped.startswith('--'):
+            if stripped.startswith("--"):
                 # Skip comment lines
                 continue
 
             # Check for inline comments (-- at end of line)
-            if '--' in line:
+            if "--" in line:
                 # Find the first -- that's not in a string
                 # Simple approach: split on -- and take first part
                 # This won't handle strings with -- in them perfectly, but it's good enough
-                parts = line.split('--', 1)
+                parts = line.split("--", 1)
                 if len(parts) > 1:
                     # Check if the -- is likely a comment (not in a string)
                     # Simple heuristic: if there's an odd number of quotes before --, it's in a string
@@ -252,7 +270,7 @@ class TestLibraryExporter:
 
             cleaned_lines.append(line)
 
-        return '\n'.join(cleaned_lines)
+        return "\n".join(cleaned_lines)
 
     def _extract_parameters(self, sql_content: str) -> dict[str, dict[str, Any]]:
         """
@@ -286,7 +304,7 @@ class TestLibraryExporter:
             default_value = match.group(3)
 
             # Skip table_name and column_name as they're special placeholders
-            if param_name in ['table_name', 'column_name']:
+            if param_name in ["table_name", "column_name"]:
                 continue
 
             parameters[param_name] = {
@@ -305,7 +323,7 @@ class TestLibraryExporter:
                 continue
 
             # Skip table_name and column_name as they're special placeholders
-            if param_name in ['table_name', 'column_name']:
+            if param_name in ["table_name", "column_name"]:
                 continue
 
             # Try to infer type from default value
@@ -339,11 +357,11 @@ class TestLibraryExporter:
             pass
 
         # Check for booleans
-        if value.lower() in ['true', 'false']:
+        if value.lower() in ["true", "false"]:
             return "boolean"
 
         # Check for arrays (simple heuristic)
-        if value.startswith('[') and value.endswith(']'):
+        if value.startswith("[") and value.endswith("]"):
             return "array"
 
         # Default to string
@@ -362,17 +380,18 @@ class TestLibraryExporter:
         """
         if param_type == "number":
             try:
-                if '.' in value:
+                if "." in value:
                     return float(value)
                 return int(value)
             except ValueError:
                 return 0
         elif param_type == "boolean":
-            return value.lower() == 'true'
+            return value.lower() == "true"
         elif param_type == "array":
             # Simple array parsing (basic)
             try:
                 import ast
+
                 return ast.literal_eval(value)
             except Exception:
                 return []
@@ -393,9 +412,9 @@ class TestLibraryExporter:
         """
         # Pattern to match FROM schema.table or FROM "schema"."table"
         patterns = [
-            r'FROM\s+([\w]+)\.([\w]+)',  # FROM schema.table
+            r"FROM\s+([\w]+)\.([\w]+)",  # FROM schema.table
             r'FROM\s+"([\w]+)"\."([\w]+)"',  # FROM "schema"."table"
-            r'FROM\s+\'([\w]+)\'\.\'([\w]+)\'',  # FROM 'schema'.'table'
+            r"FROM\s+\'([\w]+)\'\.\'([\w]+)\'",  # FROM 'schema'.'table'
         ]
 
         for pattern in patterns:
@@ -408,12 +427,19 @@ class TestLibraryExporter:
 
         # Fallback: look for any table reference that looks like schema.table
         # This is less reliable but might catch some cases
-        fallback_pattern = r'([\w]+)\.([\w]+)'
+        fallback_pattern = r"([\w]+)\.([\w]+)"
         matches = re.finditer(fallback_pattern, sql_content)
         for match in matches:
             # Skip common SQL keywords
-            if match.group(1).upper() not in ['SELECT', 'FROM', 'WHERE', 'JOIN', 'INNER', 'LEFT', 'RIGHT']:
+            if match.group(1).upper() not in [
+                "SELECT",
+                "FROM",
+                "WHERE",
+                "JOIN",
+                "INNER",
+                "LEFT",
+                "RIGHT",
+            ]:
                 return f"{match.group(1)}.{match.group(2)}"
 
         return None
-

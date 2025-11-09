@@ -11,7 +11,9 @@ logger = logging.getLogger(__name__)
 class MaterializationHandler:
     """Handles different materialization types (table, view, incremental, etc.)."""
 
-    def __init__(self, adapter: DatabaseAdapter, state_manager: Any, variables: dict[str, Any]) -> None:
+    def __init__(
+        self, adapter: DatabaseAdapter, state_manager: Any, variables: dict[str, Any]
+    ) -> None:
         """
         Initialize the materialization handler.
 
@@ -61,9 +63,7 @@ class MaterializationHandler:
                 if external_location:
                     self.adapter.create_external_table(table_name, sql_query, external_location)
                 else:
-                    logger.warning(
-                        "External table location not configured, creating table instead"
-                    )
+                    logger.warning("External table location not configured, creating table instead")
                     self.adapter.create_table(table_name, sql_query, metadata)
             else:
                 logger.warning(
@@ -171,9 +171,7 @@ class MaterializationHandler:
                 elif strategy == "delete_insert":
                     delete_insert_config = incremental_config.get("delete_insert")
                     if not delete_insert_config:
-                        logger.error(
-                            "Delete+insert strategy requires delete_insert configuration"
-                        )
+                        logger.error("Delete+insert strategy requires delete_insert configuration")
                         return
                     executor.execute_delete_insert_strategy(
                         table_name,
@@ -194,5 +192,3 @@ class MaterializationHandler:
             logger.error(f"Error executing incremental materialization: {e}")
             # Fallback to table creation
             self.adapter.create_table(table_name, sql_query, metadata)
-
-

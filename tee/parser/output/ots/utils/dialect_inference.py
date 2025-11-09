@@ -24,5 +24,3 @@ def infer_sql_dialect(project_config: dict[str, Any]) -> str:
         "spark": "spark",
     }
     return dialect_map.get(conn_type, "duckdb")
-
-

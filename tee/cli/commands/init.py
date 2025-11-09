@@ -108,8 +108,10 @@ def cmd_init(
 
     # Validate project name (basic validation)
     if not project_name or project_name.strip() != project_name:
-        error_msg = typer.style("Error: ", fg=typer.colors.RED, bold=True) + \
-                   "Project name cannot be empty or contain leading/trailing whitespace"
+        error_msg = (
+            typer.style("Error: ", fg=typer.colors.RED, bold=True)
+            + "Project name cannot be empty or contain leading/trailing whitespace"
+        )
         typer.echo(error_msg, err=True)
         raise typer.Exit(1)
 
@@ -117,8 +119,10 @@ def cmd_init(
     project_path = Path(project_name).resolve()
 
     if project_path.exists():
-        error_msg = typer.style("Error: ", fg=typer.colors.RED, bold=True) + \
-                   f"Directory '{project_name}' already exists"
+        error_msg = (
+            typer.style("Error: ", fg=typer.colors.RED, bold=True)
+            + f"Directory '{project_name}' already exists"
+        )
         typer.echo(error_msg, err=True)
         raise typer.Exit(1) from None
 
@@ -127,8 +131,10 @@ def cmd_init(
         project_path.mkdir(parents=True, exist_ok=False)
     except FileExistsError:
         # Directory was created between check and mkdir (race condition)
-        error_msg = typer.style("Error: ", fg=typer.colors.RED, bold=True) + \
-                   f"Directory '{project_name}' already exists"
+        error_msg = (
+            typer.style("Error: ", fg=typer.colors.RED, bold=True)
+            + f"Directory '{project_name}' already exists"
+        )
         typer.echo(error_msg, err=True)
         raise typer.Exit(1) from None
 
@@ -152,7 +158,7 @@ def cmd_init(
         typer.echo(f"Created configuration file: {project_name}/project.toml")
 
         typer.echo(f"\n✅ Project '{project_name}' initialized successfully!")
-        typer.echo(f"\nNext steps:")
+        typer.echo("\nNext steps:")
         typer.echo(f"  1. Edit {project_name}/project.toml to configure your database connection")
         typer.echo(f"  2. Add SQL models to {project_name}/models/")
         typer.echo(f"  3. Add seed files to {project_name}/seeds/")
@@ -162,16 +168,19 @@ def cmd_init(
         # Handle filesystem errors (permissions, disk full, etc.)
         if project_path.exists():
             shutil.rmtree(project_path)
-        error_msg = typer.style("Error: ", fg=typer.colors.RED, bold=True) + \
-                   f"Failed to create project directory: {e}"
+        error_msg = (
+            typer.style("Error: ", fg=typer.colors.RED, bold=True)
+            + f"Failed to create project directory: {e}"
+        )
         typer.echo(error_msg, err=True)
         raise typer.Exit(1) from None
     except Exception as e:
         # Cleanup on error
         if project_path.exists():
             shutil.rmtree(project_path)
-        error_msg = typer.style("Error: ", fg=typer.colors.RED, bold=True) + \
-                   f"Failed to initialize project: {e}"
+        error_msg = (
+            typer.style("Error: ", fg=typer.colors.RED, bold=True)
+            + f"Failed to initialize project: {e}"
+        )
         typer.echo(error_msg, err=True)
         raise typer.Exit(1) from None
-

@@ -12,7 +12,9 @@ from tee.parser.shared.types import DependencyGraph
 class DependencyVisualizer:
     """Handles visualization of dependency graphs."""
 
-    def generate_mermaid_diagram(self, graph: DependencyGraph, parsed_functions: dict[str, Any] | None = None) -> str:
+    def generate_mermaid_diagram(
+        self, graph: DependencyGraph, parsed_functions: dict[str, Any] | None = None
+    ) -> str:
         """
         Generate a Mermaid diagram representation of the dependency graph.
 
@@ -30,7 +32,9 @@ class DependencyVisualizer:
 
         # Add style definitions for test and function nodes
         mermaid_lines.append("    classDef testNode fill:#e1f5ff,stroke:#01579b,stroke-width:2px")
-        mermaid_lines.append("    classDef functionNode fill:#fff3e0,stroke:#e65100,stroke-width:2px")
+        mermaid_lines.append(
+            "    classDef functionNode fill:#fff3e0,stroke:#e65100,stroke-width:2px"
+        )
         mermaid_lines.append("")
 
         # Add nodes
@@ -75,7 +79,10 @@ class DependencyVisualizer:
         return "\n".join(mermaid_lines)
 
     def save_mermaid_diagram(
-        self, graph: DependencyGraph, output_file: str = "output/dependency_graph.mmd", parsed_functions: dict[str, Any] | None = None
+        self,
+        graph: DependencyGraph,
+        output_file: str = "output/dependency_graph.mmd",
+        parsed_functions: dict[str, Any] | None = None,
     ) -> None:
         """
         Save the dependency graph as a Mermaid diagram file.

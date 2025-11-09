@@ -4,7 +4,6 @@ Result categorization utilities.
 Extracts result categorization logic from TestExecutor.
 """
 
-
 from tee.testing.base import TestResult, TestSeverity
 
 
@@ -40,8 +39,7 @@ class ResultCategorizer:
             return f"{result.test_name} on {result.function_name}: {result.message}"
         elif result.column_name:
             return (
-                f"{result.test_name} on {result.table_name}.{result.column_name}: "
-                f"{result.message}"
+                f"{result.test_name} on {result.table_name}.{result.column_name}: {result.message}"
             )
         else:
             return f"{result.test_name} on {result.table_name}: {result.message}"
@@ -53,9 +51,7 @@ class ResultCategorizer:
             return f"{result.test_name} on {result.function_name}: {result.message}"
         elif result.column_name:
             return (
-                f"{result.test_name} on {result.table_name}.{result.column_name}: "
-                f"{result.message}"
+                f"{result.test_name} on {result.table_name}.{result.column_name}: {result.message}"
             )
         else:
             return f"{result.test_name} on {result.table_name}: {result.message}"
-

@@ -161,4 +161,3 @@ def _override_target_config(
 
     modified_module["target"] = target
     return modified_module
-

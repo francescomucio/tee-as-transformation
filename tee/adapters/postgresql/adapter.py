@@ -21,7 +21,9 @@ class PostgreSQLAdapter(DatabaseAdapter):
         try:
             import psycopg2
         except ImportError:
-            raise ImportError("psycopg2 is not installed. Install it with: uv add psycopg2-binary") from None
+            raise ImportError(
+                "psycopg2 is not installed. Install it with: uv add psycopg2-binary"
+            ) from None
 
         super().__init__(config)
 
@@ -326,6 +328,7 @@ class PostgreSQLAdapter(DatabaseAdapter):
         except Exception as e:
             self.logger.error(f"Failed to create function {function_name}: {e}")
             from tee.parser.shared.exceptions import FunctionExecutionError
+
             raise FunctionExecutionError(f"Failed to create function {function_name}: {e}") from e
 
     def function_exists(self, function_name: str, signature: str | None = None) -> bool:
@@ -375,6 +378,7 @@ class PostgreSQLAdapter(DatabaseAdapter):
         except Exception as e:
             self.logger.error(f"Error dropping function {function_name}: {e}")
             from tee.parser.shared.exceptions import FunctionExecutionError
+
             raise FunctionExecutionError(f"Failed to drop function {function_name}: {e}") from e
 
 

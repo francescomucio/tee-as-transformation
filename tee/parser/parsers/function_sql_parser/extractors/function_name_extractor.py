@@ -2,7 +2,6 @@
 Function name extraction from SQLglot AST or regex matches.
 """
 
-
 from sqlglot import exp
 
 
@@ -22,9 +21,7 @@ class FunctionNameExtractor:
         """
         function_name_full = ""
         if hasattr(udf, "this") and udf.this:
-            if isinstance(udf.this, exp.Table):
-                function_name_full = udf.this.name if hasattr(udf.this, "name") else str(udf.this)
-            elif isinstance(udf.this, exp.Identifier):
+            if isinstance(udf.this, exp.Table) or isinstance(udf.this, exp.Identifier):
                 function_name_full = udf.this.name if hasattr(udf.this, "name") else str(udf.this)
             else:
                 function_name_full = str(udf.this)
@@ -63,4 +60,3 @@ class FunctionNameExtractor:
             function_name = function_name_full
 
         return function_name, schema
-

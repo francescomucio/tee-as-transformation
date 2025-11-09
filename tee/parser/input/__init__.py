@@ -22,4 +22,3 @@ __all__ = [
     "validate_ots_module_location",
     "OTSValidationError",
 ]
-

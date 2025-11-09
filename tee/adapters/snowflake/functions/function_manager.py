@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class FunctionManager:
     """Manages function creation and existence checking for Snowflake."""
 
-    def __init__(self, adapter: "DatabaseAdapter") -> None:
+    def __init__(self, adapter: DatabaseAdapter) -> None:
         """
         Initialize the function manager.
 
@@ -69,11 +69,14 @@ class FunctionManager:
                 if tags:
                     self.tag_manager.attach_tags("FUNCTION", qualified_function_name, tags)
                 if object_tags:
-                    self.tag_manager.attach_object_tags("FUNCTION", qualified_function_name, object_tags)
+                    self.tag_manager.attach_object_tags(
+                        "FUNCTION", qualified_function_name, object_tags
+                    )
 
         except Exception as e:
             self.logger.error(f"Failed to create function {qualified_function_name}: {e}")
             from tee.parser.shared.exceptions import FunctionExecutionError
+
             raise FunctionExecutionError(
                 f"Failed to create function {qualified_function_name}: {e}"
             ) from e
@@ -119,7 +122,9 @@ class FunctionManager:
                         return False
 
                 # Otherwise, use SHOW FUNCTIONS to check if any function with this name exists
-                show_query = f"SHOW FUNCTIONS LIKE '{func_name.replace("'", "''")}' IN SCHEMA {schema_name}"
+                show_query = (
+                    f"SHOW FUNCTIONS LIKE '{func_name.replace("'", "''")}' IN SCHEMA {schema_name}"
+                )
                 cursor.execute(show_query)
                 result = cursor.fetchall()
                 # SHOW FUNCTIONS returns a result set - if any rows are returned, the function exists
@@ -157,5 +162,5 @@ class FunctionManager:
         except Exception as e:
             self.logger.error(f"Error dropping function {function_name}: {e}")
             from tee.parser.shared.exceptions import FunctionExecutionError
-            raise FunctionExecutionError(f"Failed to drop function {function_name}: {e}") from e
 
+            raise FunctionExecutionError(f"Failed to drop function {function_name}: {e}") from e

@@ -362,7 +362,7 @@ class PythonParser(BaseParser):
             # Inject the model decorator before loading the module
             from ..processing.model_decorator import model
 
-            setattr(module, "model", model)
+            module.model = model
 
             # Also inject it into the tee.parser module structure
             if "tee" not in sys.modules:
@@ -395,7 +395,7 @@ class PythonParser(BaseParser):
             # Inject the model decorator to make it available
             from ..processing.model_decorator import model
 
-            setattr(module, "model", model)
+            module.model = model
             logger.debug(f"Injected model decorator into module {module_name}")
 
             # Get the function

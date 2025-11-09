@@ -10,7 +10,10 @@ DEFAULT_FUNCTIONS_FOLDER = "functions"
 SUPPORTED_SQL_EXTENSIONS = [".sql"]
 SUPPORTED_PYTHON_EXTENSIONS = [".py"]
 # Database-specific function file extensions (for overrides)
-SUPPORTED_FUNCTION_OVERRIDE_EXTENSIONS = [".sql", ".js"]  # .sql for SQL, .js for JavaScript (Snowflake)
+SUPPORTED_FUNCTION_OVERRIDE_EXTENSIONS = [
+    ".sql",
+    ".js",
+]  # .sql for SQL, .js for JavaScript (Snowflake)
 
 # Known database adapter names (lowercase) for override detection
 # These should match the adapters available in tee.adapters

@@ -33,5 +33,3 @@ class BaseTransformer(ABC):
             Transformed entity as OTS structure
         """
         pass
-
-

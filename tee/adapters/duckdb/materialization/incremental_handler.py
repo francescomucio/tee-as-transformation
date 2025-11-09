@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class IncrementalHandler:
     """Handles incremental materialization strategies for DuckDB."""
 
-    def __init__(self, adapter: "DatabaseAdapter") -> None:
+    def __init__(self, adapter: DatabaseAdapter) -> None:
         """
         Initialize the incremental handler.
 
@@ -41,9 +41,7 @@ class IncrementalHandler:
             self.logger.error(f"Error executing incremental append for {table_name}: {e}")
             raise
 
-    def execute_merge(
-        self, table_name: str, source_sql: str, config: dict[str, Any]
-    ) -> None:
+    def execute_merge(self, table_name: str, source_sql: str, config: dict[str, Any]) -> None:
         """Execute incremental merge operation."""
         if not self.adapter.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
@@ -68,9 +66,7 @@ class IncrementalHandler:
             self.logger.error(f"Error executing incremental merge: {e}")
             raise
 
-    def execute_delete_insert(
-        self, table_name: str, delete_sql: str, insert_sql: str
-    ) -> None:
+    def execute_delete_insert(self, table_name: str, delete_sql: str, insert_sql: str) -> None:
         """Execute incremental delete+insert operation."""
         if not self.adapter.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
@@ -132,5 +128,3 @@ class IncrementalHandler:
         """
 
         return merge_sql.strip()
-
-

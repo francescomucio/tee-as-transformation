@@ -11,5 +11,13 @@ from tee.cli.commands.run import cmd_run
 from tee.cli.commands.seed import cmd_seed
 from tee.cli.commands.test import cmd_test
 
-__all__ = ["cmd_run", "cmd_test", "cmd_debug", "cmd_help", "cmd_build", "cmd_seed", "cmd_init", "cmd_compile"]
-
+__all__ = [
+    "cmd_run",
+    "cmd_test",
+    "cmd_debug",
+    "cmd_help",
+    "cmd_build",
+    "cmd_seed",
+    "cmd_init",
+    "cmd_compile",
+]

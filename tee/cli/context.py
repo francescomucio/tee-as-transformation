@@ -68,6 +68,7 @@ class CommandContext:
         typer.echo(f"{error_prefix}{error}", err=True)
         if show_traceback:
             import traceback
+
             traceback.print_exc()
         raise typer.Exit(1)
 
@@ -85,4 +86,3 @@ class CommandContext:
                 typer.echo(f"Selection criteria: {self.select_patterns}")
             if self.exclude_patterns:
                 typer.echo(f"Exclusion criteria: {self.exclude_patterns}")
-

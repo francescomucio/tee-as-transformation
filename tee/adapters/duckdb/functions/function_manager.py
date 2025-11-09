@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class FunctionManager:
     """Manages function creation and existence checking for DuckDB."""
 
-    def __init__(self, adapter: "DatabaseAdapter") -> None:
+    def __init__(self, adapter: DatabaseAdapter) -> None:
         """
         Initialize the function manager.
 
@@ -74,6 +74,7 @@ class FunctionManager:
         except Exception as e:
             self.logger.error(f"Failed to create function {function_name}: {e}")
             from tee.parser.shared.exceptions import FunctionExecutionError
+
             raise FunctionExecutionError(f"Failed to create function {function_name}: {e}") from e
 
     def exists(self, function_name: str, signature: str | None = None) -> bool:
@@ -161,7 +162,9 @@ class FunctionManager:
 
             # Try SHOW MACROS (for SQL macros)
             try:
-                result = self.adapter.connection.execute(f"SHOW MACROS LIKE '{func_name}'").fetchall()
+                result = self.adapter.connection.execute(
+                    f"SHOW MACROS LIKE '{func_name}'"
+                ).fetchall()
                 if result:
                     return True
             except Exception:
@@ -169,7 +172,9 @@ class FunctionManager:
 
             # Try SHOW FUNCTIONS (for Python UDFs)
             try:
-                result = self.adapter.connection.execute(f"SHOW FUNCTIONS LIKE '{func_name}'").fetchall()
+                result = self.adapter.connection.execute(
+                    f"SHOW FUNCTIONS LIKE '{func_name}'"
+                ).fetchall()
                 if result:
                     return True
             except Exception:
@@ -205,6 +210,5 @@ class FunctionManager:
         except Exception as e:
             self.logger.error(f"Error dropping function {function_name}: {e}")
             from tee.parser.shared.exceptions import FunctionExecutionError
+
             raise FunctionExecutionError(f"Failed to drop function {function_name}: {e}") from e
-
-

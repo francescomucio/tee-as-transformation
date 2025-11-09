@@ -86,7 +86,7 @@ class TableResolver:
 
         # Try to find by partial name (without schema)
         table_name_only = table_ref.split(".")[-1]
-        for full_name in parsed_models.keys():
+        for full_name in parsed_models:
             if full_name.split(".")[-1] == table_name_only:
                 return full_name
 
@@ -115,7 +115,9 @@ class TableResolver:
             function_name = function_metadata.get("function_name")
 
             if not function_name:
-                raise TableResolutionError(f"Function metadata missing 'function_name' for {function_file}")
+                raise TableResolutionError(
+                    f"Function metadata missing 'function_name' for {function_file}"
+                )
 
             # If schema is in metadata, use it
             if schema:
@@ -155,7 +157,9 @@ class TableResolver:
                     return function_name
 
         except Exception as e:
-            raise TableResolutionError(f"Failed to generate function name for {function_file}: {e}") from e
+            raise TableResolutionError(
+                f"Failed to generate function name for {function_file}: {e}"
+            ) from e
 
     def resolve_function_reference(
         self, function_ref: str, parsed_functions: dict[str, ParsedFunction]
@@ -176,7 +180,7 @@ class TableResolver:
 
         # Try to find by partial name (without schema)
         function_name_only = function_ref.split(".")[-1]
-        for full_name in parsed_functions.keys():
+        for full_name in parsed_functions:
             if full_name.split(".")[-1] == function_name_only:
                 return full_name
 

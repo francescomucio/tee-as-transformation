@@ -56,6 +56,7 @@ def execute_models(
     print("=" * 50)
     try:
         from tee.compiler import compile_project
+
         compile_results = compile_project(
             project_folder=project_folder,
             connection_config=connection_config,
@@ -93,7 +94,9 @@ def execute_models(
 
         selector = ModelSelector(select_patterns=select_patterns, exclude_patterns=exclude_patterns)
         original_count = len(parsed_models)
-        filtered_parsed_models, filtered_execution_order = selector.filter_models(parsed_models, execution_order)
+        filtered_parsed_models, filtered_execution_order = selector.filter_models(
+            parsed_models, execution_order
+        )
         filtered_count = len(filtered_parsed_models)
 
         print(f"\nFiltered to {filtered_count} models (from {original_count} total)")
@@ -124,7 +127,10 @@ def execute_models(
     try:
         # Execute models using the executor (pass filtered models if selection was applied)
         results = model_executor.execute_models(
-            parser, variables, parsed_models=filtered_parsed_models, execution_order=filtered_execution_order
+            parser,
+            variables,
+            parsed_models=filtered_parsed_models,
+            execution_order=filtered_execution_order,
         )
 
         # Step 4: Save analysis files if requested (after execution to include qualified SQL)
@@ -225,6 +231,7 @@ def build_models(
     print("=" * 50)
     try:
         from tee.compiler import compile_project
+
         compile_results = compile_project(
             project_folder=project_folder,
             connection_config=connection_config,
@@ -250,8 +257,15 @@ def build_models(
 
     # Step 2: Set up build context using compile results
     parser, parsed_models, graph, execution_order = build_helpers.setup_build_context_from_compile(
-        project_folder, connection_config, variables, select_patterns, exclude_patterns, 
-        project_config, parsed_models, graph, execution_order
+        project_folder,
+        connection_config,
+        variables,
+        select_patterns,
+        exclude_patterns,
+        project_config,
+        parsed_models,
+        graph,
+        execution_order,
     )
 
     # Step 2: Initialize executors
@@ -285,7 +299,9 @@ def build_models(
                     parsed_functions, execution_order
                 )
                 if function_results.get("executed_functions"):
-                    print(f"  ✅ Executed {len(function_results['executed_functions'])} function(s)")
+                    print(
+                        f"  ✅ Executed {len(function_results['executed_functions'])} function(s)"
+                    )
                     for func_name in function_results["executed_functions"]:
                         print(f"    - {func_name}")
 
@@ -301,7 +317,9 @@ def build_models(
                             all_test_results.extend(func_test_results)
 
                 if function_results.get("failed_functions"):
-                    print(f"  ⚠️  Failed to execute {len(function_results['failed_functions'])} function(s)")
+                    print(
+                        f"  ⚠️  Failed to execute {len(function_results['failed_functions'])} function(s)"
+                    )
                     for failure in function_results["failed_functions"]:
                         print(f"    - {failure['function']}: {failure['error']}")
                     # Continue with models even if some functions failed
@@ -309,7 +327,9 @@ def build_models(
         except Exception as e:
             # If function discovery/parsing fails, log warning but continue
             # This allows builds to work even if function parsing has issues
-            logger.warning(f"Could not discover/parse functions: {e}. Continuing with model execution.")
+            logger.warning(
+                f"Could not discover/parse functions: {e}. Continuing with model execution."
+            )
 
         # Step 3: Execute models and tests interleaved
         for node_name in execution_order:
@@ -322,7 +342,9 @@ def build_models(
                 # Mark as skipped if it depends on a failed model
                 if node_name not in skipped_models and not node_name.startswith("test:"):
                     node_deps = graph["dependencies"].get(node_name, [])
-                    if any(dep in failed_models for dep in node_deps if not dep.startswith("test:")):
+                    if any(
+                        dep in failed_models for dep in node_deps if not dep.startswith("test:")
+                    ):
                         skipped_models.add(node_name)
                 continue
 
@@ -367,8 +389,7 @@ def build_models(
 
         # Step 5: Compile and return results
         results = build_helpers.compile_build_results(
-            execution_order, failed_models, skipped_models, all_test_results,
-            parsed_models, graph
+            execution_order, failed_models, skipped_models, all_test_results, parsed_models, graph
         )
         build_helpers.print_build_summary(results, failed_models, skipped_models)
 
@@ -383,5 +404,3 @@ def build_models(
         # Always disconnect
         if model_executor and model_executor.execution_engine:
             model_executor.execution_engine.disconnect()
-
-

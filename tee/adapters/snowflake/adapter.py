@@ -412,9 +412,7 @@ class SnowflakeAdapter(DatabaseAdapter):
         """Execute delete+insert atomically in a transaction, aligning columns."""
         self.incremental_handler.execute_delete_insert(table_name, delete_sql, insert_sql)
 
-    def attach_tags(
-        self, object_type: str, object_name: str, tags: list[str]
-    ) -> None:
+    def attach_tags(self, object_type: str, object_name: str, tags: list[str]) -> None:
         """Attach tags to a Snowflake database object."""
         self.tag_manager.attach_tags(object_type, object_name, tags)
 

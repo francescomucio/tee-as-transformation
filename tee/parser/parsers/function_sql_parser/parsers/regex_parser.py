@@ -67,7 +67,9 @@ class RegexParser:
             pattern2 = r"CREATE\s+(?:OR\s+REPLACE\s+)?(?:FUNCTION|MACRO)\s+([^\s(]+)\s*\(([^)]*)\)"
             match = re.search(pattern2, content_normalized, re.IGNORECASE)
             if not match:
-                logger.warning(f"Could not parse CREATE FUNCTION/MACRO statement in {file_path_str}")
+                logger.warning(
+                    f"Could not parse CREATE FUNCTION/MACRO statement in {file_path_str}"
+                )
                 return None
 
         function_name_full = match.group(1).strip()
@@ -132,4 +134,3 @@ class RegexParser:
             # Store dependencies temporarily - will be moved to code["sql"] in the result structure
             "_dependencies": dependencies,
         }
-

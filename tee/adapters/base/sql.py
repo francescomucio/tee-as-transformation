@@ -4,7 +4,6 @@ SQL processing methods for database adapters.
 These methods are mixed into DatabaseAdapter via multiple inheritance.
 """
 
-
 import sqlglot
 
 

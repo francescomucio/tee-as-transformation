@@ -55,7 +55,7 @@ def cmd_compile(
             format=format,
         )
 
-        typer.echo(f"\n✅ Compilation complete!")
+        typer.echo("\n✅ Compilation complete!")
         typer.echo(f"   Parsed models: {results['parsed_models_count']}")
         typer.echo(f"   Imported OTS: {results['imported_ots_count']}")
         typer.echo(f"   Total transformations: {results['total_transformations']}")
@@ -68,4 +68,3 @@ def cmd_compile(
     except Exception as e:
         typer.echo(f"\n❌ Unexpected error: {e}", err=True)
         ctx.handle_error(e)
-

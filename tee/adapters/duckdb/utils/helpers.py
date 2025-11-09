@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class DuckDBUtils:
     """Utility methods for DuckDB operations."""
 
-    def __init__(self, adapter: "DatabaseAdapter") -> None:
+    def __init__(self, adapter: DatabaseAdapter) -> None:
         """
         Initialize the utils.
 
@@ -37,7 +37,9 @@ class DuckDBUtils:
         """Convert SQL dialect and qualify table references if schema is specified."""
         converted_query = self.adapter.convert_sql_dialect(query)
         if self.config.schema:
-            converted_query = self.adapter.qualify_table_references(converted_query, self.config.schema)
+            converted_query = self.adapter.qualify_table_references(
+                converted_query, self.config.schema
+            )
         return converted_query
 
     def execute_query(self, query: str) -> None:
@@ -86,8 +88,5 @@ class DuckDBUtils:
                 self.adapter.connection.execute(comment_query)
                 self.logger.debug(f"Added comment to column {table_name}.{col_name}")
             except Exception as e:
-                self.logger.warning(
-                    f"Could not add comment to column {table_name}.{col_name}: {e}"
-                )
+                self.logger.warning(f"Could not add comment to column {table_name}.{col_name}: {e}")
                 # Continue with other columns even if one fails
-

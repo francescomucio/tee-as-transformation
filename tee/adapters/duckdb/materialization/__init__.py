@@ -5,5 +5,3 @@ from .table_handler import TableHandler
 from .view_handler import ViewHandler
 
 __all__ = ["TableHandler", "ViewHandler", "IncrementalHandler"]
-
-

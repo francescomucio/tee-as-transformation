@@ -20,7 +20,9 @@ class FunctionBodyExtractor:
             Function body string (may be empty)
         """
         # Try with delimiters first ($$, quotes)
-        as_match = re.search(r"AS\s+(?:\$\$|['\"`])(.*?)(?:\$\$|['\"`])", content, re.IGNORECASE | re.DOTALL)
+        as_match = re.search(
+            r"AS\s+(?:\$\$|['\"`])(.*?)(?:\$\$|['\"`])", content, re.IGNORECASE | re.DOTALL
+        )
         if as_match:
             return as_match.group(1).strip()
 
@@ -39,4 +41,3 @@ class FunctionBodyExtractor:
             return body.strip()
 
         return ""
-

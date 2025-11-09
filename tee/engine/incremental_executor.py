@@ -262,7 +262,7 @@ class IncrementalExecutor:
         model_name: str,
         sql_query: str,
         config: IncrementalAppendConfig,
-        adapter: "DatabaseAdapter",
+        adapter: DatabaseAdapter,
         table_name: str,
         variables: dict[str, Any] | None = None,
     ) -> None:
@@ -302,7 +302,7 @@ class IncrementalExecutor:
         model_name: str,
         sql_query: str,
         config: IncrementalMergeConfig,
-        adapter: "DatabaseAdapter",
+        adapter: DatabaseAdapter,
         table_name: str,
         variables: dict[str, Any] | None = None,
     ) -> None:
@@ -340,7 +340,7 @@ class IncrementalExecutor:
         model_name: str,
         sql_query: str,
         config: IncrementalDeleteInsertConfig,
-        adapter: "DatabaseAdapter",
+        adapter: DatabaseAdapter,
         table_name: str,
         variables: dict[str, Any] | None = None,
     ) -> None:

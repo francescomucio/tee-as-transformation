@@ -62,7 +62,9 @@ def cmd_build(
         typer.echo(
             f"\nCompleted! Executed {successful_count} out of {total_tables} tables successfully."
         )
-        typer.echo(f"Tests: {passed_tests} passed, {failed_tests} failed out of {total_tests} total")
+        typer.echo(
+            f"Tests: {passed_tests} passed, {failed_tests} failed out of {total_tests} total"
+        )
 
         if failed_count > 0 or failed_tests > 0:
             if failed_count > 0:
@@ -86,4 +88,3 @@ def cmd_build(
         # Cleanup
         if connection_manager:
             connection_manager.cleanup()
-

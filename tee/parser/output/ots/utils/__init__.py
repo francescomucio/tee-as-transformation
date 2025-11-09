@@ -8,5 +8,3 @@ __all__ = [
     "group_models_by_schema",
     "group_functions_by_schema",
 ]
-
-

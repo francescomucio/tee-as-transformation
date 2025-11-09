@@ -92,5 +92,3 @@ class TagManager:
                     validated_tags[key] = str(value)
 
         return validated_tags
-
-

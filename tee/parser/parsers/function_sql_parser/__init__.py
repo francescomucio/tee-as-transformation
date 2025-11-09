@@ -43,7 +43,9 @@ class FunctionSQLParser(BaseParser):
     a SQLglot bug - see parsers/sqlglot_parser.py for details).
     """
 
-    def __init__(self, connection: dict[str, Any] | None = None, project_config: dict[str, Any] | None = None):
+    def __init__(
+        self, connection: dict[str, Any] | None = None, project_config: dict[str, Any] | None = None
+    ):
         """
         Initialize the SQL function parser.
 
@@ -171,15 +173,18 @@ class FunctionSQLParser(BaseParser):
 
             # Cache the result
             self._set_cache(cache_key, result)
-            logger.info(f"Successfully parsed function {function_name} from {file_path} (dialect: {dialect})")
+            logger.info(
+                f"Successfully parsed function {function_name} from {file_path} (dialect: {dialect})"
+            )
             return result
 
         except Exception as e:
             if isinstance(e, FunctionSQLParsingError):
                 raise
-            raise FunctionSQLParsingError(f"Error parsing SQL function file {file_path}: {str(e)}") from e
+            raise FunctionSQLParsingError(
+                f"Error parsing SQL function file {file_path}: {str(e)}"
+            ) from e
 
 
 # Export the main class for backward compatibility
 __all__ = ["FunctionSQLParser", "FunctionSQLParsingError"]
-

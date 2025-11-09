@@ -31,4 +31,3 @@ def find_metadata_file(sql_file_path: str) -> str | None:
         return str(python_file)
 
     return None
-

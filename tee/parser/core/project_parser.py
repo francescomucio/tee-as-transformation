@@ -168,9 +168,13 @@ class ProjectParser:
 
             # Use orchestrator's report generator
             if output_file is None:
-                self.orchestrator.report_generator.generate_mermaid_diagram(self.graph, parsed_functions=parsed_functions)
+                self.orchestrator.report_generator.generate_mermaid_diagram(
+                    self.graph, parsed_functions=parsed_functions
+                )
             else:
-                self.orchestrator.report_generator.generate_mermaid_diagram(self.graph, output_file, parsed_functions=parsed_functions)
+                self.orchestrator.report_generator.generate_mermaid_diagram(
+                    self.graph, output_file, parsed_functions=parsed_functions
+                )
         except Exception as e:
             raise ParserError(f"Failed to save Mermaid diagram: {e}") from e
 
@@ -185,8 +189,12 @@ class ProjectParser:
 
             # Use orchestrator's report generator
             if output_file is None:
-                self.orchestrator.report_generator.generate_markdown_report(self.graph, parsed_functions=parsed_functions)
+                self.orchestrator.report_generator.generate_markdown_report(
+                    self.graph, parsed_functions=parsed_functions
+                )
             else:
-                self.orchestrator.report_generator.generate_markdown_report(self.graph, output_file, parsed_functions)
+                self.orchestrator.report_generator.generate_markdown_report(
+                    self.graph, output_file, parsed_functions
+                )
         except Exception as e:
             raise ParserError(f"Failed to save markdown report: {e}") from e

@@ -4,7 +4,8 @@ Inspired by dlt's resource decorator pattern.
 """
 
 import logging
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from tee.parser.shared.exceptions import ParserError
 

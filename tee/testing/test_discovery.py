@@ -50,7 +50,8 @@ class TestDiscovery:
 
         # Find all .sql files in tests/ folder, excluding tests/functions/
         sql_files = [
-            f for f in self.tests_folder.rglob("*.sql")
+            f
+            for f in self.tests_folder.rglob("*.sql")
             if not str(f).startswith(str(self.functions_tests_folder))
         ]
 
@@ -137,7 +138,9 @@ class TestDiscovery:
                 logger.error(f"Failed to load function SQL test from {sql_file}: {e}")
                 continue
 
-        logger.info(f"Discovered {len(discovered)} function SQL test(s) from {self.functions_tests_folder}")
+        logger.info(
+            f"Discovered {len(discovered)} function SQL test(s) from {self.functions_tests_folder}"
+        )
         self._discovered_function_tests = discovered
         return discovered
 

@@ -207,7 +207,9 @@ class DuckDBAdapter(DatabaseAdapter):
         self, table_name: str, source_sql: str, unique_key: list[str], columns: list[str]
     ) -> str:
         """Generate DuckDB-specific MERGE SQL statement."""
-        return self.incremental_handler._generate_merge_sql(table_name, source_sql, unique_key, columns)
+        return self.incremental_handler._generate_merge_sql(
+            table_name, source_sql, unique_key, columns
+        )
 
     def generate_no_duplicates_test_query(
         self, table_name: str, columns: list[str] | None = None

@@ -2,12 +2,11 @@
 Run command implementation.
 """
 
-
 import typer
 
-from tee.executor import execute_models
 from tee.cli.context import CommandContext
 from tee.engine.connection_manager import ConnectionManager
+from tee.executor import execute_models
 
 
 def cmd_run(
@@ -77,4 +76,3 @@ def cmd_run(
         # Cleanup
         if connection_manager:
             connection_manager.cleanup()
-

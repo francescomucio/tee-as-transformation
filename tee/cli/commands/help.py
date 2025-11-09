@@ -15,4 +15,3 @@ def cmd_help(ctx: typer.Context) -> None:
     else:
         # Fallback to current context if no parent (shouldn't happen)
         typer.echo(ctx.get_help())
-

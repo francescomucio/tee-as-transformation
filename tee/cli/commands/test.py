@@ -40,13 +40,16 @@ def cmd_test(
         typer.echo("=" * 50)
         try:
             from tee.compiler import compile_project
+
             compile_results = compile_project(
                 project_folder=str(ctx.project_path),
                 connection_config=ctx.config["connection"],
                 variables=ctx.vars,
                 project_config=ctx.config,
             )
-            typer.echo(f"✅ Compilation complete: {compile_results['ots_modules_count']} OTS module(s)")
+            typer.echo(
+                f"✅ Compilation complete: {compile_results['ots_modules_count']} OTS module(s)"
+            )
 
             # Extract graph and execution order from compile results
             graph = compile_results.get("dependency_graph")
@@ -64,15 +67,16 @@ def cmd_test(
             raise
 
         # Step 2: Create parser instance for test execution
-        parser = ProjectParser(str(ctx.project_path), ctx.config["connection"], ctx.vars, ctx.config)
+        parser = ProjectParser(
+            str(ctx.project_path), ctx.config["connection"], ctx.vars, ctx.config
+        )
         parser.parsed_models = parsed_models
         parser.graph = graph
 
         # Apply selection filtering if specified
         if ctx.select_patterns or ctx.exclude_patterns:
             selector = ModelSelector(
-                select_patterns=ctx.select_patterns,
-                exclude_patterns=ctx.exclude_patterns
+                select_patterns=ctx.select_patterns, exclude_patterns=ctx.exclude_patterns
             )
 
             parsed_models, execution_order = selector.filter_models(parsed_models, execution_order)
@@ -87,9 +91,7 @@ def cmd_test(
                 connection_config["path"] = str(ctx.project_path / db_path)
 
         execution_engine = ExecutionEngine(
-            config=connection_config,
-            project_folder=str(ctx.project_path),
-            variables=ctx.vars
+            config=connection_config, project_folder=str(ctx.project_path), variables=ctx.vars
         )
 
         try:
@@ -121,7 +123,7 @@ def cmd_test(
             )
 
             # Print test results
-            typer.echo(f"\nTest Results:")
+            typer.echo("\nTest Results:")
             typer.echo(f"  Total tests: {test_results['total']}")
             typer.echo(f"  ✅ Passed: {test_results['passed']}")
             typer.echo(f"  ❌ Failed: {test_results['failed']}")
@@ -157,4 +159,3 @@ def cmd_test(
 
     except Exception as e:
         ctx.handle_error(e)
-

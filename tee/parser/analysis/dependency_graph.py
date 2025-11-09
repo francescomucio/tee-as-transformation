@@ -136,7 +136,9 @@ class DependencyGraphBuilder:
             # Detect cycles and build execution order using graphlib
             cycles = self._detect_cycles_with_graphlib(dependencies)
             execution_order = (
-                self._topological_sort_with_graphlib(dependencies, parsed_functions) if not cycles else []
+                self._topological_sort_with_graphlib(dependencies, parsed_functions)
+                if not cycles
+                else []
             )
 
             return {
@@ -224,9 +226,7 @@ class DependencyGraphBuilder:
                 # Process table-level tests
                 if "tests" in metadata and metadata["tests"]:
                     for test_def in metadata["tests"]:
-                        test_name = (
-                            test_def if isinstance(test_def, str) else test_def.get("name")
-                        )
+                        test_name = test_def if isinstance(test_def, str) else test_def.get("name")
                         if not test_name:
                             continue
 
@@ -242,9 +242,7 @@ class DependencyGraphBuilder:
                             parsed_models=parsed_models,
                         )
                         test_dependencies[test_node] = test_deps
-                        logger.debug(
-                            f"Table-level test {test_node} depends on: {test_deps}"
-                        )
+                        logger.debug(f"Table-level test {test_node} depends on: {test_deps}")
 
         except ImportError as e:
             logger.warning(f"Could not import test discovery: {e}")
@@ -304,20 +302,14 @@ class DependencyGraphBuilder:
                 substituted_sql = substituted_sql.replace("{{column_name}}", column_name)
 
             # Parse with SQLParser (reuses existing sqlglot code!)
-            parsed = sql_parser.parse(
-                substituted_sql, file_path=str(sql_test.sql_file_path)
-            )
+            parsed = sql_parser.parse(substituted_sql, file_path=str(sql_test.sql_file_path))
 
             # Extract source tables from parsed result
-            source_tables = (
-                parsed.get("code", {}).get("sql", {}).get("source_tables", [])
-            )
+            source_tables = parsed.get("code", {}).get("sql", {}).get("source_tables", [])
 
             # Resolve table references
             for ref_table in source_tables:
-                full_ref = table_resolver.resolve_table_reference(
-                    ref_table, parsed_models
-                )
+                full_ref = table_resolver.resolve_table_reference(ref_table, parsed_models)
                 if full_ref and full_ref != table_name:
                     test_deps.add(full_ref)
 
@@ -325,9 +317,7 @@ class DependencyGraphBuilder:
             test_deps.add(table_name)
 
         except Exception as e:
-            logger.warning(
-                f"Failed to parse test {test_name} for table {table_name}: {e}"
-            )
+            logger.warning(f"Failed to parse test {test_name} for table {table_name}: {e}")
             # Still add the table as a dependency even if parsing fails
             test_deps.add(table_name)
 
@@ -422,9 +412,10 @@ class DependencyGraphBuilder:
             # Cycles detected, fall back to custom cycle detection for detailed info
             return self._detect_cycles(dependencies)
 
-
     def _topological_sort_with_graphlib(
-        self, dependencies: DependencyInfo, parsed_functions: dict[str, ParsedFunction] | None = None
+        self,
+        dependencies: DependencyInfo,
+        parsed_functions: dict[str, ParsedFunction] | None = None,
     ) -> ExecutionOrder:
         """
         Perform topological sort using graphlib.TopologicalSorter.

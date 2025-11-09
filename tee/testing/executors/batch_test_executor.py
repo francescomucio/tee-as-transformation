@@ -201,4 +201,3 @@ class BatchTestExecutor:
             all_results.extend(results)
 
         return all_results
-

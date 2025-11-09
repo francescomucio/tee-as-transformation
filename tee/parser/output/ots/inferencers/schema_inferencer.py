@@ -83,9 +83,9 @@ class SchemaInferencer:
             # Simple heuristic based on SQL type
             if any(word in sql_type.upper() for word in ["TEXT", "VARCHAR", "CHAR", "STRING"]):
                 return "string"
-            elif any(word in sql_type.upper() for word in ["INT", "BIGINT", "SMALLINT", "INTEGER"]):
-                return "number"
             elif any(
+                word in sql_type.upper() for word in ["INT", "BIGINT", "SMALLINT", "INTEGER"]
+            ) or any(
                 word in sql_type.upper() for word in ["FLOAT", "DOUBLE", "DECIMAL", "NUMERIC"]
             ):
                 return "number"
@@ -96,5 +96,3 @@ class SchemaInferencer:
 
         # Default to string if can't infer
         return "string"
-
-

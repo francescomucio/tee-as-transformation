@@ -74,5 +74,3 @@ class OTSTransformer:
             self.model_transformer,
             self.function_transformer,
         )
-
-

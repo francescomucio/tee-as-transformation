@@ -142,4 +142,3 @@ class StateChecker:
     def close(self) -> None:
         """Close the state manager."""
         self.state_manager.close()
-

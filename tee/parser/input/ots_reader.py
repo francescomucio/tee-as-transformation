@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 class OTSModuleReaderError(Exception):
     """Exception raised when reading or validating OTS modules fails."""
+
     pass
 
 
@@ -51,10 +52,10 @@ class OTSModuleReader:
 
         # Determine file format
         is_json = file_path.suffixes == [".ots", ".json"] or file_path.name.endswith(".ots.json")
-        is_yaml = (
-            file_path.suffixes in [[".ots", ".yaml"], [".ots", ".yml"]]
-            or file_path.name.endswith((".ots.yaml", ".ots.yml"))
-        )
+        is_yaml = file_path.suffixes in [
+            [".ots", ".yaml"],
+            [".ots", ".yml"],
+        ] or file_path.name.endswith((".ots.yaml", ".ots.yml"))
 
         if not (is_json or is_yaml):
             logger.warning(
@@ -113,7 +114,9 @@ class OTSModuleReader:
         )
 
         if not ots_files:
-            logger.warning(f"No OTS module files (.ots.json, .ots.yaml, .ots.yml) found in {directory}")
+            logger.warning(
+                f"No OTS module files (.ots.json, .ots.yaml, .ots.yml) found in {directory}"
+            )
             return modules
 
         for ots_file in ots_files:
@@ -175,7 +178,9 @@ class OTSModuleReader:
         # Validate target structure
         target = module_data.get("target", {})
         if not isinstance(target, dict):
-            raise OTSModuleReaderError(f"Invalid 'target' field in OTS module {file_path}: must be a dictionary")
+            raise OTSModuleReaderError(
+                f"Invalid 'target' field in OTS module {file_path}: must be a dictionary"
+            )
 
         required_target_fields = ["database", "schema"]
         for field in required_target_fields:
@@ -198,7 +203,9 @@ class OTSModuleReader:
         for i, transformation in enumerate(transformations):
             self._validate_transformation(transformation, file_path, i)
 
-    def _validate_transformation(self, transformation: dict[str, Any], file_path: Path, index: int) -> None:
+    def _validate_transformation(
+        self, transformation: dict[str, Any], file_path: Path, index: int
+    ) -> None:
         """
         Validate a single transformation.
 
@@ -318,4 +325,3 @@ class OTSModuleReader:
             "has_test_library": "test_library_path" in module,
             "module_tags": module.get("tags", []),
         }
-

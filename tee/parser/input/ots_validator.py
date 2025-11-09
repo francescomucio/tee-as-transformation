@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 class OTSValidationError(Exception):
     """Exception raised when OTS module validation fails."""
+
     pass
 
 
@@ -77,4 +78,3 @@ def validate_ots_module_location(module_path: Path, models_folder: Path) -> None
         if isinstance(e, OTSValidationError):
             raise
         raise OTSValidationError(f"Error validating OTS module location: {e}") from e
-

@@ -66,4 +66,3 @@ class DialectInferencer:
                     return dialect_map.get(potential_db, "postgres")
 
         return None
-

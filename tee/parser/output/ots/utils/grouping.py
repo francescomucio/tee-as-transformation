@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 def group_models_by_schema(
-    parsed_models: dict[str, ParsedModel]
+    parsed_models: dict[str, ParsedModel],
 ) -> dict[str, list[tuple[str, ParsedModel]]]:
     """
     Group models by their schema (first part of transformation_id).
@@ -36,7 +36,7 @@ def group_models_by_schema(
 
 
 def group_functions_by_schema(
-    parsed_functions: dict[str, ParsedFunction]
+    parsed_functions: dict[str, ParsedFunction],
 ) -> dict[str, list[tuple[str, ParsedFunction]]]:
     """
     Group functions by their schema (first part of function_id).
@@ -61,5 +61,3 @@ def group_functions_by_schema(
 
     logger.debug(f"Grouped functions into {len(grouped)} schemas: {list(grouped.keys())}")
     return grouped
-
-

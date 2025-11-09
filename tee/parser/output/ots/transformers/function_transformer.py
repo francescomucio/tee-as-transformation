@@ -106,5 +106,3 @@ class FunctionTransformer(BaseTransformer):
             ots_function["metadata"]["object_tags"] = object_tags
 
         return ots_function
-
-

@@ -160,7 +160,7 @@ def validate_function_metadata_consistency(
         for i, (sql_param, python_param) in enumerate(zip(sql_params, python_params)):
             if sql_param.get("name") != python_param.get("name"):
                 raise FunctionMetadataError(
-                    f"Parameter {i+1} name mismatch: SQL has '{sql_param.get('name')}', "
+                    f"Parameter {i + 1} name mismatch: SQL has '{sql_param.get('name')}', "
                     f"Python has '{python_param.get('name')}'"
                 )
 
@@ -174,4 +174,3 @@ def validate_function_metadata_consistency(
             f"Return type mismatch: SQL has '{sql_return}', Python has '{python_return}'. "
             f"Using Python metadata."
         )
-

@@ -71,7 +71,9 @@ class FunctionPythonParser(BaseParser):
                 # This is a metadata-only file
                 functions = self._parse_metadata_dict(metadata_dict, file_path_str)
                 self._set_cache(file_path_str, functions)
-                logger.info(f"Successfully parsed {len(functions)} function(s) from metadata in {file_path}")
+                logger.info(
+                    f"Successfully parsed {len(functions)} function(s) from metadata in {file_path}"
+                )
                 return functions
 
             # Otherwise, parse AST to find functions with decorators
@@ -118,9 +120,13 @@ class FunctionPythonParser(BaseParser):
         except Exception as e:
             if isinstance(e, FunctionPythonParsingError):
                 raise
-            raise FunctionPythonParsingError(f"Error parsing Python function file {file_path}: {str(e)}") from e
+            raise FunctionPythonParsingError(
+                f"Error parsing Python function file {file_path}: {str(e)}"
+            ) from e
 
-    def _try_parse_metadata_only(self, content: str, file_path_str: str) -> FunctionMetadataDict | None:
+    def _try_parse_metadata_only(
+        self, content: str, file_path_str: str
+    ) -> FunctionMetadataDict | None:
         """
         Try to parse the file as a metadata-only file (with a `metadata` dict).
 
@@ -143,7 +149,7 @@ class FunctionPythonParser(BaseParser):
 
             # Check if there's a metadata variable
             if hasattr(module, "metadata"):
-                metadata = getattr(module, "metadata")
+                metadata = module.metadata
                 if isinstance(metadata, dict):
                     # Validate it has function_name (required)
                     if "function_name" in metadata:
@@ -152,7 +158,7 @@ class FunctionPythonParser(BaseParser):
 
             # Also check for multiple functions (list of metadata dicts)
             if hasattr(module, "functions"):
-                functions_list = getattr(module, "functions")
+                functions_list = module.functions
                 if isinstance(functions_list, list):
                     logger.debug(f"Found multiple function metadata definitions in {file_path_str}")
                     # For now, we'll handle the first one (multiple functions per file will be handled later)
@@ -165,7 +171,9 @@ class FunctionPythonParser(BaseParser):
 
         return None
 
-    def _parse_metadata_dict(self, metadata_dict: FunctionMetadataDict, file_path_str: str) -> dict[str, dict[str, Any]]:
+    def _parse_metadata_dict(
+        self, metadata_dict: FunctionMetadataDict, file_path_str: str
+    ) -> dict[str, dict[str, Any]]:
         """
         Parse a metadata dictionary into a function structure.
 
@@ -245,7 +253,9 @@ class FunctionPythonParser(BaseParser):
 
         return None
 
-    def _extract_decorator_arguments(self, decorator: ast.Call, language: str) -> dict[str, Any] | None:
+    def _extract_decorator_arguments(
+        self, decorator: ast.Call, language: str
+    ) -> dict[str, Any] | None:
         """
         Extract arguments from a decorator call.
 
@@ -357,4 +367,3 @@ class FunctionPythonParser(BaseParser):
 
         # For complex types, return None (caller should handle)
         return None
-

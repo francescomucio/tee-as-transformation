@@ -4,7 +4,8 @@ Inspired by the model decorator pattern.
 """
 
 import logging
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from tee.parser.shared.exceptions import ParserError
 from tee.typing.metadata import FunctionParameter, FunctionType
@@ -106,7 +107,9 @@ def sql(
         except Exception as e:
             if isinstance(e, FunctionDecoratorError):
                 raise
-            raise FunctionDecoratorError(f"Failed to create SQL function decorator: {str(e)}") from e
+            raise FunctionDecoratorError(
+                f"Failed to create SQL function decorator: {str(e)}"
+            ) from e
 
     return decorator
 
@@ -196,7 +199,9 @@ def python(
         except Exception as e:
             if isinstance(e, FunctionDecoratorError):
                 raise
-            raise FunctionDecoratorError(f"Failed to create Python function decorator: {str(e)}") from e
+            raise FunctionDecoratorError(
+                f"Failed to create Python function decorator: {str(e)}"
+            ) from e
 
     return decorator
 
@@ -207,4 +212,3 @@ class functions:
 
     sql = sql
     python = python
-

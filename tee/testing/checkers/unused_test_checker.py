@@ -57,15 +57,11 @@ class UnusedTestChecker:
         discovered_function_tests = self.test_discovery.discover_function_tests()
 
         # Get all test names referenced in metadata
-        referenced_test_names = self._collect_referenced_tests(
-            parsed_models, parsed_functions
-        )
+        referenced_test_names = self._collect_referenced_tests(parsed_models, parsed_functions)
 
         # Check unused model tests
         warnings.extend(
-            self._check_unused_model_tests(
-                discovered_tests, referenced_test_names, used_test_names
-            )
+            self._check_unused_model_tests(discovered_tests, referenced_test_names, used_test_names)
         )
 
         # Check unused function tests
@@ -252,5 +248,3 @@ class UnusedTestChecker:
         except Exception:
             # If we can't load the SQL, assume it's generic to be safe
             return True
-
-

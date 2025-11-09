@@ -54,7 +54,9 @@ def cmd_ots_run(
         # Note: Functions from OTS modules are not yet integrated into execution
         # This will be handled in Phase 8 (Execution Engine Integration)
         if ots_parsed_functions:
-            typer.echo(f"⚠️  Note: {len(ots_parsed_functions)} function(s) loaded but not yet executed (Phase 8)")
+            typer.echo(
+                f"⚠️  Note: {len(ots_parsed_functions)} function(s) loaded but not yet executed (Phase 8)"
+            )
 
         # Determine connection config and project folder
         if project_folder:
@@ -84,6 +86,7 @@ def cmd_ots_run(
 
             # Merge OTS models with existing models
             from tee.parser.input import merge_ots_with_parsed_models
+
             all_models = merge_ots_with_parsed_models(existing_models, ots_parsed_models)
             typer.echo(f"Total models to execute: {len(all_models)}")
 
@@ -99,15 +102,16 @@ def cmd_ots_run(
             # Apply selection filtering if specified
             if select_patterns or exclude_patterns:
                 from tee.cli.selection import ModelSelector
+
                 selector = ModelSelector(
-                    select_patterns=select_patterns,
-                    exclude_patterns=exclude_patterns
+                    select_patterns=select_patterns, exclude_patterns=exclude_patterns
                 )
                 all_models, execution_order = selector.filter_models(all_models, execution_order)
                 typer.echo(f"Filtered to {len(all_models)} models")
 
             # Execute models
             from tee.engine import ModelExecutor
+
             model_executor = ModelExecutor(str(project_path), connection_config)
             results = model_executor.execute_models(
                 parser=parser,
@@ -118,6 +122,7 @@ def cmd_ots_run(
 
             # Run tests
             from tee.testing import TestExecutor
+
             test_executor = TestExecutor(model_executor.execution_engine)
             test_results = test_executor.run_tests(all_models, variables=variables)
             results["test_results"] = test_results
@@ -126,7 +131,7 @@ def cmd_ots_run(
             model_executor.execution_engine.disconnect()
 
             # Print summary
-            typer.echo(f"\n✅ Execution complete!")
+            typer.echo("\n✅ Execution complete!")
             typer.echo(f"   Executed: {len(results['executed_tables'])} tables")
             if results.get("failed_tables"):
                 typer.echo(f"   Failed: {len(results['failed_tables'])} tables")
@@ -157,8 +162,14 @@ def cmd_ots_run(
                 # Use current directory as project folder
                 project_path = Path.cwd()
             else:
-                typer.echo("❌ Error: Cannot determine connection config for directory of OTS modules", err=True)
-                typer.echo("   Please provide --project-folder or ensure OTS modules have target config", err=True)
+                typer.echo(
+                    "❌ Error: Cannot determine connection config for directory of OTS modules",
+                    err=True,
+                )
+                typer.echo(
+                    "   Please provide --project-folder or ensure OTS modules have target config",
+                    err=True,
+                )
                 raise typer.Exit(1)
 
             # Create a minimal parser for dependency graph building
@@ -173,6 +184,7 @@ def cmd_ots_run(
 
             # Execute models
             from tee.engine import ModelExecutor
+
             model_executor = ModelExecutor(str(project_path), connection_config)
             results = model_executor.execute_models(
                 parser=parser,
@@ -183,6 +195,7 @@ def cmd_ots_run(
 
             # Run tests
             from tee.testing import TestExecutor
+
             test_executor = TestExecutor(model_executor.execution_engine)
             test_results = test_executor.run_tests(ots_parsed_models, variables=variables or {})
             results["test_results"] = test_results
@@ -191,7 +204,7 @@ def cmd_ots_run(
             model_executor.execution_engine.disconnect()
 
             # Print summary
-            typer.echo(f"\n✅ Execution complete!")
+            typer.echo("\n✅ Execution complete!")
             typer.echo(f"   Executed: {len(results['executed_tables'])} tables")
             if results.get("failed_tables"):
                 typer.echo(f"   Failed: {len(results['failed_tables'])} tables")
@@ -203,6 +216,7 @@ def cmd_ots_run(
         typer.echo(f"❌ Error executing OTS modules: {e}", err=True)
         if verbose:
             import traceback
+
             traceback.print_exc()
         raise typer.Exit(1) from None
 
@@ -233,15 +247,15 @@ def cmd_ots_validate(
             info = reader.get_module_info(module)
 
             typer.echo("✅ OTS module is valid!")
-            typer.echo(f"\nModule Information:")
+            typer.echo("\nModule Information:")
             typer.echo(f"  Name: {info['module_name']}")
             typer.echo(f"  OTS Version: {info['ots_version']}")
             typer.echo(f"  Transformations: {info['transformation_count']}")
             typer.echo(f"  Target: {info['target'].get('database')}.{info['target'].get('schema')}")
-            if info.get('module_tags'):
+            if info.get("module_tags"):
                 typer.echo(f"  Tags: {', '.join(info['module_tags'])}")
-            if info.get('has_test_library'):
-                typer.echo(f"  Test Library: Yes")
+            if info.get("has_test_library"):
+                typer.echo("  Test Library: Yes")
 
         elif ots_path_obj.is_dir():
             typer.echo(f"\nValidating OTS modules in: {ots_path}")
@@ -257,7 +271,9 @@ def cmd_ots_validate(
                 info = reader.get_module_info(module)
                 typer.echo(f"\n  {module_name}:")
                 typer.echo(f"    Transformations: {info['transformation_count']}")
-                typer.echo(f"    Target: {info['target'].get('database')}.{info['target'].get('schema')}")
+                typer.echo(
+                    f"    Target: {info['target'].get('database')}.{info['target'].get('schema')}"
+                )
 
         else:
             typer.echo(f"❌ Error: Path is neither a file nor a directory: {ots_path}", err=True)
@@ -267,12 +283,13 @@ def cmd_ots_validate(
         typer.echo(f"❌ Validation failed: {e}", err=True)
         if verbose:
             import traceback
+
             traceback.print_exc()
         raise typer.Exit(1) from None
     except Exception as e:
         typer.echo(f"❌ Error: {e}", err=True)
         if verbose:
             import traceback
+
             traceback.print_exc()
         raise typer.Exit(1) from None
-

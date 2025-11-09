@@ -208,7 +208,11 @@ class FileDiscovery:
 
             # Collect all files with supported extensions in a single pass
             # This is more efficient than multiple rglob() calls
-            all_extensions = set(SUPPORTED_SQL_EXTENSIONS) | set(SUPPORTED_PYTHON_EXTENSIONS) | set(SUPPORTED_FUNCTION_OVERRIDE_EXTENSIONS)
+            all_extensions = (
+                set(SUPPORTED_SQL_EXTENSIONS)
+                | set(SUPPORTED_PYTHON_EXTENSIONS)
+                | set(SUPPORTED_FUNCTION_OVERRIDE_EXTENSIONS)
+            )
 
             for ext in all_extensions:
                 for file_path in self.functions_folder.rglob(f"*{ext}"):

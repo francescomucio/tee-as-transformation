@@ -132,7 +132,9 @@ class SqlTest(StandardTest):
                     # Support both @param1 and @param_1 formats
                     sql = sql.replace(f"@param{param_key.replace('param', '')}", str(value))
                     sql = sql.replace(f"@param_{param_key.replace('param', '')}", str(value))
-                    sql = sql.replace(f"{{{{ param{param_key.replace('param', '')} }}}}", str(value))
+                    sql = sql.replace(
+                        f"{{{{ param{param_key.replace('param', '')} }}}}", str(value)
+                    )
                     sql = sql.replace(f"{{{{param{param_key.replace('param', '')}}}}}", str(value))
 
         # Apply variable substitution for other variables (these are SQL values, quoted)

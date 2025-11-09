@@ -139,8 +139,7 @@ class TestExecutor:
 
         # Collect used test names from both executors
         used_test_names = (
-            self.function_executor.get_used_test_names()
-            | self.model_executor.get_used_test_names()
+            self.function_executor.get_used_test_names() | self.model_executor.get_used_test_names()
         )
 
         # Check for unused generic tests
@@ -176,8 +175,7 @@ class TestExecutor:
 
         # Collect used test names from both executors
         used_test_names = (
-            self.function_executor.get_used_test_names()
-            | self.model_executor.get_used_test_names()
+            self.function_executor.get_used_test_names() | self.model_executor.get_used_test_names()
         )
 
         unused_checker = UnusedTestChecker(self._test_discovery, self.project_folder)

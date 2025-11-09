@@ -118,7 +118,9 @@ class ModelExecutor:
             function_results = {}
             if parsed_functions:
                 self.logger.info(f"Executing {len(parsed_functions)} functions before models")
-                function_results = self.execution_engine.execute_functions(parsed_functions, execution_order)
+                function_results = self.execution_engine.execute_functions(
+                    parsed_functions, execution_order
+                )
                 if function_results.get("failed_functions"):
                     self.logger.warning(
                         f"Some functions failed: {len(function_results['failed_functions'])} failed"

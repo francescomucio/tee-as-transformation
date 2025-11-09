@@ -23,7 +23,12 @@ logger = logging.getLogger(__name__)
 class JSONExporter:
     """Handles JSON export of parsed models and dependency graphs."""
 
-    def __init__(self, output_folder: Path, project_config: dict[str, Any] | None = None, project_folder: Path | None = None):
+    def __init__(
+        self,
+        output_folder: Path,
+        project_config: dict[str, Any] | None = None,
+        project_folder: Path | None = None,
+    ):
         """
         Initialize the JSON exporter.
 
@@ -146,11 +151,11 @@ class JSONExporter:
             raise OutputGenerationError(f"Failed to export all data: {e}") from e
 
     def export_ots_modules(
-        self, 
-        parsed_models: dict[str, ParsedModel], 
+        self,
+        parsed_models: dict[str, ParsedModel],
         parsed_functions: dict[str, ParsedFunction] | None = None,
         test_library_path: Path | None = None,
-        format: Literal["json", "yaml"] = "json"
+        format: Literal["json", "yaml"] = "json",
     ) -> dict[str, Path]:
         """
         Export parsed models and functions as OTS Modules.
@@ -179,7 +184,7 @@ class JSONExporter:
             modules = self.transformer.transform_to_ots_modules(
                 parsed_models,
                 parsed_functions=parsed_functions,
-                test_library_path=test_library_path
+                test_library_path=test_library_path,
             )
 
             results = {}
@@ -198,12 +203,20 @@ class JSONExporter:
                 # Write module to file in the specified format
                 with open(output_file, "w", encoding="utf-8") as f:
                     if format == "yaml":
-                        yaml.dump(module_data, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+                        yaml.dump(
+                            module_data,
+                            f,
+                            default_flow_style=False,
+                            sort_keys=False,
+                            allow_unicode=True,
+                        )
                     else:
                         json.dump(module_data, f, indent=2, ensure_ascii=False)
 
                 results[module_name] = output_file
-                logger.info(f"Exported OTS module '{module_name}' to {output_file} ({format.upper()})")
+                logger.info(
+                    f"Exported OTS module '{module_name}' to {output_file} ({format.upper()})"
+                )
                 print(f"✅ OTS module '{module_name}' saved to {output_file} ({format.upper()})")
                 print(f"   Contains {len(module_data['transformations'])} transformations", end="")
                 if "functions" in module_data and module_data["functions"]:

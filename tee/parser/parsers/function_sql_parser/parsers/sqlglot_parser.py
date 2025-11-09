@@ -96,7 +96,9 @@ class SQLglotParser:
 
             # Determine function type
             function_type: FunctionType = "scalar"
-            if "RETURNS TABLE" in content.upper() or (return_type and "TABLE" in return_type.upper()):
+            if "RETURNS TABLE" in content.upper() or (
+                return_type and "TABLE" in return_type.upper()
+            ):
                 function_type = "table"
 
             # Extract dependencies
@@ -123,4 +125,3 @@ class SQLglotParser:
         except Exception as e:
             logger.debug(f"SQLglot parsing failed for {file_path_str}: {e}")
             return None
-

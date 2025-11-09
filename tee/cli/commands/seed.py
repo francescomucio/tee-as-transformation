@@ -2,7 +2,6 @@
 Seed command implementation.
 """
 
-
 import typer
 
 from tee.cli.context import CommandContext
@@ -39,22 +38,22 @@ def cmd_seed(
 
         if not seed_files:
             typer.echo("ℹ️  No seed files found in seeds folder")
-            typer.echo(f"   Supported formats: CSV, TSV, JSON")
-            typer.echo(f"   Example: seeds/users.csv or seeds/my_schema/orders.json")
+            typer.echo("   Supported formats: CSV, TSV, JSON")
+            typer.echo("   Example: seeds/users.csv or seeds/my_schema/orders.json")
             return
 
         typer.echo(f"\nFound {len(seed_files)} seed file(s):")
         for file_path, schema_name in seed_files:
             if schema_name:
-                typer.echo(f"  - {file_path.relative_to(seeds_folder)} → {schema_name}.{file_path.stem}")
+                typer.echo(
+                    f"  - {file_path.relative_to(seeds_folder)} → {schema_name}.{file_path.stem}"
+                )
             else:
                 typer.echo(f"  - {file_path.relative_to(seeds_folder)} → {file_path.stem}")
 
         # Create execution engine to get adapter
         execution_engine = ExecutionEngine(
-            ctx.config["connection"],
-            project_folder=str(ctx.project_path),
-            variables=ctx.vars
+            ctx.config["connection"], project_folder=str(ctx.project_path), variables=ctx.vars
         )
 
         try:
@@ -73,7 +72,9 @@ def cmd_seed(
             typer.echo("=" * 50)
 
             if seed_results["loaded_tables"]:
-                typer.echo(f"\n✅ Successfully loaded {len(seed_results['loaded_tables'])} seed(s):")
+                typer.echo(
+                    f"\n✅ Successfully loaded {len(seed_results['loaded_tables'])} seed(s):"
+                )
                 for table in seed_results["loaded_tables"]:
                     # Get table info to show row count
                     try:
@@ -84,7 +85,9 @@ def cmd_seed(
                         typer.echo(f"  - {table} (could not get row count: {e})")
 
             if seed_results["failed_tables"]:
-                typer.echo(f"\n❌ Failed to load {len(seed_results['failed_tables'])} seed(s):", err=True)
+                typer.echo(
+                    f"\n❌ Failed to load {len(seed_results['failed_tables'])} seed(s):", err=True
+                )
                 for failure in seed_results["failed_tables"]:
                     typer.echo(f"  - {failure['file']}: {failure['error']}", err=True)
 
@@ -96,4 +99,3 @@ def cmd_seed(
 
     except Exception as e:
         ctx.handle_error(e)
-

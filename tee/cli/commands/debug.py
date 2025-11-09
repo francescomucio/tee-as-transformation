@@ -2,7 +2,6 @@
 Debug command implementation.
 """
 
-
 import typer
 
 from tee.cli.context import CommandContext
@@ -66,4 +65,3 @@ def cmd_debug(
         # Cleanup
         if connection_manager:
             connection_manager.cleanup()
-

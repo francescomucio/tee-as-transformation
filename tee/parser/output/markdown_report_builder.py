@@ -2,7 +2,6 @@
 Helper functions for building markdown report sections.
 """
 
-
 from tee.parser.shared.types import DependencyGraph
 
 
@@ -21,12 +20,10 @@ def separate_nodes_by_type(
     """
     test_nodes = [node for node in all_nodes if node.startswith("test:")]
     function_nodes = [
-        node for node in all_nodes 
-        if node in function_names and not node.startswith("test:")
+        node for node in all_nodes if node in function_names and not node.startswith("test:")
     ]
     table_nodes = [
-        node for node in all_nodes 
-        if node not in function_names and not node.startswith("test:")
+        node for node in all_nodes if node not in function_names and not node.startswith("test:")
     ]
     return test_nodes, function_nodes, table_nodes
 
@@ -62,10 +59,7 @@ def _format_dependency_list(deps: list[str], prefix: str = "`", suffix: str = "`
 
 
 def build_statistics_section(
-    table_nodes: list[str],
-    function_nodes: list[str],
-    test_nodes: list[str],
-    graph: DependencyGraph
+    table_nodes: list[str], function_nodes: list[str], test_nodes: list[str], graph: DependencyGraph
 ) -> str:
     """
     Build the statistics section of the markdown report.
@@ -111,10 +105,7 @@ def build_execution_order_section(execution_order: list[str]) -> str:
     return content
 
 
-def build_test_details_section(
-    test_nodes: list[str],
-    graph: DependencyGraph
-) -> str:
+def build_test_details_section(test_nodes: list[str], graph: DependencyGraph) -> str:
     """
     Build the tests details section of the markdown report.
 
@@ -184,7 +175,7 @@ def build_transformation_details_section(
     function_nodes: list[str],
     table_nodes: list[str],
     function_names: set[str],
-    graph: DependencyGraph
+    graph: DependencyGraph,
 ) -> str:
     """
     Build the transformation details section of the markdown report.
@@ -257,4 +248,3 @@ def build_circular_dependencies_section(cycles: list[list[str]]) -> str:
         content += f"{i}. {cycle_str}\n\n"
 
     return content
-

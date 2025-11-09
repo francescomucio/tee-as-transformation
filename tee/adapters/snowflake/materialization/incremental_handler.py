@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class IncrementalHandler:
     """Handles incremental materialization strategies for Snowflake."""
 
-    def __init__(self, adapter: "DatabaseAdapter") -> None:
+    def __init__(self, adapter: DatabaseAdapter) -> None:
         """
         Initialize the incremental handler.
 
@@ -52,9 +52,7 @@ class IncrementalHandler:
         finally:
             cursor.close()
 
-    def execute_merge(
-        self, table_name: str, source_sql: str, config: dict[str, Any]
-    ) -> None:
+    def execute_merge(self, table_name: str, source_sql: str, config: dict[str, Any]) -> None:
         """Execute incremental merge (upsert) with dedup and tuple ON for composite keys."""
         if not self.adapter.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
@@ -85,9 +83,7 @@ class IncrementalHandler:
         finally:
             cursor.close()
 
-    def execute_delete_insert(
-        self, table_name: str, delete_sql: str, insert_sql: str
-    ) -> None:
+    def execute_delete_insert(self, table_name: str, delete_sql: str, insert_sql: str) -> None:
         """Execute incremental delete+insert operation."""
         if not self.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
@@ -148,4 +144,3 @@ class IncrementalHandler:
             f"WHEN NOT MATCHED THEN INSERT ({insert_cols}) VALUES ({insert_vals})"
         )
         return merge_sql
-

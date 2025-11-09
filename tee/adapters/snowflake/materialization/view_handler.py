@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class ViewHandler:
     """Handles view creation with column comments for Snowflake."""
 
-    def __init__(self, adapter: "DatabaseAdapter") -> None:
+    def __init__(self, adapter: DatabaseAdapter) -> None:
         """
         Initialize the view handler.
 
@@ -24,9 +24,7 @@ class ViewHandler:
         self.logger = adapter.logger
         self.tag_manager = adapter.tag_manager
 
-    def create(
-        self, view_name: str, query: str, metadata: dict[str, Any] | None = None
-    ) -> None:
+    def create(self, view_name: str, query: str, metadata: dict[str, Any] | None = None) -> None:
         """Create a view from a qualified SQL query."""
         if not self.adapter.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
@@ -74,7 +72,9 @@ class ViewHandler:
                 object_tags = metadata.get("object_tags", {})
                 if object_tags and isinstance(object_tags, dict):
                     try:
-                        self.tag_manager.attach_object_tags("VIEW", qualified_view_name, object_tags)
+                        self.tag_manager.attach_object_tags(
+                            "VIEW", qualified_view_name, object_tags
+                        )
                     except Exception as e:
                         self.logger.warning(f"Could not add object_tags for view {view_name}: {e}")
                         # Don't raise here - view creation succeeded, tags are optional
@@ -150,4 +150,3 @@ class ViewHandler:
             self.logger.warning(f"Failed to build view with comments: {e}")
             # Fall back to simple CREATE VIEW without comments
             return f"CREATE OR REPLACE VIEW {qualified_view_name} AS {query}"
-

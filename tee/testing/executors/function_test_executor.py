@@ -165,9 +165,7 @@ class FunctionTestExecutor:
                     return None
             else:
                 # Standard tests don't support function testing
-                self.logger.warning(
-                    f"Test {test_name} does not support function testing, skipping"
-                )
+                self.logger.warning(f"Test {test_name} does not support function testing, skipping")
                 return None
 
         except Exception as e:
@@ -185,5 +183,3 @@ class FunctionTestExecutor:
     def get_used_test_names(self) -> set[str]:
         """Get set of test names that were used during execution."""
         return self._used_test_names
-
-

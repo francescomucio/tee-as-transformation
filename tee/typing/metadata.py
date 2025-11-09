@@ -2,9 +2,7 @@
 Type definitions for SQL model metadata.
 """
 
-from typing import Any, Literal, TypedDict, Union
-
-from typing_extensions import NotRequired
+from typing import Any, Literal, NotRequired, TypedDict
 
 # Data type definitions
 DataType = Literal[
@@ -183,9 +181,13 @@ class OTSTransformation(TypedDict):
 
     transformation_id: str
     description: NotRequired[str | None]
-    transformation_type: NotRequired[str | None]  # "sql" (default), future: "python", "pyspark", "r"
+    transformation_type: NotRequired[
+        str | None
+    ]  # "sql" (default), future: "python", "pyspark", "r"
     sql_dialect: NotRequired[str | None]
-    code: dict[str, Any]  # Type-based structure: {"sql": {"original_sql": ..., "resolved_sql": ..., "source_tables": [...]}}
+    code: dict[
+        str, Any
+    ]  # Type-based structure: {"sql": {"original_sql": ..., "resolved_sql": ..., "source_tables": [...]}}
     schema: NotRequired[dict[str, Any] | None]
     materialization: NotRequired[dict[str, Any] | None]
     tests: NotRequired[dict[str, Any] | None]
@@ -202,7 +204,9 @@ class OTSFunction(TypedDict):
     parameters: NotRequired[list[FunctionParameter]]
     return_type: NotRequired[str | None]  # For scalar/aggregate functions
     return_table_schema: NotRequired[list[ColumnDefinition] | None]  # For table functions
-    deterministic: NotRequired[bool | None]  # Whether function is deterministic (same inputs = same outputs)
+    deterministic: NotRequired[
+        bool | None
+    ]  # Whether function is deterministic (same inputs = same outputs)
     code: dict[str, Any]  # Type-based structure with generic_sql and database_specific
     dependencies: NotRequired[dict[str, list[str]]]  # {"functions": [], "tables": []}
     metadata: dict[str, Any]  # Includes tags, object_tags, file_path, etc.

@@ -38,7 +38,9 @@ class TestResult:
         if self.function_name:
             location = self.function_name
         elif self.column_name:
-            location = f"{self.table_name}.{self.column_name}" if self.table_name else self.column_name
+            location = (
+                f"{self.table_name}.{self.column_name}" if self.table_name else self.column_name
+            )
         else:
             location = self.table_name or "unknown"
         return f"{status} {self.test_name} on {location}: {self.message}"
@@ -118,9 +120,7 @@ class StandardTest(ABC):
                 f"{self.name} test is a model-level test and cannot be applied to a column"
             )
 
-    def _validate_unknown_params(
-        self, params: dict[str, Any] | None, allowed_params: set
-    ) -> None:
+    def _validate_unknown_params(self, params: dict[str, Any] | None, allowed_params: set) -> None:
         """
         Validate that no unknown parameters are provided.
 

@@ -20,8 +20,9 @@ class ReturnTypeExtractor:
             Return type string or None if not found
         """
         # Match RETURNS followed by type, stopping before AS or LANGUAGE
-        returns_match = re.search(r"RETURNS\s+(\w+(?:\s+\w+)?)\s*(?=AS|LANGUAGE|;|$)", content, re.IGNORECASE)
+        returns_match = re.search(
+            r"RETURNS\s+(\w+(?:\s+\w+)?)\s*(?=AS|LANGUAGE|;|$)", content, re.IGNORECASE
+        )
         if returns_match:
             return returns_match.group(1).strip().upper()
         return None
-

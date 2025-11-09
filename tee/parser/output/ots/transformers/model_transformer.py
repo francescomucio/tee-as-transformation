@@ -27,9 +27,7 @@ class ModelTransformer(BaseTransformer):
         self.sql_dialect = sql_dialect
         self.schema_inferencer = SchemaInferencer()
 
-    def transform(
-        self, model_id: str, model_data: ParsedModel, schema: str
-    ) -> OTSTransformation:
+    def transform(self, model_id: str, model_data: ParsedModel, schema: str) -> OTSTransformation:
         """
         Transform a single parsed model to OTS transformation format.
 
@@ -238,5 +236,3 @@ class ModelTransformer(BaseTransformer):
             tests["table"] = normalized_table_tests
 
         return tests if tests else None
-
-

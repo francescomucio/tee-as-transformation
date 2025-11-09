@@ -58,9 +58,7 @@ class FunctionExecutor:
         }
 
         # Filter execution order to get only functions
-        function_order = [
-            name for name in execution_order if name in parsed_functions
-        ]
+        function_order = [name for name in execution_order if name in parsed_functions]
 
         if not function_order:
             logger.info("No functions to execute")
@@ -82,7 +80,10 @@ class FunctionExecutor:
                 if function_name not in parsed_functions:
                     logger.warning(f"Function {function_name} not found in parsed functions")
                     results["failed_functions"].append(
-                        {"function": function_name, "error": "Function not found in parsed functions"}
+                        {
+                            "function": function_name,
+                            "error": "Function not found in parsed functions",
+                        }
                     )
                     continue
 
@@ -194,7 +195,9 @@ class FunctionExecutor:
             return
 
         # Attach tags to schema if adapter supports it
-        if hasattr(self.adapter, "attach_tags") and hasattr(self.adapter, "_create_schema_if_needed"):
+        if hasattr(self.adapter, "attach_tags") and hasattr(
+            self.adapter, "_create_schema_if_needed"
+        ):
             try:
                 # Use the adapter's _create_schema_if_needed with metadata to attach tags
                 # This will create the schema if needed and attach tags
@@ -205,5 +208,3 @@ class FunctionExecutor:
 
         # Mark as processed
         self._processed_schemas[schema_name] = schema_metadata
-
-

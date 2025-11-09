@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class TagManager:
     """Manages tag attachment for Snowflake objects."""
 
-    def __init__(self, adapter: "DatabaseAdapter") -> None:
+    def __init__(self, adapter: DatabaseAdapter) -> None:
         """
         Initialize the tag manager.
 
@@ -28,9 +28,7 @@ class TagManager:
         """Get connection from adapter."""
         return self.adapter.connection
 
-    def attach_tags(
-        self, object_type: str, object_name: str, tags: list[str]
-    ) -> None:
+    def attach_tags(self, object_type: str, object_name: str, tags: list[str]) -> None:
         """
         Attach tags to a Snowflake database object.
 
@@ -98,7 +96,9 @@ class TagManager:
 
                     alter_sql = f"ALTER {object_type} {object_name} SET TAG {sanitized_tag} = '{tag_value.replace("'", "''")}'"
                     cursor.execute(alter_sql)
-                    self.logger.debug(f"Attached tag {sanitized_tag}='{tag_value}' to {object_type} {object_name}")
+                    self.logger.debug(
+                        f"Attached tag {sanitized_tag}='{tag_value}' to {object_type} {object_name}"
+                    )
 
                 except Exception as e:
                     self.logger.warning(
@@ -198,10 +198,7 @@ class TagManager:
             )
 
         except Exception as e:
-            self.logger.warning(
-                f"Error attaching object tags to {object_type} {object_name}: {e}"
-            )
+            self.logger.warning(f"Error attaching object tags to {object_type} {object_name}: {e}")
             # Don't raise - tag attachment is optional
         finally:
             cursor.close()
-

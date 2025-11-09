@@ -16,7 +16,7 @@ class ParserFactory:
     """Factory for creating appropriate parsers based on file type."""
 
     # Registry of parsers by file extension
-    _parsers: dict[str, type[BaseParser]] = {ext: SQLParser for ext in SUPPORTED_SQL_EXTENSIONS}
+    _parsers: dict[str, type[BaseParser]] = dict.fromkeys(SUPPORTED_SQL_EXTENSIONS, SQLParser)
 
     # Python parser for .py files
     _python_parser = PythonParser

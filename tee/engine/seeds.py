@@ -273,7 +273,9 @@ class SeedLoader:
                 for row in rows:
                     values = [self._escape_value(row.get(col, "")) for col in columns]
                     values_str = ", ".join(values)
-                    insert_query = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({values_str})"
+                    insert_query = (
+                        f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({values_str})"
+                    )
                     self.adapter.execute_query(insert_query)
         except Exception as e:
             self.logger.error(f"Error loading CSV generically: {e}")
@@ -301,7 +303,9 @@ class SeedLoader:
                 for row in rows:
                     values = [self._escape_value(row.get(col, "")) for col in columns]
                     values_str = ", ".join(values)
-                    insert_query = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({values_str})"
+                    insert_query = (
+                        f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({values_str})"
+                    )
                     self.adapter.execute_query(insert_query)
         except Exception as e:
             self.logger.error(f"Error loading JSON generically: {e}")
@@ -345,9 +349,7 @@ class SeedLoader:
         escaped = str(value).replace("'", "''")
         return f"'{escaped}'"
 
-    def load_all_seeds(
-        self, seed_files: list[tuple[Path, str | None]]
-    ) -> dict[str, Any]:
+    def load_all_seeds(self, seed_files: list[tuple[Path, str | None]]) -> dict[str, Any]:
         """
         Load all seed files into database tables.
 
@@ -381,9 +383,7 @@ class SeedLoader:
             except Exception as e:
                 error_msg = f"Error loading seed file {file_path}: {e}"
                 self.logger.error(error_msg)
-                results["failed_tables"].append(
-                    {"file": str(file_path), "error": str(e)}
-                )
+                results["failed_tables"].append({"file": str(file_path), "error": str(e)})
 
         self.logger.info(
             f"Seed loading completed. {len(results['loaded_tables'])} successful, "
@@ -391,4 +391,3 @@ class SeedLoader:
         )
 
         return results
-

@@ -115,5 +115,3 @@ class TestDefinitionParser:
         # Check severity_overrides dict (key format: "context.test_name" or just "test_name")
         override_key = f"{context}.{test_name}"
         return severity_overrides.get(override_key) or severity_overrides.get(test_name)
-
-

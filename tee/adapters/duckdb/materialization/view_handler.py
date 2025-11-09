@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class ViewHandler:
     """Handles view creation for DuckDB."""
 
-    def __init__(self, adapter: "DatabaseAdapter") -> None:
+    def __init__(self, adapter: DatabaseAdapter) -> None:
         """
         Initialize the view handler.
 
@@ -23,9 +23,7 @@ class ViewHandler:
         self.config = adapter.config
         self.logger = adapter.logger
 
-    def create(
-        self, view_name: str, query: str, metadata: dict[str, Any] | None = None
-    ) -> None:
+    def create(self, view_name: str, query: str, metadata: dict[str, Any] | None = None) -> None:
         """Create a view from a qualified SQL query."""
         if not self.adapter.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
@@ -58,5 +56,3 @@ class ViewHandler:
         except Exception as e:
             self.logger.error(f"Failed to create view {view_name}: {e}")
             raise
-
-

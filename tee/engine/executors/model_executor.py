@@ -47,9 +47,7 @@ class ModelExecutor:
         # Track schemas that have been processed for tag attachment
         self._processed_schemas: dict[str, dict[str, Any]] = {}
 
-    def execute(
-        self, parsed_models: dict[str, Any], execution_order: list[str]
-    ) -> dict[str, Any]:
+    def execute(self, parsed_models: dict[str, Any], execution_order: list[str]) -> dict[str, Any]:
         """
         Execute SQL models in the specified order with dialect conversion.
 
@@ -138,7 +136,9 @@ class ModelExecutor:
                     self._attach_schema_tags_if_needed(schema_name)
 
                 # Check for materialization changes and database existence
-                self.state_checker.check_model_state(table_name, materialization, metadata, self.adapter)
+                self.state_checker.check_model_state(
+                    table_name, materialization, metadata, self.adapter
+                )
 
                 # Execute the model
                 self.materialization_handler.materialize(
@@ -146,7 +146,9 @@ class ModelExecutor:
                 )
 
                 # Save model state after successful execution
-                self.state_checker.save_model_state(table_name, materialization, sql_query, metadata)
+                self.state_checker.save_model_state(
+                    table_name, materialization, sql_query, metadata
+                )
 
                 # Get table information
                 table_info = self.adapter.get_table_info(table_name)
@@ -199,9 +201,7 @@ class ModelExecutor:
         if "resolved_sql" in sql_data:
             return sql_data["resolved_sql"]
         elif "original_sql" in sql_data:
-            logger.warning(
-                f"No resolved_sql found for {table_name}, falling back to original_sql"
-            )
+            logger.warning(f"No resolved_sql found for {table_name}, falling back to original_sql")
             return sql_data["original_sql"]
 
         logger.error(f"No SQL query found for {table_name}")
@@ -239,9 +239,7 @@ class ModelExecutor:
             return "table"
 
         except Exception as e:
-            logger.warning(
-                f"Error extracting materialization type: {e}, defaulting to 'table'"
-            )
+            logger.warning(f"Error extracting materialization type: {e}, defaulting to 'table'")
             return "table"
 
     def _extract_schema_name(self, table_name: str) -> str | None:
@@ -279,7 +277,9 @@ class ModelExecutor:
             return
 
         # Attach tags to schema if adapter supports it
-        if hasattr(self.adapter, "attach_tags") and hasattr(self.adapter, "_create_schema_if_needed"):
+        if hasattr(self.adapter, "attach_tags") and hasattr(
+            self.adapter, "_create_schema_if_needed"
+        ):
             try:
                 # Use the adapter's _create_schema_if_needed with metadata to attach tags
                 # This will create the schema if needed and attach tags
@@ -290,5 +290,3 @@ class ModelExecutor:
 
         # Mark as processed
         self._processed_schemas[schema_name] = schema_metadata
-
-

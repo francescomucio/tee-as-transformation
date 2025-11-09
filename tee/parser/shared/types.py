@@ -3,7 +3,7 @@ Common type definitions for the parser module.
 """
 
 from pathlib import Path
-from typing import Any, Union
+from typing import Any
 
 # Core data structures
 ParsedModel = dict[str, Any]

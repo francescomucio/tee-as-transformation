@@ -28,6 +28,7 @@ DatabaseType = Literal["duckdb", "snowflake", "postgresql", "bigquery"]
 
 class AlphabeticalOrderGroup(typer.core.TyperGroup):
     """Custom Typer Group that lists commands in alphabetical order."""
+
     def list_commands(self, ctx: typer.Context) -> list[str]:
         return sorted(self.commands.keys())
 
@@ -36,8 +37,8 @@ def validate_format(value: str) -> OutputFormat:
     """Validate format option (json or yaml)."""
     if value not in ["json", "yaml"]:
         raise typer.BadParameter(
-            typer.style("Error: ", fg=typer.colors.RED, bold=True) +
-            f"Invalid format '{value}'. Must be 'json' or 'yaml'."
+            typer.style("Error: ", fg=typer.colors.RED, bold=True)
+            + f"Invalid format '{value}'. Must be 'json' or 'yaml'."
         )
     return value  # type: ignore[return-value]
 
@@ -48,8 +49,8 @@ def validate_database_type(value: str) -> DatabaseType:
     if not is_adapter_supported(db_type):
         available = ", ".join(sorted(list_available_adapters()))
         raise typer.BadParameter(
-            typer.style("Error: ", fg=typer.colors.RED, bold=True) +
-            f"Unsupported database type '{db_type}'. "
+            typer.style("Error: ", fg=typer.colors.RED, bold=True)
+            + f"Unsupported database type '{db_type}'. "
             f"Supported: {available}"
         )
     return db_type  # type: ignore[return-value]
@@ -73,12 +74,17 @@ def main_callback(ctx: typer.Context) -> None:
         typer.echo(ctx.get_help())
         raise typer.Exit()
 
+
 # Common option definitions to reduce duplication
 PROJECT_FOLDER_ARG = typer.Argument(None, help="Path to the project folder containing project.toml")
 VERBOSE_OPTION = typer.Option(False, "-v", "--verbose", help="Enable verbose output")
 VARS_OPTION = typer.Option(None, "--vars", help="Variables to pass to models (JSON format)")
-SELECT_OPTION = typer.Option(None, "-s", "--select", help="Select models. Can be used multiple times.")
-EXCLUDE_OPTION = typer.Option(None, "-e", "--exclude", help="Exclude models. Can be used multiple times.")
+SELECT_OPTION = typer.Option(
+    None, "-s", "--select", help="Select models. Can be used multiple times."
+)
+EXCLUDE_OPTION = typer.Option(
+    None, "-e", "--exclude", help="Exclude models. Can be used multiple times."
+)
 
 
 def _check_required_argument(ctx: typer.Context, arg_name: str, arg_value: Any) -> None:
@@ -183,8 +189,16 @@ def seed(
 @app.command()
 def init(
     ctx: typer.Context,
-    project_name: str | None = typer.Argument(None, help="Name of the project (will create a folder with this name)"),
-    database_type: DatabaseType = typer.Option("duckdb", "-d", "--database-type", help="Database type (duckdb, snowflake, postgresql, bigquery)", callback=validate_database_type),
+    project_name: str | None = typer.Argument(
+        None, help="Name of the project (will create a folder with this name)"
+    ),
+    database_type: DatabaseType = typer.Option(
+        "duckdb",
+        "-d",
+        "--database-type",
+        help="Database type (duckdb, snowflake, postgresql, bigquery)",
+        callback=validate_database_type,
+    ),
 ) -> None:
     """Initialize a new t4t project."""
     _check_required_argument(ctx, "project_name", project_name)
@@ -200,7 +214,9 @@ def compile(
     project_folder: str | None = PROJECT_FOLDER_ARG,
     vars: str | None = VARS_OPTION,
     verbose: bool = VERBOSE_OPTION,
-    format: OutputFormat = typer.Option("json", "-f", "--format", help="Output format: json or yaml", callback=validate_format),
+    format: OutputFormat = typer.Option(
+        "json", "-f", "--format", help="Output format: json or yaml", callback=validate_format
+    ),
 ) -> None:
     """Compile t4t project to OTS modules."""
     _check_required_argument(ctx, "project_folder", project_folder)
@@ -236,11 +252,16 @@ def ots_callback(ctx: typer.Context) -> None:  # type: ignore[no-untyped-def]
         typer.echo(ctx.get_help())
         raise typer.Exit()
 
+
 @ots_app.command("run")
 def ots_run(
     ctx: typer.Context,
-    ots_path: str | None = typer.Argument(None, help="Path to OTS module file (.ots.json) or directory"),
-    project_folder: str | None = typer.Option(None, "--project-folder", help="Project folder for connection config and merging"),
+    ots_path: str | None = typer.Argument(
+        None, help="Path to OTS module file (.ots.json) or directory"
+    ),
+    project_folder: str | None = typer.Option(
+        None, "--project-folder", help="Project folder for connection config and merging"
+    ),
     vars: str | None = VARS_OPTION,
     verbose: bool = VERBOSE_OPTION,
     select: list[str] | None = SELECT_OPTION,
@@ -261,7 +282,9 @@ def ots_run(
 @ots_app.command("validate")
 def ots_validate(
     ctx: typer.Context,
-    ots_path: str | None = typer.Argument(None, help="Path to OTS module file (.ots.json) or directory"),
+    ots_path: str | None = typer.Argument(
+        None, help="Path to OTS module file (.ots.json) or directory"
+    ),
     verbose: bool = VERBOSE_OPTION,
 ) -> None:
     """Validate OTS modules."""

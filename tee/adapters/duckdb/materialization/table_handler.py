@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class TableHandler:
     """Handles table creation and management for DuckDB."""
 
-    def __init__(self, adapter: "DatabaseAdapter") -> None:
+    def __init__(self, adapter: DatabaseAdapter) -> None:
         """
         Initialize the table handler.
 
@@ -23,9 +23,7 @@ class TableHandler:
         self.config = adapter.config
         self.logger = adapter.logger
 
-    def create(
-        self, table_name: str, query: str, metadata: dict[str, Any] | None = None
-    ) -> None:
+    def create(self, table_name: str, query: str, metadata: dict[str, Any] | None = None) -> None:
         """Create a table from a qualified SQL query with optional column metadata."""
         if not self.adapter.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
@@ -65,5 +63,3 @@ class TableHandler:
         except Exception as e:
             self.logger.error(f"Failed to create table {table_name}: {e}")
             raise
-
-

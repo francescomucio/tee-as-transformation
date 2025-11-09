@@ -10,8 +10,9 @@ This module provides utilities for testing database adapters including:
 
 import logging
 import time
+from collections.abc import Callable
 from contextlib import contextmanager
-from typing import Any, Callable
+from typing import Any
 
 from .base import DatabaseAdapter
 

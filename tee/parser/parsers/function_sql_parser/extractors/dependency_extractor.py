@@ -38,8 +38,9 @@ class DependencyExtractor:
         # Support both unqualified and qualified function names
         func_pattern = r"([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)?)\s*\("
         func_matches = re.findall(func_pattern, function_body, re.IGNORECASE)
-        functions = [f.strip() for f in func_matches if f.strip().lower() not in SQL_BUILT_IN_FUNCTIONS]
+        functions = [
+            f.strip() for f in func_matches if f.strip().lower() not in SQL_BUILT_IN_FUNCTIONS
+        ]
         dependencies["functions"] = list(set(functions))
 
         return dependencies
-

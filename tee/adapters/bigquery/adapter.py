@@ -346,7 +346,10 @@ class BigQueryAdapter(DatabaseAdapter):
         except Exception as e:
             self.logger.error(f"Failed to create function {full_function_name}: {e}")
             from tee.parser.shared.exceptions import FunctionExecutionError
-            raise FunctionExecutionError(f"Failed to create function {full_function_name}: {e}") from e
+
+            raise FunctionExecutionError(
+                f"Failed to create function {full_function_name}: {e}"
+            ) from e
 
     def function_exists(self, function_name: str, signature: Optional[str] = None) -> bool:
         """Check if a function exists in the database."""
@@ -408,6 +411,7 @@ class BigQueryAdapter(DatabaseAdapter):
         except Exception as e:
             self.logger.error(f"Error dropping function {function_name}: {e}")
             from tee.parser.shared.exceptions import FunctionExecutionError
+
             raise FunctionExecutionError(f"Failed to drop function {function_name}: {e}") from e
 
 

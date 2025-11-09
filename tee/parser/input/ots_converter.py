@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 class OTSConverterError(Exception):
     """Exception raised when converting OTS modules fails."""
+
     pass
 
 
@@ -64,7 +65,9 @@ class OTSConverter:
                     parsed_models[transformation_id] = parsed_model
                 except Exception as e:
                     logger.error(f"Failed to convert transformation {transformation_id}: {e}")
-                    raise OTSConverterError(f"Failed to convert transformation {transformation_id}: {e}") from e
+                    raise OTSConverterError(
+                        f"Failed to convert transformation {transformation_id}: {e}"
+                    ) from e
 
             # Convert functions (OTS 0.2.0+)
             parsed_functions = {}
@@ -84,7 +87,9 @@ class OTSConverter:
                         parsed_functions[function_id] = parsed_function
                     except Exception as e:
                         logger.error(f"Failed to convert function {function_id}: {e}")
-                        raise OTSConverterError(f"Failed to convert function {function_id}: {e}") from e
+                        raise OTSConverterError(
+                            f"Failed to convert function {function_id}: {e}"
+                        ) from e
 
             logger.info(
                 f"Converted {len(parsed_models)} transformations and {len(parsed_functions)} functions from OTS module"
@@ -157,7 +162,9 @@ class OTSConverter:
             }
         else:
             # For non-SQL transformations, preserve as-is for now
-            logger.warning(f"Non-SQL transformation type '{transformation_type}' not fully supported yet")
+            logger.warning(
+                f"Non-SQL transformation type '{transformation_type}' not fully supported yet"
+            )
             return code
 
     def _convert_metadata(
@@ -280,9 +287,7 @@ class OTSConverter:
 
         return column_definitions
 
-    def _convert_materialization(
-        self, materialization: dict[str, Any] | None
-    ) -> dict[str, Any]:
+    def _convert_materialization(self, materialization: dict[str, Any] | None) -> dict[str, Any]:
         """
         Convert OTS materialization to ParsedModel format.
 
@@ -306,9 +311,7 @@ class OTSConverter:
 
         return result
 
-    def _convert_incremental_details(
-        self, incremental_details: dict[str, Any]
-    ) -> dict[str, Any]:
+    def _convert_incremental_details(self, incremental_details: dict[str, Any]) -> dict[str, Any]:
         """
         Convert OTS incremental_details to ParsedModel incremental config.
 
@@ -392,9 +395,7 @@ class OTSConverter:
 
         return result if result else None
 
-    def _convert_function(
-        self, function: OTSFunction, module: OTSModule
-    ) -> ParsedFunction:
+    def _convert_function(self, function: OTSFunction, module: OTSModule) -> ParsedFunction:
         """
         Convert a single OTS function to ParsedFunction format.
 
@@ -511,4 +512,3 @@ class OTSConverter:
             # For non-SQL functions (Python, JavaScript, etc.), preserve as-is
             logger.warning(f"Non-SQL function language '{language}' not fully supported yet")
             return code
-

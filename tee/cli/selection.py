@@ -11,7 +11,9 @@ from typing import Any
 class ModelSelector:
     """Selects models based on name patterns and tags."""
 
-    def __init__(self, select_patterns: list[str] | None = None, exclude_patterns: list[str] | None = None) -> None:
+    def __init__(
+        self, select_patterns: list[str] | None = None, exclude_patterns: list[str] | None = None
+    ) -> None:
         """
         Initialize model selector.
 
@@ -219,4 +221,3 @@ class ModelSelector:
                     filtered_order.append(model_name)
 
         return filtered_models, filtered_order
-

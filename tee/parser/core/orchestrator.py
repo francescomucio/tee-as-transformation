@@ -51,13 +51,13 @@ class ParserOrchestrator:
         self.project_config = project_config or {}
 
         # Initialize components
-        self.file_discovery = FileDiscovery(self.models_folder, functions_folder=self.functions_folder)
+        self.file_discovery = FileDiscovery(
+            self.models_folder, functions_folder=self.functions_folder
+        )
         self.table_resolver = TableResolver(connection)
         self.dependency_builder = DependencyGraphBuilder()
         self.json_exporter = JSONExporter(
-            self.project_folder / "output", 
-            project_config, 
-            project_folder=self.project_folder
+            self.project_folder / "output", project_config, project_folder=self.project_folder
         )
         self.report_generator = ReportGenerator(self.project_folder / "output")
         self.transformer = project_config is not None  # Flag to enable OTS export
@@ -229,7 +229,9 @@ class ParserOrchestrator:
                         override_map[db_name][base_name] = override_file
 
             # Parse SQL functions
-            sql_parser = FunctionSQLParser(connection=self.connection, project_config=self.project_config)
+            sql_parser = FunctionSQLParser(
+                connection=self.connection, project_config=self.project_config
+            )
             for sql_file in function_files["sql"]:
                 try:
                     logger.debug(f"Processing SQL function file: {sql_file}")
@@ -294,7 +296,9 @@ class ParserOrchestrator:
                         for function_name, function_data in function_results.items():
                             # Generate qualified function name
                             qualified_name = self.table_resolver.generate_full_function_name(
-                                override_file, self.functions_folder, function_data["function_metadata"]
+                                override_file,
+                                self.functions_folder,
+                                function_data["function_metadata"],
                             )
 
                             # Only add if not already present (generic SQL takes precedence if both exist)
@@ -308,10 +312,14 @@ class ParserOrchestrator:
                                 )
 
                                 parsed_functions[qualified_name] = standardized
-                                logger.debug(f"Successfully parsed standalone database override function: {qualified_name}")
+                                logger.debug(
+                                    f"Successfully parsed standalone database override function: {qualified_name}"
+                                )
 
                     except Exception as e:
-                        logger.error(f"Error processing database override file {override_file}: {e}")
+                        logger.error(
+                            f"Error processing database override file {override_file}: {e}"
+                        )
                         continue
 
             # Parse Python functions
@@ -347,7 +355,9 @@ class ParserOrchestrator:
                                 merged_metadata = {**existing_metadata, **new_metadata}
                                 # Update the existing function with merged metadata
                                 existing_function["function_metadata"] = merged_metadata
-                                logger.debug(f"Merged metadata from Python file into existing SQL function: {qualified_name}")
+                                logger.debug(
+                                    f"Merged metadata from Python file into existing SQL function: {qualified_name}"
+                                )
                                 continue
 
                         # Standardize function structure
@@ -411,10 +421,10 @@ class ParserOrchestrator:
 
             # Build the graph (pass project_folder for test discovery and parsed_functions)
             self._dependency_graph = self.dependency_builder.build_graph(
-                parsed_models, 
-                self.table_resolver, 
+                parsed_models,
+                self.table_resolver,
                 project_folder=Path(self.project_folder),
-                parsed_functions=parsed_functions
+                parsed_functions=parsed_functions,
             )
 
             logger.info(f"Built dependency graph with {len(self._dependency_graph['nodes'])} nodes")
@@ -445,13 +455,14 @@ class ParserOrchestrator:
             if self.transformer:
                 try:
                     # Export test library first
-                    project_name = self.project_config.get("project_folder", self.project_folder.name)
+                    project_name = self.project_config.get(
+                        "project_folder", self.project_folder.name
+                    )
                     test_library_path = self.json_exporter.export_test_library(project_name)
 
                     # Export OTS modules (will include test_library_path reference)
                     ots_results = self.json_exporter.export_ots_modules(
-                        parsed_models, 
-                        test_library_path=test_library_path
+                        parsed_models, test_library_path=test_library_path
                     )
                     logger.info(f"Exported {len(ots_results)} OTS modules")
                 except Exception as e:
@@ -459,7 +470,9 @@ class ParserOrchestrator:
 
             # Generate reports (pass parsed_functions for function identification)
             parsed_functions = self._parsed_functions or {}
-            report_results = self.report_generator.generate_all_reports(dependency_graph, parsed_functions)
+            report_results = self.report_generator.generate_all_reports(
+                dependency_graph, parsed_functions
+            )
 
             # Combine results
             all_results = {**json_results, **ots_results, **report_results}

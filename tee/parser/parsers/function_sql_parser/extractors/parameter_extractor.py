@@ -35,7 +35,9 @@ class ParameterExtractor:
                     # Extract parameter name
                     if hasattr(expr, "this") and expr.this:
                         if isinstance(expr.this, exp.Identifier):
-                            param["name"] = expr.this.name if hasattr(expr.this, "name") else str(expr.this)
+                            param["name"] = (
+                                expr.this.name if hasattr(expr.this, "name") else str(expr.this)
+                            )
                         else:
                             param["name"] = str(expr.this)
 
@@ -139,4 +141,3 @@ class ParameterExtractor:
             parts.append(current)
 
         return parts
-

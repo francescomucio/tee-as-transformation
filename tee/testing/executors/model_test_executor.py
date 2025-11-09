@@ -92,9 +92,7 @@ class ModelTestExecutor:
 
             column_name = column_def.get("name")
             if not column_name:
-                self.logger.warning(
-                    f"Skipping tests for column without name in {table_name}"
-                )
+                self.logger.warning(f"Skipping tests for column without name in {table_name}")
                 continue
 
             for test_def in column_def["tests"]:
@@ -244,5 +242,3 @@ class ModelTestExecutor:
     def get_used_test_names(self) -> set[str]:
         """Get set of test names that were used during execution."""
         return self._used_test_names
-
-

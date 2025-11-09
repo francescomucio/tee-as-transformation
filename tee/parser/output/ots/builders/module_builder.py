@@ -62,7 +62,13 @@ class ModuleBuilder:
                 f"Creating OTS module: {module_name} with {len(models)} transformations and {len(functions)} functions"
             )
             module = self.build_module(
-                module_name, schema, models, functions, test_library_path, model_transformer, function_transformer
+                module_name,
+                schema,
+                models,
+                functions,
+                test_library_path,
+                model_transformer,
+                function_transformer,
             )
             modules[module_name] = module
 
@@ -154,5 +160,3 @@ class ModuleBuilder:
             module["tags"] = module_tags
 
         return module
-
-
