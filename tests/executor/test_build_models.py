@@ -467,8 +467,8 @@ class TestBuildModels:
         project_path = self._setup_real_project(temp_dir, models_sql, mock_connection_config)
         
         parsed_models = {
-            "schema1.table1": {"model_metadata": {"metadata": {"tests": ["not_null"]}}},
-            "schema1.table2": {"model_metadata": {"metadata": {"tests": ["unique"]}}},
+            "schema1.table1": {"model_metadata": {"metadata": {"schema": [], "tests": ["not_null"]}}},
+            "schema1.table2": {"model_metadata": {"metadata": {"schema": [], "tests": ["unique"]}}},
         }
         execution_order = ["schema1.table1", "schema1.table2"]
         
