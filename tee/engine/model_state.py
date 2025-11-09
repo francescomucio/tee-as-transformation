@@ -22,7 +22,7 @@ class ModelStateManager:
     This is a wrapper around the centralized StateManager for backward compatibility.
     """
 
-    def __init__(self, state_database_path: str | None = None, project_folder: str = "."):
+    def __init__(self, state_database_path: str | None = None, project_folder: str = ".") -> None:
         """
         Initialize the model state manager.
 
@@ -34,11 +34,11 @@ class ModelStateManager:
         self.project_folder = project_folder
         self.state_database_path = self.state_manager.state_database_path
 
-    def _get_connection(self):
+    def _get_connection(self) -> Any:
         """Get database connection from the underlying state manager."""
         return self.state_manager._get_connection()
 
-    def _initialize_database(self):
+    def _initialize_database(self) -> None:
         """Initialize the state database."""
         self.state_manager._initialize_database()
 
@@ -66,11 +66,11 @@ class ModelStateManager:
         """Update the last processed value for a model."""
         self.state_manager.update_processed_value(model_name, value, strategy)
 
-    def check_database_existence(self, adapter, table_name: str) -> bool:
+    def check_database_existence(self, adapter: Any, table_name: str) -> bool:
         """Check if the model exists in the target database."""
         return self.state_manager.check_database_existence(adapter, table_name)
 
-    def rebuild_state_from_database(self, adapter, model_name: str) -> ModelState | None:
+    def rebuild_state_from_database(self, adapter: Any, model_name: str) -> ModelState | None:
         """Rebuild model state from database existence."""
         return self.state_manager.rebuild_state_from_database(adapter, model_name)
 
@@ -94,6 +94,6 @@ class ModelStateManager:
         """Compute hash for configuration using the centralized state manager."""
         return self.state_manager.compute_config_hash(config)
 
-    def close(self):
+    def close(self) -> None:
         """Close the database connection."""
         self.state_manager.close()

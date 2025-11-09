@@ -24,7 +24,7 @@ class ModelExecutor:
         metadata_extractor: MetadataExtractor,
         state_checker: StateChecker,
         config: Any | None = None,
-    ):
+    ) -> None:
         """
         Initialize the model executor.
 

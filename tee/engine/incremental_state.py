@@ -37,7 +37,7 @@ class IncrementalState:
 class IncrementalStateManager:
     """Manages incremental model state using DuckDB."""
 
-    def __init__(self, state_database_path: str | None = None):
+    def __init__(self, state_database_path: str | None = None) -> None:
         """
         Initialize the state manager.
 

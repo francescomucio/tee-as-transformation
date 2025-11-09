@@ -26,7 +26,7 @@ def cmd_run(
         exclude=exclude,
     )
     connection_manager = None
-    
+
     try:
         typer.echo(f"Running t4t on project: {project_folder}")
         ctx.print_variables_info()

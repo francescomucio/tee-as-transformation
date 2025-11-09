@@ -31,7 +31,7 @@ class ProjectParser:
         connection: ConnectionConfig,
         variables: Variables | None = None,
         project_config: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         """
         Initialize the ProjectParser.
 

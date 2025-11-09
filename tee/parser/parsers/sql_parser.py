@@ -185,7 +185,7 @@ class SQLParser(BaseParser):
             for func_node in expr.find_all(exp.Func):
                 # Get function name - SQLglot Function nodes have a 'name' attribute
                 func_name = func_node.name if hasattr(func_node, "name") else None
-                
+
                 # For qualified names (schema.func), check the 'this' attribute
                 if not func_name and hasattr(func_node, "this"):
                     # Try to extract from 'this' (could be Identifier, Column, etc.)
@@ -197,11 +197,11 @@ class SQLParser(BaseParser):
                         func_name = this_node.this.name
                     else:
                         func_name = str(this_node) if this_node else None
-                
+
                 # Fallback to string representation
                 if not func_name:
                     func_name = str(func_node)
-                
+
                 # Filter out built-in functions and add to list
                 if func_name and func_name.lower() not in SQL_BUILT_IN_FUNCTIONS:
                     source_functions.append(func_name)

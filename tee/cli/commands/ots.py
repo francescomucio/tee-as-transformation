@@ -21,7 +21,7 @@ def cmd_ots_run(
 ) -> None:
     """
     Execute OTS modules.
-    
+
     Args:
         ots_path: Path to OTS module file (.ots.json) or directory containing OTS modules
         project_folder: Optional project folder (for connection config and merging with existing models)
@@ -31,7 +31,7 @@ def cmd_ots_run(
         exclude: Exclude models (can be used multiple times)
     """
     ots_path_obj = Path(ots_path)
-    
+
     if not ots_path_obj.exists():
         typer.echo(f"❌ Error: OTS path not found: {ots_path}", err=True)
         raise typer.Exit(1)
@@ -50,7 +50,7 @@ def cmd_ots_run(
             typer.echo(f" and {len(ots_parsed_functions)} functions from OTS modules")
         else:
             typer.echo(" from OTS modules")
-        
+
         # Note: Functions from OTS modules are not yet integrated into execution
         # This will be handled in Phase 8 (Execution Engine Integration)
         if ots_parsed_functions:
@@ -72,7 +72,7 @@ def cmd_ots_run(
             exclude_patterns = ctx.exclude_patterns
 
             typer.echo(f"\nMerging with project models from: {project_folder}")
-            
+
             # Parse existing models
             parser = ProjectParser(
                 str(project_path),
@@ -142,7 +142,7 @@ def cmd_ots_run(
                 reader = OTSModuleReader()
                 module = reader.read_module(ots_path_obj)
                 target = module.get("target", {})
-                
+
                 # Create connection config from target
                 sql_dialect = target.get("sql_dialect", "duckdb")
                 connection_config = {
@@ -153,7 +153,7 @@ def cmd_ots_run(
                     connection_config["database"] = target["database"]
                 if target.get("schema"):
                     connection_config["schema"] = target["schema"]
-                
+
                 # Use current directory as project folder
                 project_path = Path.cwd()
             else:
@@ -213,25 +213,25 @@ def cmd_ots_validate(
 ) -> None:
     """
     Validate OTS modules.
-    
+
     Args:
         ots_path: Path to OTS module file (.ots.json) or directory containing OTS modules
         verbose: Enable verbose output
     """
     ots_path_obj = Path(ots_path)
-    
+
     if not ots_path_obj.exists():
         typer.echo(f"❌ Error: OTS path not found: {ots_path}", err=True)
         raise typer.Exit(1)
 
     try:
         reader = OTSModuleReader()
-        
+
         if ots_path_obj.is_file():
             typer.echo(f"\nValidating OTS module: {ots_path}")
             module = reader.read_module(ots_path_obj)
             info = reader.get_module_info(module)
-            
+
             typer.echo("✅ OTS module is valid!")
             typer.echo(f"\nModule Information:")
             typer.echo(f"  Name: {info['module_name']}")
@@ -242,27 +242,27 @@ def cmd_ots_validate(
                 typer.echo(f"  Tags: {', '.join(info['module_tags'])}")
             if info.get('has_test_library'):
                 typer.echo(f"  Test Library: Yes")
-                
+
         elif ots_path_obj.is_dir():
             typer.echo(f"\nValidating OTS modules in: {ots_path}")
             modules = reader.read_modules_from_directory(ots_path_obj)
-            
+
             if not modules:
                 typer.echo("⚠️  No OTS modules found")
                 return
-            
+
             typer.echo(f"✅ Found {len(modules)} OTS module(s)")
-            
+
             for module_name, module in modules.items():
                 info = reader.get_module_info(module)
                 typer.echo(f"\n  {module_name}:")
                 typer.echo(f"    Transformations: {info['transformation_count']}")
                 typer.echo(f"    Target: {info['target'].get('database')}.{info['target'].get('schema')}")
-                
+
         else:
             typer.echo(f"❌ Error: Path is neither a file nor a directory: {ots_path}", err=True)
             raise typer.Exit(1)
-            
+
     except OTSModuleReaderError as e:
         typer.echo(f"❌ Validation failed: {e}", err=True)
         if verbose:

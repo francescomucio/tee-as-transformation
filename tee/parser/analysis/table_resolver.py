@@ -12,7 +12,7 @@ from tee.parser.shared.types import ConnectionConfig, ParsedFunction, ParsedMode
 class TableResolver:
     """Handles table name generation and resolution based on connection type."""
 
-    def __init__(self, connection: ConnectionConfig):
+    def __init__(self, connection: ConnectionConfig) -> None:
         """
         Initialize the TableResolver.
 

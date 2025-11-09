@@ -23,15 +23,15 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
     # Override in subclasses to define required fields
     REQUIRED_FIELDS = ["type"]
 
-    def __init__(self, config_dict: dict[str, Any]):
-        self.connection = None
-        self.logger = logging.getLogger(self.__class__.__name__)
+    def __init__(self, config_dict: dict[str, Any]) -> None:
+        self.connection: Any | None = None
+        self.logger: logging.Logger = logging.getLogger(self.__class__.__name__)
 
         # Validate configuration first
         self._validate_config(config_dict)
 
         # Create adapter config
-        self.config = self._create_adapter_config(config_dict)
+        self.config: AdapterConfig = self._create_adapter_config(config_dict)
 
         # Initialize SQLglot dialect objects (needed for SQL processing)
         # We need to do this after config is created but before we can use SQL methods
@@ -195,12 +195,12 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
     def function_exists(self, function_name: str, signature: str | None = None) -> bool:
         """
         Check if a function exists in the database.
-        
+
         Args:
             function_name: Name of the function (can be qualified: schema.function_name)
             signature: Optional function signature (e.g., "FLOAT, FLOAT" for parameters)
                       If provided, checks for exact signature match (handles overloading)
-        
+
         Returns:
             True if function exists (and matches signature if provided), False otherwise
         """
@@ -327,7 +327,7 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
             f"Object tags would be attached to {object_type} {object_name}: {object_tags}"
         )
 
-    def _get_dialect(self, dialect_name: str | None):
+    def _get_dialect(self, dialect_name: str | None) -> Any:
         """Get SQLglot dialect object from name."""
         import sqlglot
 

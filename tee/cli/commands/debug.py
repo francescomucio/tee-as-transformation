@@ -21,7 +21,7 @@ def cmd_debug(
         verbose=verbose,
     )
     connection_manager = None
-    
+
     try:
         typer.echo(f"Testing database connectivity for project: {project_folder}")
         ctx.print_variables_info()

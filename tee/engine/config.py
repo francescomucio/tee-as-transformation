@@ -17,7 +17,7 @@ from tee.adapters.base import AdapterConfig
 class DatabaseConfigManager:
     """Manages database configurations from multiple sources."""
 
-    def __init__(self, project_root: str | None = None):
+    def __init__(self, project_root: str | None = None) -> None:
         self.project_root = Path(project_root) if project_root else Path.cwd()
         self.logger = logging.getLogger(self.__class__.__name__)
 

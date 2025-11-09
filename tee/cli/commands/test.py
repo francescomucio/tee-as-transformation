@@ -28,12 +28,12 @@ def cmd_test(
         select=select,
         exclude=exclude,
     )
-    
+
     try:
         typer.echo(f"Running tests for project: {project_folder}")
         ctx.print_variables_info()
         ctx.print_selection_info()
-        
+
         # Step 1: Compile project to OTS modules
         typer.echo("\n" + "=" * 50)
         typer.echo("t4t: COMPILING PROJECT TO OTS MODULES")
@@ -47,34 +47,34 @@ def cmd_test(
                 project_config=ctx.config,
             )
             typer.echo(f"✅ Compilation complete: {compile_results['ots_modules_count']} OTS module(s)")
-            
+
             # Extract graph and execution order from compile results
             graph = compile_results.get("dependency_graph")
             execution_order = compile_results.get("execution_order", [])
             parsed_models = compile_results.get("parsed_models", {})
-            
+
             if not graph or not execution_order:
                 raise RuntimeError("Compilation did not return dependency graph or execution order")
-            
+
             typer.echo(f"✅ Using dependency graph from compilation: {len(graph['nodes'])} nodes")
             typer.echo(f"   Execution order: {' -> '.join(execution_order)}")
-            
+
         except Exception as e:
             typer.echo(f"❌ Compilation failed: {e}", err=True)
             raise
-        
+
         # Step 2: Create parser instance for test execution
         parser = ProjectParser(str(ctx.project_path), ctx.config["connection"], ctx.vars, ctx.config)
         parser.parsed_models = parsed_models
         parser.graph = graph
-        
+
         # Apply selection filtering if specified
         if ctx.select_patterns or ctx.exclude_patterns:
             selector = ModelSelector(
                 select_patterns=ctx.select_patterns,
                 exclude_patterns=ctx.exclude_patterns
             )
-            
+
             parsed_models, execution_order = selector.filter_models(parsed_models, execution_order)
             typer.echo(f"Filtered to {len(parsed_models)} models")
 

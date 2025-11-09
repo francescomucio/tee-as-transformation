@@ -24,7 +24,7 @@ class ModelExecutor:
         project_folder: str,
         config: AdapterConfig | dict[str, Any] | None = None,
         config_name: str = "default",
-    ):
+    ) -> None:
         """
         Initialize the ModelExecutor.
 
@@ -73,7 +73,7 @@ class ModelExecutor:
 
     def execute_models(
         self,
-        parser,
+        parser: Any,
         variables: dict[str, Any] | None = None,
         parsed_models: dict[str, Any] | None = None,
         execution_order: list[str] | None = None,
@@ -142,7 +142,7 @@ class ModelExecutor:
 
             # Execute all models
             results = self.execution_engine.execute_models(parsed_models, execution_order)
-            
+
             # Merge function results into main results
             if function_results:
                 results["executed_functions"] = function_results.get("executed_functions", [])
@@ -238,27 +238,27 @@ class ModelExecutor:
     def _load_seeds(self) -> None:
         """Load seed files from the seeds folder into database tables."""
         seeds_folder = Path(self.project_folder) / "seeds"
-        
+
         # Discover seed files
         seed_discovery = SeedDiscovery(seeds_folder)
         seed_files = seed_discovery.discover_seed_files()
-        
+
         if not seed_files:
             self.logger.debug("No seed files found")
             return
-        
+
         self.logger.info(f"Found {len(seed_files)} seed file(s) to load")
-        
+
         # Load seeds using the adapter
         seed_loader = SeedLoader(self.execution_engine.adapter)
         seed_results = seed_loader.load_all_seeds(seed_files)
-        
+
         # Log results
         if seed_results["loaded_tables"]:
             self.logger.info(f"Successfully loaded {len(seed_results['loaded_tables'])} seed(s)")
             for table in seed_results["loaded_tables"]:
                 self.logger.info(f"  - {table}")
-        
+
         if seed_results["failed_tables"]:
             self.logger.warning(f"Failed to load {len(seed_results['failed_tables'])} seed(s)")
             for failure in seed_results["failed_tables"]:

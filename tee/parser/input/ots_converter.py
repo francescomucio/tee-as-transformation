@@ -25,7 +25,7 @@ class OTSConverterError(Exception):
 class OTSConverter:
     """Converts OTS modules to ParsedModel format."""
 
-    def __init__(self, module_path: Path | None = None):
+    def __init__(self, module_path: Path | None = None) -> None:
         """
         Initialize the OTS converter.
 
@@ -174,7 +174,7 @@ class OTSConverter:
             ParsedModel model_metadata dictionary
         """
         transformation_id = transformation.get("transformation_id", "")
-        
+
         # Extract schema.table from transformation_id
         if "." in transformation_id:
             table_name = transformation_id
@@ -406,7 +406,7 @@ class OTSConverter:
             ParsedFunction dictionary
         """
         function_id = function.get("function_id", "")
-        
+
         # Extract schema.function_name from function_id
         if "." in function_id:
             parts = function_id.split(".", 1)
@@ -431,7 +431,7 @@ class OTSConverter:
         # Extract and merge metadata
         metadata = function.get("metadata", {})
         file_path = metadata.get("file_path", "")
-        
+
         # Merge module-level and function-level tags
         module_tags = module.get("tags", [])
         function_tags = metadata.get("tags", [])

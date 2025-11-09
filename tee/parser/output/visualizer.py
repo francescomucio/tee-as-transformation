@@ -25,7 +25,7 @@ class DependencyVisualizer:
         """
         parsed_functions = parsed_functions or {}
         function_names = set(parsed_functions.keys())
-        
+
         mermaid_lines = ["graph LR"]  # Left-to-right layout
 
         # Add style definitions for test and function nodes

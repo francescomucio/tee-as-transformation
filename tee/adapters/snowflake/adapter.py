@@ -37,7 +37,7 @@ class SnowflakeAdapter(DatabaseAdapter):
     # Snowflake-specific required fields
     REQUIRED_FIELDS = ["type", "user", "password", "database"]
 
-    def __init__(self, config_dict: dict[str, Any]):
+    def __init__(self, config_dict: dict[str, Any]) -> None:
         if snowflake is None:
             raise ImportError(
                 "Snowflake connector is not installed. Install it with: uv add snowflake-connector-python"

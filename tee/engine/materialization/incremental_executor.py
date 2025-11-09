@@ -10,8 +10,12 @@ This module handles the execution of incremental materializations including:
 """
 
 import logging
+import re
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from tee.adapters.base.core import DatabaseAdapter
 
 import sqlglot
 from sqlglot import expressions as exp
@@ -31,7 +35,7 @@ logger = logging.getLogger(__name__)
 class IncrementalExecutor:
     """Handles execution of incremental materializations."""
 
-    def __init__(self, state_manager: ModelStateManager):
+    def __init__(self, state_manager: ModelStateManager) -> None:
         """Initialize the incremental executor."""
         self.state_manager = state_manager
 
@@ -221,14 +225,14 @@ class IncrementalExecutor:
         import re
 
         # Handle @variable syntax
-        def replace_at_vars(match):
+        def replace_at_vars(match: re.Match[str]) -> str:
             var_name = match.group(1)
             return str(variables.get(var_name, f"@{var_name}"))
 
         text = re.sub(r"@(\w+)", replace_at_vars, text)
 
         # Handle {{ variable }} syntax
-        def replace_brace_vars(match):
+        def replace_brace_vars(match: re.Match[str]) -> str:
             var_name = match.group(1).strip()
             return str(variables.get(var_name, f"{{{{ {var_name} }}}}"))
 
@@ -244,7 +248,7 @@ class IncrementalExecutor:
         # This will match: column_name >= YYYY-MM-DD or column_name >= 'YYYY-MM-DD' etc.
         pattern = r"(\w+)\s*([><=]+)\s*(\'?)(\d{4}-\d{2}-\d{2})\3"
 
-        def replace_date_comparison(match):
+        def replace_date_comparison(match: re.Match[str]) -> str:
             column = match.group(1)
             operator = match.group(2)
             match.group(3)
@@ -258,7 +262,7 @@ class IncrementalExecutor:
         model_name: str,
         sql_query: str,
         config: IncrementalAppendConfig,
-        adapter,
+        adapter: "DatabaseAdapter",
         table_name: str,
         variables: dict[str, Any] | None = None,
     ) -> None:
@@ -298,7 +302,7 @@ class IncrementalExecutor:
         model_name: str,
         sql_query: str,
         config: IncrementalMergeConfig,
-        adapter,
+        adapter: "DatabaseAdapter",
         table_name: str,
         variables: dict[str, Any] | None = None,
     ) -> None:
@@ -336,7 +340,7 @@ class IncrementalExecutor:
         model_name: str,
         sql_query: str,
         config: IncrementalDeleteInsertConfig,
-        adapter,
+        adapter: "DatabaseAdapter",
         table_name: str,
         variables: dict[str, Any] | None = None,
     ) -> None:

@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class StateChecker:
     """Manages model state checking and updates."""
 
-    def __init__(self, project_folder: str):
+    def __init__(self, project_folder: str) -> None:
         """
         Initialize the state checker.
 

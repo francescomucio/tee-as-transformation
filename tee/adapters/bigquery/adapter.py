@@ -17,7 +17,7 @@ from tee.adapters.registry import register_adapter
 class BigQueryAdapter(DatabaseAdapter):
     """BigQuery database adapter with SQLglot integration."""
 
-    def __init__(self, config: AdapterConfig):
+    def __init__(self, config: AdapterConfig) -> None:
         try:
             from google.cloud import bigquery
         except ImportError:

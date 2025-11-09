@@ -52,7 +52,7 @@ def load_project_config(
 
     # Use tomllib (Python 3.11+ built-in, required for Python 3.14+)
     import tomllib
-    
+
     with open(project_toml_path, "rb") as f:
         config = tomllib.load(f)
 

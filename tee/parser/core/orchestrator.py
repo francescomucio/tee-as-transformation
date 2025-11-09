@@ -33,7 +33,7 @@ class ParserOrchestrator:
         connection: ConnectionConfig,
         variables: Variables | None = None,
         project_config: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         """
         Initialize the orchestrator.
 
@@ -408,7 +408,7 @@ class ParserOrchestrator:
             # Store parsed_functions for report generation (before building graph)
             if parsed_functions:
                 self._parsed_functions = parsed_functions
-            
+
             # Build the graph (pass project_folder for test discovery and parsed_functions)
             self._dependency_graph = self.dependency_builder.build_graph(
                 parsed_models, 
@@ -447,7 +447,7 @@ class ParserOrchestrator:
                     # Export test library first
                     project_name = self.project_config.get("project_folder", self.project_folder.name)
                     test_library_path = self.json_exporter.export_test_library(project_name)
-                    
+
                     # Export OTS modules (will include test_library_path reference)
                     ots_results = self.json_exporter.export_ots_modules(
                         parsed_models, 
@@ -463,7 +463,7 @@ class ParserOrchestrator:
 
             # Combine results
             all_results = {**json_results, **ots_results, **report_results}
-            
+
             # Add test library if exported
             if test_library_path:
                 all_results["test_library"] = test_library_path

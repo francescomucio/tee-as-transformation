@@ -1,7 +1,10 @@
 """Utility methods for Snowflake operations."""
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from tee.adapters.base.core import DatabaseAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -9,7 +12,7 @@ logger = logging.getLogger(__name__)
 class SnowflakeUtils:
     """Utility methods for Snowflake operations."""
 
-    def __init__(self, adapter):
+    def __init__(self, adapter: "DatabaseAdapter") -> None:
         """
         Initialize the utils.
 

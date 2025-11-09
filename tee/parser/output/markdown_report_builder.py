@@ -11,11 +11,11 @@ def separate_nodes_by_type(
 ) -> tuple[list[str], list[str], list[str]]:
     """
     Separate nodes into test, function, and table nodes.
-    
+
     Args:
         all_nodes: List of all node names
         function_names: Set of function names for identification
-        
+
     Returns:
         Tuple of (test_nodes, function_nodes, table_nodes)
     """
@@ -34,10 +34,10 @@ def separate_nodes_by_type(
 def _filter_dependencies(deps: list[str]) -> tuple[list[str], list[str]]:
     """
     Filter dependencies into table dependencies and test dependencies.
-    
+
     Args:
         deps: List of dependency node names
-        
+
     Returns:
         Tuple of (table_deps, test_deps)
     """
@@ -49,12 +49,12 @@ def _filter_dependencies(deps: list[str]) -> tuple[list[str], list[str]]:
 def _format_dependency_list(deps: list[str], prefix: str = "`", suffix: str = "`") -> str:
     """
     Format a list of dependencies as a comma-separated markdown string.
-    
+
     Args:
         deps: List of dependency names
         prefix: Prefix for each dependency (default: backtick)
         suffix: Suffix for each dependency (default: backtick)
-        
+
     Returns:
         Formatted string
     """
@@ -69,13 +69,13 @@ def build_statistics_section(
 ) -> str:
     """
     Build the statistics section of the markdown report.
-    
+
     Args:
         table_nodes: List of table node names
         function_nodes: List of function node names
         test_nodes: List of test node names
         graph: The dependency graph
-        
+
     Returns:
         Markdown string for statistics section
     """
@@ -93,21 +93,21 @@ def build_statistics_section(
 def build_execution_order_section(execution_order: list[str]) -> str:
     """
     Build the execution order section of the markdown report.
-    
+
     Args:
         execution_order: List of nodes in execution order
-        
+
     Returns:
         Markdown string for execution order section
     """
     content = "## Execution Order\n\n"
-    
+
     if execution_order:
         for i, node in enumerate(execution_order, 1):
             content += f"{i}. `{node}`\n"
     else:
         content += "No valid execution order (circular dependencies detected)\n"
-    
+
     return content
 
 
@@ -117,20 +117,20 @@ def build_test_details_section(
 ) -> str:
     """
     Build the tests details section of the markdown report.
-    
+
     Args:
         test_nodes: List of test node names
         graph: The dependency graph
-        
+
     Returns:
         Markdown string for tests details section
     """
     if not test_nodes:
         return ""
-    
+
     content = "\n## Tests Details\n\n"
     content += "The following tests are defined and integrated into the dependency graph:\n\n"
-    
+
     for test_node in sorted(test_nodes):
         # Parse test node: test:table.test_name or test:table.column.test_name
         test_parts = test_node.replace("test:", "").split(".")
@@ -148,16 +148,16 @@ def build_test_details_section(
             # Fallback for unexpected format
             test_display = test_node.replace("test:", "")
             test_type = "Test"
-        
+
         deps = graph.get("dependencies", {}).get(test_node, [])
         dependents = graph.get("dependents", {}).get(test_node, [])
-        
+
         content += f"### {test_display}\n\n"
         content += f"**Type**: {test_type}\n\n"
-        
+
         if deps:
             table_deps, test_deps = _filter_dependencies(deps)
-            
+
             if table_deps:
                 content += f"**Depends on tables**: {_format_dependency_list(table_deps)}\n\n"
             if test_deps:
@@ -165,10 +165,10 @@ def build_test_details_section(
                 content += f"**Depends on tests**: {_format_dependency_list(test_names)}\n\n"
         else:
             content += "**No dependencies**\n\n"
-        
+
         if dependents:
             table_dependents, test_dependents = _filter_dependencies(dependents)
-            
+
             if table_dependents:
                 content += f"**Used by tables**: {_format_dependency_list(table_dependents)}\n\n"
             if test_dependents:
@@ -176,7 +176,7 @@ def build_test_details_section(
                 content += f"**Used by tests**: {_format_dependency_list(test_names)}\n\n"
         else:
             content += "**No dependents**\n\n"
-    
+
     return content
 
 
@@ -188,18 +188,18 @@ def build_transformation_details_section(
 ) -> str:
     """
     Build the transformation details section of the markdown report.
-    
+
     Args:
         function_nodes: List of function node names
         table_nodes: List of table node names
         function_names: Set of function names for identification
         graph: The dependency graph
-        
+
     Returns:
         Markdown string for transformation details section
     """
     content = "\n## Transformation Details\n\n"
-    
+
     # Include both function and table nodes in the transformation details section (exclude tests)
     all_transformations = sorted(function_nodes + table_nodes)
     for transformation in all_transformations:
@@ -207,13 +207,13 @@ def build_transformation_details_section(
         node_type = "Function" if is_function else "Table"
         deps = graph.get("dependencies", {}).get(transformation, [])
         dependents = graph.get("dependents", {}).get(transformation, [])
-        
+
         content += f"### `{transformation}`\n\n"
         content += f"**Type**: {node_type}\n\n"
-        
+
         if deps:
             table_deps, test_deps = _filter_dependencies(deps)
-            
+
             if table_deps:
                 content += f"**Depends on**: {_format_dependency_list(table_deps)}\n\n"
             if test_deps:
@@ -222,10 +222,10 @@ def build_transformation_details_section(
         else:
             base_label = "base function" if is_function else "base table"
             content += f"**No dependencies** ({base_label})\n\n"
-        
+
         if dependents:
             table_dependents, test_dependents = _filter_dependencies(dependents)
-            
+
             if table_dependents:
                 content += f"**Used by**: {_format_dependency_list(table_dependents)}\n\n"
             if test_dependents:
@@ -234,27 +234,27 @@ def build_transformation_details_section(
         else:
             leaf_label = "leaf function" if is_function else "leaf table"
             content += f"**No dependents** ({leaf_label})\n\n"
-    
+
     return content
 
 
 def build_circular_dependencies_section(cycles: list[list[str]]) -> str:
     """
     Build the circular dependencies section of the markdown report.
-    
+
     Args:
         cycles: List of circular dependency cycles
-        
+
     Returns:
         Markdown string for circular dependencies section
     """
     if not cycles:
         return ""
-    
+
     content = "## ⚠️ Circular Dependencies\n\n"
     for i, cycle in enumerate(cycles, 1):
         cycle_str = " → ".join([f"`{table}`" for table in cycle]) + f" → `{cycle[0]}`"
         content += f"{i}. {cycle_str}\n\n"
-    
+
     return content
 

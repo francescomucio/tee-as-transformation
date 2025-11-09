@@ -144,7 +144,7 @@ class OTSModuleReader:
         # For OTS 0.2.0, transformations is optional if functions are present
         ots_version = module_data.get("ots_version", "0.1.0")
         required_fields = ["ots_version", "module_name", "target"]
-        
+
         # Transformations is required for 0.1.0, optional for 0.2.0+ if functions exist
         if ots_version == "0.1.0":
             required_fields.append("transformations")
@@ -156,7 +156,7 @@ class OTSModuleReader:
                 )
         else:
             required_fields.append("transformations")
-        
+
         for field in required_fields:
             if field not in module_data:
                 raise OTSModuleReaderError(
@@ -275,17 +275,17 @@ class OTSModuleReader:
             parts = version.split(".")
             if len(parts) < 2:
                 return False
-            
+
             major = int(parts[0])
             minor = int(parts[1])
             patch = int(parts[2]) if len(parts) > 2 else 0
-            
+
             # Support versions <= 0.2.0
             max_parts = self.max_supported_version.split(".")
             max_major = int(max_parts[0])
             max_minor = int(max_parts[1])
             max_patch = int(max_parts[2]) if len(max_parts) > 2 else 0
-            
+
             if major < max_major:
                 return True
             elif major == max_major:

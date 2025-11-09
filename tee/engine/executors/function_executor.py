@@ -19,7 +19,7 @@ class FunctionExecutor:
         adapter: DatabaseAdapter,
         project_folder: str,
         metadata_extractor: MetadataExtractor,
-    ):
+    ) -> None:
         """
         Initialize the function executor.
 

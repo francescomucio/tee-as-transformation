@@ -55,7 +55,7 @@ class TestQueryGenerator:
         # Note: table_name and columns are expected to be simple identifiers
         # (no spaces, no special chars) from validated metadata
         # Using COUNT(*) for better performance on large tables
-        
+
         if columns is None or len(columns) == 0:
             # Check all columns (entire row uniqueness)
             # Use SELECT * to group by all columns
@@ -85,7 +85,7 @@ class TestQueryGenerator:
     ) -> str:
         """
         DEPRECATED: Use generate_unique_test_query instead.
-        
+
         This method is kept for backward compatibility but delegates to generate_unique_test_query.
         """
         return self.generate_unique_test_query(table_name, columns)

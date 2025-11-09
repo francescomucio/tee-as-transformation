@@ -5,7 +5,7 @@ Utility functions for function metadata standardization.
 import hashlib
 from typing import Any
 
-from tee.typing.metadata import FunctionType, ParsedFunctionMetadata
+from tee.typing.metadata import FunctionParameter, FunctionType, ParsedFunctionMetadata
 
 
 def create_function_metadata(
@@ -15,7 +15,7 @@ def create_function_metadata(
     description: str | None = None,
     function_type: FunctionType = "scalar",
     language: str | None = None,
-    parameters: list | None = None,
+    parameters: list[FunctionParameter] | None = None,
     return_type: str | None = None,
     metadata: ParsedFunctionMetadata | None = None,
 ) -> dict[str, Any]:

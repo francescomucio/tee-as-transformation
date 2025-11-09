@@ -14,7 +14,7 @@ from .base import AdapterConfig, DatabaseAdapter
 class AdapterRegistry:
     """Registry for managing database adapters."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._adapters: dict[str, type[DatabaseAdapter]] = {}
         self.logger = logging.getLogger(self.__class__.__name__)
 

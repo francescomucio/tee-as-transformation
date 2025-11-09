@@ -17,7 +17,7 @@ from tee.adapters.registry import register_adapter
 class PostgreSQLAdapter(DatabaseAdapter):
     """PostgreSQL database adapter with SQLglot integration."""
 
-    def __init__(self, config: AdapterConfig):
+    def __init__(self, config: AdapterConfig) -> None:
         try:
             import psycopg2
         except ImportError:

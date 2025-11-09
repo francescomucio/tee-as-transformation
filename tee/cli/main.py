@@ -28,7 +28,7 @@ DatabaseType = Literal["duckdb", "snowflake", "postgresql", "bigquery"]
 
 class AlphabeticalOrderGroup(typer.core.TyperGroup):
     """Custom Typer Group that lists commands in alphabetical order."""
-    def list_commands(self, ctx):
+    def list_commands(self, ctx: typer.Context) -> list[str]:
         return sorted(self.commands.keys())
 
 
@@ -229,7 +229,7 @@ ots_app = typer.Typer(
 
 
 @ots_app.callback()
-def ots_callback(ctx: typer.Context):
+def ots_callback(ctx: typer.Context) -> None:  # type: ignore[no-untyped-def]
     """Open Transformation Specification (OTS) module commands."""
     # If no subcommand was provided, show help
     if ctx.invoked_subcommand is None:

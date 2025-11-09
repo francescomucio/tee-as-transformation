@@ -49,7 +49,7 @@ def execute_models(
         Dictionary containing execution results and analysis info
     """
     logger = logging.getLogger(__name__)
-    
+
     # Step 0: Compile project to OTS modules first
     print("\n" + "=" * 50)
     print("t4t: COMPILING PROJECT TO OTS MODULES")
@@ -63,22 +63,22 @@ def execute_models(
             project_config=project_config,
         )
         print(f"✅ Compilation complete: {compile_results['ots_modules_count']} OTS module(s)")
-        
+
         # Extract graph and execution order from compile results
         graph = compile_results.get("dependency_graph")
         execution_order = compile_results.get("execution_order", [])
         parsed_models = compile_results.get("parsed_models", {})
-        
+
         if not graph or not execution_order:
             raise RuntimeError("Compilation did not return dependency graph or execution order")
-        
+
         print(f"✅ Using dependency graph from compilation: {len(graph['nodes'])} nodes")
         print(f"   Execution order: {' -> '.join(execution_order)}")
-        
+
     except Exception as e:
         logger.error(f"Compilation failed: {e}")
         raise
-    
+
     # Create parser instance for model execution (needed by ModelExecutor)
     parser = ProjectParser(project_folder, connection_config, variables, project_config)
     parser.parsed_models = parsed_models
@@ -87,15 +87,15 @@ def execute_models(
     # Step 2.5: Apply selection filtering if specified
     filtered_parsed_models = None
     filtered_execution_order = None
-    
+
     if select_patterns or exclude_patterns:
         from .cli.selection import ModelSelector
-        
+
         selector = ModelSelector(select_patterns=select_patterns, exclude_patterns=exclude_patterns)
         original_count = len(parsed_models)
         filtered_parsed_models, filtered_execution_order = selector.filter_models(parsed_models, execution_order)
         filtered_count = len(filtered_parsed_models)
-        
+
         print(f"\nFiltered to {filtered_count} models (from {original_count} total)")
         if filtered_count > 0:
             print(f"Filtered execution order: {' -> '.join(filtered_execution_order)}")
@@ -214,7 +214,7 @@ def build_models(
         SystemExit: If tests fail with ERROR severity
     """
     logger = logging.getLogger(__name__)
-    
+
     print("\n" + "=" * 50)
     print("t4t: BUILDING MODELS WITH TESTS")
     print("=" * 50)
@@ -232,22 +232,22 @@ def build_models(
             project_config=project_config,
         )
         print(f"✅ Compilation complete: {compile_results['ots_modules_count']} OTS module(s)")
-        
+
         # Extract graph and execution order from compile results
         graph = compile_results.get("dependency_graph")
         execution_order = compile_results.get("execution_order", [])
         parsed_models = compile_results.get("parsed_models", {})
-        
+
         if not graph or not execution_order:
             raise RuntimeError("Compilation did not return dependency graph or execution order")
-        
+
         print(f"✅ Using dependency graph from compilation: {len(graph['nodes'])} nodes")
         print(f"   Execution order: {' -> '.join(execution_order)}")
-        
+
     except Exception as e:
         logger.error(f"Compilation failed: {e}")
         raise
-    
+
     # Step 2: Set up build context using compile results
     parser, parsed_models, graph, execution_order = build_helpers.setup_build_context_from_compile(
         project_folder, connection_config, variables, select_patterns, exclude_patterns, 
@@ -288,7 +288,7 @@ def build_models(
                     print(f"  ✅ Executed {len(function_results['executed_functions'])} function(s)")
                     for func_name in function_results["executed_functions"]:
                         print(f"    - {func_name}")
-                        
+
                         # Execute tests for this function
                         func_test_results = build_helpers.execute_tests_for_function(
                             func_name, parsed_functions, model_executor, test_executor
@@ -299,7 +299,7 @@ def build_models(
                                 func_name, func_test_results, failed_models, parser, skipped_models
                             )
                             all_test_results.extend(func_test_results)
-                            
+
                 if function_results.get("failed_functions"):
                     print(f"  ⚠️  Failed to execute {len(function_results['failed_functions'])} function(s)")
                     for failure in function_results["failed_functions"]:
@@ -317,7 +317,7 @@ def build_models(
             # Check if parsed_functions is a dict and contains this node
             if isinstance(parsed_functions, dict) and node_name in parsed_functions:
                 continue
-            
+
             if build_helpers.should_skip_model(node_name, skipped_models, failed_models, graph):
                 # Mark as skipped if it depends on a failed model
                 if node_name not in skipped_models and not node_name.startswith("test:"):

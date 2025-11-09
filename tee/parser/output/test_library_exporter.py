@@ -47,7 +47,7 @@ class TestLibraryExporter:
         try:
             # Discover all SQL tests
             discovered_tests = self.test_discovery.discover_tests()
-            
+
             if not discovered_tests:
                 logger.info("No SQL tests found to export")
                 return None
@@ -58,7 +58,7 @@ class TestLibraryExporter:
 
             for test_name, sql_test in discovered_tests.items():
                 test_metadata = self._extract_test_metadata(sql_test)
-                
+
                 if test_metadata["is_generic"]:
                     generic_tests[test_name] = test_metadata["definition"]
                 else:
@@ -198,7 +198,7 @@ class TestLibraryExporter:
         """
         lines = sql_content.split('\n')
         description_lines = []
-        
+
         for line in lines:
             line = line.strip()
             # Skip empty lines and SQL code
@@ -209,10 +209,10 @@ class TestLibraryExporter:
                 comment = line[2:].strip()
                 if comment and not comment.startswith('Usage:') and not comment.startswith('Returns'):
                     description_lines.append(comment)
-        
+
         if description_lines:
             return ' '.join(description_lines[:3])  # Take first few comment lines
-        
+
         return None
 
     def _remove_sql_comments(self, sql_content: str) -> str:
@@ -227,14 +227,14 @@ class TestLibraryExporter:
         """
         lines = sql_content.split('\n')
         cleaned_lines = []
-        
+
         for line in lines:
             # Check if line is a comment
             stripped = line.strip()
             if stripped.startswith('--'):
                 # Skip comment lines
                 continue
-            
+
             # Check for inline comments (-- at end of line)
             if '--' in line:
                 # Find the first -- that's not in a string
@@ -249,9 +249,9 @@ class TestLibraryExporter:
                     if quote_count % 2 == 0:
                         # Even number of quotes means -- is likely a comment
                         line = parts[0].rstrip()
-            
+
             cleaned_lines.append(line)
-        
+
         return '\n'.join(cleaned_lines)
 
     def _extract_parameters(self, sql_content: str) -> dict[str, dict[str, Any]]:
@@ -265,7 +265,7 @@ class TestLibraryExporter:
             Dictionary of parameter definitions
         """
         parameters = {}
-        
+
         # Find all @param:default patterns
         # Pattern: @param_name:default_value
         # Supports:
@@ -273,50 +273,50 @@ class TestLibraryExporter:
         # - Strings: @name:'test', @name:"test"
         # - Booleans: @enabled:true, @enabled:false
         # - No spaces, commas, semicolons, or closing parens after the colon (unless in quotes)
-        
+
         # Pattern for quoted strings: @param:'value' or @param:"value"
         quoted_pattern = r'@(\w+):([\'"])([^\'"]*)\2'
         # Pattern for unquoted values (numbers, booleans, etc.): @param:value
         unquoted_pattern = r'@(\w+):([^\s\'"`,;\)]+)'
-        
+
         # First match quoted strings
         for match in re.finditer(quoted_pattern, sql_content):
             param_name = match.group(1)
             match.group(2)
             default_value = match.group(3)
-            
+
             # Skip table_name and column_name as they're special placeholders
             if param_name in ['table_name', 'column_name']:
                 continue
-            
+
             parameters[param_name] = {
                 "type": "string",
                 "default": default_value,
                 "description": f"Parameter {param_name}",
             }
-        
+
         # Then match unquoted values (but skip if already found as quoted)
         for match in re.finditer(unquoted_pattern, sql_content):
             param_name = match.group(1)
             default_value = match.group(2)
-            
+
             # Skip if already found as quoted parameter
             if param_name in parameters:
                 continue
-            
+
             # Skip table_name and column_name as they're special placeholders
             if param_name in ['table_name', 'column_name']:
                 continue
-            
+
             # Try to infer type from default value
             param_type = self._infer_parameter_type(default_value)
-            
+
             parameters[param_name] = {
                 "type": param_type,
                 "default": self._parse_default_value(default_value, param_type),
                 "description": f"Parameter {param_name}",
             }
-        
+
         return parameters
 
     def _infer_parameter_type(self, value: str) -> str:
@@ -330,22 +330,22 @@ class TestLibraryExporter:
             Type string: "number", "string", "boolean", or "array"
         """
         value = value.strip()
-        
+
         # Check for numbers
         try:
             float(value)
             return "number"
         except ValueError:
             pass
-        
+
         # Check for booleans
         if value.lower() in ['true', 'false']:
             return "boolean"
-        
+
         # Check for arrays (simple heuristic)
         if value.startswith('[') and value.endswith(']'):
             return "array"
-        
+
         # Default to string
         return "string"
 
@@ -397,7 +397,7 @@ class TestLibraryExporter:
             r'FROM\s+"([\w]+)"\."([\w]+)"',  # FROM "schema"."table"
             r'FROM\s+\'([\w]+)\'\.\'([\w]+)\'',  # FROM 'schema'.'table'
         ]
-        
+
         for pattern in patterns:
             matches = re.finditer(pattern, sql_content, re.IGNORECASE)
             for match in matches:
@@ -405,7 +405,7 @@ class TestLibraryExporter:
                 table = match.group(2)
                 # Return first fully qualified table found
                 return f"{schema}.{table}"
-        
+
         # Fallback: look for any table reference that looks like schema.table
         # This is less reliable but might catch some cases
         fallback_pattern = r'([\w]+)\.([\w]+)'
@@ -414,6 +414,6 @@ class TestLibraryExporter:
             # Skip common SQL keywords
             if match.group(1).upper() not in ['SELECT', 'FROM', 'WHERE', 'JOIN', 'INNER', 'LEFT', 'RIGHT']:
                 return f"{match.group(1)}.{match.group(2)}"
-        
+
         return None
 

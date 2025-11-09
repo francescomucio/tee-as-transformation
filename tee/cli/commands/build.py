@@ -27,7 +27,7 @@ def cmd_build(
         exclude=exclude,
     )
     connection_manager = None
-    
+
     try:
         typer.echo(f"Building project: {project_folder}")
         ctx.print_variables_info()
@@ -63,7 +63,7 @@ def cmd_build(
             f"\nCompleted! Executed {successful_count} out of {total_tables} tables successfully."
         )
         typer.echo(f"Tests: {passed_tests} passed, {failed_tests} failed out of {total_tests} total")
-        
+
         if failed_count > 0 or failed_tests > 0:
             if failed_count > 0:
                 typer.echo(f"  ❌ Failed models: {failed_count}")

@@ -1,7 +1,10 @@
 """View creation and management for Snowflake."""
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from tee.adapters.base.core import DatabaseAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -9,7 +12,7 @@ logger = logging.getLogger(__name__)
 class ViewHandler:
     """Handles view creation with column comments for Snowflake."""
 
-    def __init__(self, adapter):
+    def __init__(self, adapter: "DatabaseAdapter") -> None:
         """
         Initialize the view handler.
 

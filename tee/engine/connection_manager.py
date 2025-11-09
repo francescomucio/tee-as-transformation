@@ -27,7 +27,7 @@ class ConnectionManager:
         project_folder: str,
         connection_config: dict[str, Any],
         variables: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         """
         Initialize the connection manager.
 
@@ -80,7 +80,7 @@ class ConnectionManager:
             self.logger.error(f"Failed to get materializations: {e}")
             return []
 
-    def execute_models(self, parser, save_analysis: bool = True) -> dict[str, Any]:
+    def execute_models(self, parser: Any, save_analysis: bool = True) -> dict[str, Any]:
         """
         Execute SQL models.
 
@@ -98,7 +98,7 @@ class ConnectionManager:
             self.logger.error(f"Model execution failed: {e}")
             raise
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Clean up resources."""
         if self.executor:
             try:

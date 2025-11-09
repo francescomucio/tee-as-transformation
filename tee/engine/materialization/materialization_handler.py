@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class MaterializationHandler:
     """Handles different materialization types (table, view, incremental, etc.)."""
 
-    def __init__(self, adapter: DatabaseAdapter, state_manager, variables: dict[str, Any]):
+    def __init__(self, adapter: DatabaseAdapter, state_manager: Any, variables: dict[str, Any]) -> None:
         """
         Initialize the materialization handler.
 

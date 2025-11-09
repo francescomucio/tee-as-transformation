@@ -38,7 +38,7 @@ class ExecutionEngine:
         config_name: str = "default",
         project_folder: str = ".",
         variables: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         """
         Initialize the execution engine.
 

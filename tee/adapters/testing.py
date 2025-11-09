@@ -19,7 +19,7 @@ from .base import DatabaseAdapter
 class AdapterTester:
     """Test framework for database adapters."""
 
-    def __init__(self, adapter: DatabaseAdapter):
+    def __init__(self, adapter: DatabaseAdapter) -> None:
         self.adapter = adapter
         self.logger = logging.getLogger(self.__class__.__name__)
         self.test_results = {}
@@ -189,7 +189,7 @@ class AdapterTester:
                 pass
 
     @contextmanager
-    def test_connection_context(self):
+    def test_connection_context(self) -> Any:
         """Context manager for testing with automatic cleanup."""
         try:
             self.adapter.connect()

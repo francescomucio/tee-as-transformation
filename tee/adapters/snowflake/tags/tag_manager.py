@@ -1,6 +1,10 @@
 """Tag management for Snowflake database objects."""
 
 import logging
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from tee.adapters.base.core import DatabaseAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -8,7 +12,7 @@ logger = logging.getLogger(__name__)
 class TagManager:
     """Manages tag attachment for Snowflake objects."""
 
-    def __init__(self, adapter):
+    def __init__(self, adapter: "DatabaseAdapter") -> None:
         """
         Initialize the tag manager.
 
@@ -20,7 +24,7 @@ class TagManager:
         self.logger = adapter.logger
 
     @property
-    def connection(self):
+    def connection(self) -> Any:
         """Get connection from adapter."""
         return self.adapter.connection
 

@@ -72,7 +72,7 @@ class StandardTest(ABC):
 
         For model tests: The query should return rows when the test fails (like dbt).
         Zero rows = test passes.
-        
+
         For function tests: The query can return boolean (assertion-based) or a value (expected value pattern).
 
         Args:

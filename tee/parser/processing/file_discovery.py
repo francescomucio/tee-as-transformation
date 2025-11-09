@@ -205,18 +205,18 @@ class FileDiscovery:
             sql_files = []
             python_files = []
             database_overrides = []
-            
+
             # Collect all files with supported extensions in a single pass
             # This is more efficient than multiple rglob() calls
             all_extensions = set(SUPPORTED_SQL_EXTENSIONS) | set(SUPPORTED_PYTHON_EXTENSIONS) | set(SUPPORTED_FUNCTION_OVERRIDE_EXTENSIONS)
-            
+
             for ext in all_extensions:
                 for file_path in self.functions_folder.rglob(f"*{ext}"):
                     # Check if this is a database override file
                     # Pattern: {function_name}.{database}.{ext}
                     # e.g., calculate_metric.postgresql.sql
                     stem = file_path.stem  # filename without extension
-                    
+
                     if "." in stem:
                         # Split by dots - last part before extension should be a database name
                         parts = stem.split(".")
@@ -227,7 +227,7 @@ class FileDiscovery:
                                 # This is a database override file
                                 database_overrides.append(file_path)
                                 continue
-                    
+
                     # Not a database override - categorize by extension
                     if ext in SUPPORTED_SQL_EXTENSIONS:
                         sql_files.append(file_path)

@@ -30,7 +30,7 @@ def setup_build_context_from_compile(
 ) -> tuple[ProjectParser, dict[str, Any], dict[str, Any], list[str]]:
     """
     Set up build context using compile results (graph and models).
-    
+
     Returns:
         Tuple of (parser, parsed_models, graph, execution_order)
     """
@@ -59,53 +59,53 @@ def initialize_build_executors(
 ) -> tuple[ModelExecutor, TestExecutor]:
     """
     Initialize model and test executors and connect to database.
-    
+
     Returns:
         Tuple of (model_executor, test_executor)
     """
     model_executor = ModelExecutor(project_folder, connection_config)
-    
+
     from tee.engine.execution_engine import ExecutionEngine
-    
+
     model_executor.execution_engine = ExecutionEngine(
         model_executor.config, project_folder=project_folder, variables=variables
     )
-    
+
     model_executor.execution_engine.connect()
-    
+
     # Load seeds before executing models
     _load_seeds_for_build(model_executor, project_folder)
 
     test_executor = TestExecutor(
         model_executor.execution_engine.adapter, project_folder=project_folder
     )
-    
+
     return model_executor, test_executor
 
 
 def _load_seeds_for_build(model_executor: ModelExecutor, project_folder: str) -> None:
     """Load seed files from the seeds folder into database tables."""
     seeds_folder = Path(project_folder) / "seeds"
-    
+
     # Discover seed files
     seed_discovery = SeedDiscovery(seeds_folder)
     seed_files = seed_discovery.discover_seed_files()
-    
+
     if not seed_files:
         return
-    
+
     print(f"\nLoading {len(seed_files)} seed file(s)...")
-    
+
     # Load seeds using the adapter
     seed_loader = SeedLoader(model_executor.execution_engine.adapter)
     seed_results = seed_loader.load_all_seeds(seed_files)
-    
+
     # Log results
     if seed_results["loaded_tables"]:
         print(f"  ✅ Loaded {len(seed_results['loaded_tables'])} seed(s)")
         for table in seed_results["loaded_tables"]:
             print(f"    - {table}")
-    
+
     if seed_results["failed_tables"]:
         print(f"  ⚠️  Failed to load {len(seed_results['failed_tables'])} seed(s)")
         for failure in seed_results["failed_tables"]:
@@ -123,7 +123,7 @@ def should_skip_model(
         return True
     if node_name in skipped_models:
         return True
-    
+
     # Check if this model depends on any failed model
     node_deps = graph["dependencies"].get(node_name, [])
     depends_on_failed = any(
@@ -131,7 +131,7 @@ def should_skip_model(
     )
     if depends_on_failed:
         return True
-    
+
     return False
 
 
@@ -154,11 +154,11 @@ def execute_single_model(
 ) -> dict[str, Any]:
     """Execute a single model and return results."""
     print(f"\n📦 Executing: {node_name}")
-    
+
     model_results = model_executor.execution_engine.execute_models(
         {node_name: parsed_models[node_name]}, [node_name]
     )
-    
+
     return model_results
 
 
@@ -175,7 +175,7 @@ def handle_model_execution_result(
     failed_table_names = [
         f["table"] for f in model_results.get("failed_tables", [])
     ]
-    
+
     if node_name in failed_table_names:
         failed_models.add(node_name)
         error_msg = next(
@@ -189,7 +189,7 @@ def handle_model_execution_result(
         print(f"  ❌ Model failed: {error_msg}")
         mark_dependents_as_skipped(node_name, parser, skipped_models)
         return False
-    
+
     # Model executed successfully
     table_info = model_results.get("table_info", {}).get(node_name, {})
     row_count = table_info.get("row_count", 0)
@@ -205,19 +205,19 @@ def execute_tests_for_model(
 ) -> list[Any]:
     """Execute tests for a model and return test results."""
     from tee.engine.metadata import MetadataExtractor
-    
+
     model_data = parsed_models[node_name]
     metadata_extractor = MetadataExtractor()
     metadata = metadata_extractor.extract_model_metadata(model_data)
-    
+
     if not metadata:
         return []
-    
+
     print(f"  🧪 Running tests for {node_name}...")
     test_results = test_executor.execute_tests_for_model(
         table_name=node_name, metadata=metadata
     )
-    
+
     return test_results
 
 
@@ -229,19 +229,19 @@ def execute_tests_for_function(
 ) -> list[Any]:
     """Execute tests for a function and return test results."""
     from tee.engine.metadata import MetadataExtractor
-    
+
     function_data = parsed_functions[function_name]
     metadata_extractor = MetadataExtractor()
     metadata = metadata_extractor.extract_function_metadata(function_data)
-    
+
     if not metadata:
         return []
-    
+
     print(f"  🧪 Running tests for {function_name}...")
     test_results = test_executor.execute_tests_for_function(
         function_name=function_name, metadata=metadata
     )
-    
+
     return test_results
 
 
@@ -260,7 +260,7 @@ def handle_test_results(
         r for r in test_results
         if not r.passed and r.severity == TestSeverity.ERROR
     ]
-    
+
     if error_failures:
         failed_models.add(node_name)
         print(f"  ❌ Tests failed for {node_name}:")
@@ -271,11 +271,11 @@ def handle_test_results(
                 else node_name
             )
             print(f"    - {failure.test_name} on {location}: {failure.message}")
-        
+
         mark_dependents_as_skipped(node_name, parser, skipped_models)
         print(f"\n❌ Build stopped: Tests failed for {node_name}")
         raise SystemExit(1)
-    
+
     # Tests passed or only warnings
     passed_count = sum(1 for r in test_results if r.passed)
     warning_count = sum(
@@ -286,7 +286,7 @@ def handle_test_results(
         print(f"  ⚠️  Tests: {passed_count} passed, {warning_count} warnings")
     else:
         print(f"  ✅ Tests: {passed_count} passed")
-    
+
     return True
 
 
@@ -306,12 +306,12 @@ def compile_build_results(
         and name not in failed_models
         and not name.startswith("test:")
     ]
-    
+
     failed_tables = [
         {"table": name, "error": "Model failed or tests failed"}
         for name in failed_models
     ]
-    
+
     # Count test results
     total_tests = len(all_test_results)
     passed_tests = sum(1 for r in all_test_results if r.passed)
@@ -323,7 +323,7 @@ def compile_build_results(
         1 for r in all_test_results
         if not r.passed and r.severity == TestSeverity.WARNING
     )
-    
+
     test_results_summary = {
         "total": total_tests,
         "passed": passed_tests,
@@ -331,7 +331,7 @@ def compile_build_results(
         "warnings": warning_tests,
         "test_results": all_test_results,
     }
-    
+
     return {
         "executed_tables": executed_tables,
         "failed_tables": failed_tables,
@@ -349,7 +349,7 @@ def print_build_summary(results: dict[str, Any], failed_models: set[str], skippe
     """Print build summary."""
     executed_tables = results["executed_tables"]
     test_results = results["test_results"]
-    
+
     print("\n" + "=" * 50)
     print("BUILD RESULTS")
     print("=" * 50)

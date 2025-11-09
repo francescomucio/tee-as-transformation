@@ -46,7 +46,7 @@ class DependencyGraphBuilder:
             DependencyError: If graph building fails
         """
         parsed_functions = parsed_functions or {}
-        
+
         try:
             # Extract dependencies from parsed models and functions
             dependencies = {}

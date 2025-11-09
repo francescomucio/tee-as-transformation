@@ -28,7 +28,7 @@ from .utils.helpers import DuckDBUtils
 class DuckDBAdapter(DatabaseAdapter):
     """DuckDB database adapter with SQLglot integration."""
 
-    def __init__(self, config: AdapterConfig):
+    def __init__(self, config: AdapterConfig) -> None:
         if duckdb is None:
             raise ImportError("DuckDB is not installed. Install it with: uv add duckdb")
 

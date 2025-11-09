@@ -23,7 +23,7 @@ SUPPORTED_SEED_EXTENSIONS = [".csv", ".json", ".tsv"]
 class SeedDiscovery:
     """Handles discovery of seed files in the seeds folder."""
 
-    def __init__(self, seeds_folder: Path):
+    def __init__(self, seeds_folder: Path) -> None:
         """
         Initialize the seed discovery.
 
@@ -56,14 +56,14 @@ class SeedDiscovery:
                 # If file is in a subfolder, use the first subfolder as schema name
                 relative_path = file_path.relative_to(self.seeds_folder)
                 parts = relative_path.parts
-                
+
                 if len(parts) > 1:
                     # File is in a subfolder, first part is the schema name
                     schema_name = parts[0]
                 else:
                     # File is directly in seeds folder, no schema
                     schema_name = None
-                
+
                 seed_files.append((file_path, schema_name))
 
         # Sort for consistent ordering
@@ -82,7 +82,7 @@ class SeedDiscovery:
 class SeedLoader:
     """Handles loading seed files into database tables."""
 
-    def __init__(self, adapter: DatabaseAdapter):
+    def __init__(self, adapter: DatabaseAdapter) -> None:
         """
         Initialize the seed loader.
 
@@ -114,7 +114,7 @@ class SeedLoader:
 
         # Determine file type and load accordingly
         file_ext = file_path.suffix.lower()
-        
+
         if file_ext == ".csv":
             self._load_csv(file_path, full_table_name)
         elif file_ext == ".tsv":
@@ -138,15 +138,15 @@ class SeedLoader:
             f.seek(0)
             sniffer = csv.Sniffer()
             delimiter = sniffer.sniff(sample).delimiter
-            
+
             reader = csv.DictReader(f, delimiter=delimiter)
-            
+
             # Get column names from header
             if not reader.fieldnames:
                 raise ValueError(f"CSV file {file_path} has no header row")
-            
+
             columns = list(reader.fieldnames)
-            
+
             # Read all rows
             rows = list(reader)
 
@@ -172,10 +172,10 @@ class SeedLoader:
         # Read TSV
         with open(file_path, encoding="utf-8") as f:
             reader = csv.DictReader(f, delimiter="\t")
-            
+
             if not reader.fieldnames:
                 raise ValueError(f"TSV file {file_path} has no header row")
-            
+
             columns = list(reader.fieldnames)
             rows = list(reader)
 
@@ -226,7 +226,7 @@ class SeedLoader:
         # Escape single quotes in path and convert backslashes to forward slashes
         file_path_str = str(file_path.absolute()).replace("\\", "/").replace("'", "''")
         query = f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM read_csv_auto('{file_path_str}')"
-        
+
         try:
             self.adapter.execute_query(query)
         except Exception as e:
@@ -238,7 +238,7 @@ class SeedLoader:
         # Escape single quotes in path and convert backslashes to forward slashes
         file_path_str = str(file_path.absolute()).replace("\\", "/").replace("'", "''")
         query = f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM read_csv_auto('{file_path_str}', delim='\\t')"
-        
+
         try:
             self.adapter.execute_query(query)
         except Exception as e:
@@ -250,7 +250,7 @@ class SeedLoader:
         # Escape single quotes in path and convert backslashes to forward slashes
         file_path_str = str(file_path.absolute()).replace("\\", "/").replace("'", "''")
         query = f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM read_json_auto('{file_path_str}')"
-        
+
         try:
             self.adapter.execute_query(query)
         except Exception as e:
@@ -264,10 +264,10 @@ class SeedLoader:
         # Create table first
         column_defs = ", ".join([f"{col} VARCHAR" for col in columns])
         create_query = f"CREATE TABLE IF NOT EXISTS {table_name} ({column_defs})"
-        
+
         try:
             self.adapter.execute_query(create_query)
-            
+
             # Insert rows
             if rows:
                 for row in rows:
@@ -292,10 +292,10 @@ class SeedLoader:
         # Create table first
         column_defs = ", ".join([f"{col} VARCHAR" for col in columns])
         create_query = f"CREATE TABLE IF NOT EXISTS {table_name} ({column_defs})"
-        
+
         try:
             self.adapter.execute_query(create_query)
-            
+
             # Insert rows
             if rows:
                 for row in rows:
@@ -311,7 +311,7 @@ class SeedLoader:
         """Create an empty table with the specified columns."""
         column_defs = ", ".join([f"{col} VARCHAR" for col in columns])
         create_query = f"CREATE TABLE IF NOT EXISTS {table_name} ({column_defs})"
-        
+
         try:
             self.adapter.execute_query(create_query)
         except Exception as e:

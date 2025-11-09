@@ -43,7 +43,7 @@ class StateManager:
     and state tracking.
     """
 
-    def __init__(self, state_database_path: str | None = None, project_folder: str = "."):
+    def __init__(self, state_database_path: str | None = None, project_folder: str = ".") -> None:
         """
         Initialize the state manager.
 
@@ -61,13 +61,13 @@ class StateManager:
         self._initialize_database()
         logger.info(f"State manager initialized with database: {self.state_database_path}")
 
-    def _get_connection(self):
+    def _get_connection(self) -> Any:
         """Get database connection, creating if needed."""
         if self.conn is None:
             self.conn = duckdb.connect(database=str(self.state_database_path), read_only=False)
         return self.conn
 
-    def _initialize_database(self):
+    def _initialize_database(self) -> None:
         """Initialize the state database with required tables."""
         conn = self._get_connection()
         conn.execute("""
@@ -206,7 +206,7 @@ class StateManager:
             strategy=strategy or state.strategy,
         )
 
-    def check_database_existence(self, adapter, table_name: str) -> bool:
+    def check_database_existence(self, adapter: Any, table_name: str) -> bool:
         """Check if the model exists in the target database."""
         # Check if table exists
         if adapter.table_exists(table_name):
@@ -219,7 +219,7 @@ class StateManager:
         # For adapters without view_exists method, assume it doesn't exist
         return False
 
-    def rebuild_state_from_database(self, adapter, model_name: str) -> ModelState | None:
+    def rebuild_state_from_database(self, adapter: Any, model_name: str) -> ModelState | None:
         """Rebuild model state from database existence."""
         if not self.check_database_existence(adapter, model_name):
             return None
@@ -284,7 +284,7 @@ class StateManager:
             for row in results
         ]
 
-    def close(self):
+    def close(self) -> None:
         """Close the database connection."""
         if self.conn:
             self.conn.close()
