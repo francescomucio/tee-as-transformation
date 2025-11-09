@@ -82,13 +82,20 @@ def compile_project(
     try:
         logger.info("Starting project compilation to OTS modules")
 
-        # Step 1: Parse SQL/Python models
+        # Step 1: Parse SQL/Python models and functions
         print("\n" + "=" * 50)
-        print("STEP 1: Parsing SQL and Python models")
+        print("STEP 1: Parsing SQL and Python models and functions")
         print("=" * 50)
         parser = ProjectParser(project_folder, connection_config, variables, project_config)
         parsed_models = parser.collect_models()
         print(f"✅ Parsed {len(parsed_models)} models from SQL/Python files")
+        
+        # Discover and parse functions
+        parsed_functions = parser.orchestrator.discover_and_parse_functions()
+        if parsed_functions:
+            print(f"✅ Parsed {len(parsed_functions)} functions")
+        else:
+            print("✅ No functions found")
 
         # Step 2: Discover and validate imported OTS modules
         print("\n" + "=" * 50)
@@ -112,7 +119,7 @@ def compile_project(
                     
                     # Load and convert
                     module = reader.read_module(ots_file)
-                    module_models = converter.convert_module(module)
+                    module_models, module_functions = converter.convert_module(module)
                     
                     # Merge into imported models
                     for transformation_id, parsed_model in module_models.items():
@@ -123,7 +130,16 @@ def compile_project(
                             )
                         imported_ots_models[transformation_id] = parsed_model
                     
-                    print(f"  ✅ Loaded {ots_file.name}: {len(module_models)} transformations")
+                    # Note: Functions from OTS modules are not yet integrated into the compilation flow
+                    # This will be handled in Phase 8 (Execution Engine Integration)
+                    if module_functions:
+                        logger.debug(f"Loaded {len(module_functions)} functions from OTS module {ots_file.name} (not yet integrated)")
+                    
+                    print(f"  ✅ Loaded {ots_file.name}: {len(module_models)} transformations", end="")
+                    if module_functions:
+                        print(f" and {len(module_functions)} functions")
+                    else:
+                        print()
                 except (OTSValidationError, OTSModuleReaderError, OTSConverterError) as e:
                     raise CompilationError(f"Failed to load imported OTS module {ots_file}: {e}")
                 except Exception as e:
@@ -208,7 +224,7 @@ def compile_project(
         )
         
         ots_modules = transformer.transform_to_ots_modules(
-            all_models, test_library_path=test_library_path
+            all_models, parsed_functions=parsed_functions, test_library_path=test_library_path
         )
         print(f"✅ Converted to {len(ots_modules)} OTS module(s)")
 
@@ -248,7 +264,9 @@ def compile_project(
         exporter = JSONExporter(output_folder, project_config, project_path)
         
         # Export OTS modules in the specified format
-        exported_paths = exporter.export_ots_modules(all_models, test_library_path=test_library_path, format=format)
+        exported_paths = exporter.export_ots_modules(
+            all_models, parsed_functions=parsed_functions, test_library_path=test_library_path, format=format
+        )
         
         print(f"✅ Exported {len(exported_paths)} OTS module(s) to {output_folder}")
 
@@ -297,11 +315,17 @@ def _merge_test_libraries(
     from tee.parser.input import OTSModuleReader
     
     # Get project name from config or folder name
-    project_name = project_config.get("name") if project_config else project_path.name
+    # project.toml has "project_folder" not "name", so use that or fall back to folder name
+    if project_config:
+        project_name = project_config.get("name") or project_config.get("project_folder") or project_path.name
+    else:
+        project_name = project_path.name
     
     # Step 1: Export project's test library (or create empty structure)
+    # This creates the base test library that will be merged with imported ones
     test_exporter = TestLibraryExporter(project_path, project_name)
     project_test_library_path = test_exporter.export_test_library(output_folder, format=format)
+    # Note: This file will be overwritten by the merged version below
     
     # Load project's test library if it exists
     project_test_library = {}
@@ -323,6 +347,7 @@ def _merge_test_libraries(
     # If no project test library was created, create empty structure
     if not project_test_library:
         project_test_library = {
+            "ots_version": "0.2.0",  # Test libraries are part of OTS 0.2.0
             "test_library_version": "1.0",
             "description": f"Test library for {project_name} project",
         }
@@ -405,6 +430,7 @@ def _merge_test_libraries(
     
     # Step 4: Build merged test library
     merged_test_library = {
+        "ots_version": "0.2.0",  # Test libraries are part of OTS 0.2.0
         "test_library_version": project_test_library.get("test_library_version", "1.0"),
         "description": project_test_library.get("description", f"Test library for {project_name} project"),
     }
@@ -435,7 +461,7 @@ def _merge_test_libraries(
             json.dump(merged_test_library, f, indent=2, ensure_ascii=False)
     
     logger.info(f"Exported merged test library to {output_file}")
-    print(f"✅ Merged test library saved to {output_file}")
+    print(f"✅ Final merged test library saved to {output_file}")
     print(f"   Contains {len(merged_generic_tests)} generic test(s) and {len(merged_singular_tests)} singular test(s)")
     if conflicts:
         print(f"   ⚠️  {len(conflicts)} test conflict(s) resolved (project version used)")

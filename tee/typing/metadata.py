@@ -27,6 +27,9 @@ MaterializationType = Literal["table", "view", "incremental", "scd2"]
 # Incremental strategy types
 IncrementalStrategy = Literal["append", "merge", "delete_insert"]
 
+# Function types
+FunctionType = Literal["scalar", "aggregate", "table"]
+
 # Test names for columns
 ColumnTestName = Literal[
     "not_null", "unique", "accepted_values", "relationships", "expression", "custom"
@@ -113,6 +116,56 @@ class ParsedModelMetadata(TypedDict):
     indexes: NotRequired[Optional[List[Dict[str, Any]]]]  # Explicit index definitions
 
 
+# Function-specific types
+
+
+class FunctionParameter(TypedDict):
+    """Type definition for a function parameter."""
+
+    name: str
+    type: str  # SQL type string (e.g., "FLOAT", "VARCHAR(255)", "INTEGER")
+    description: NotRequired[Optional[str]]
+    default: NotRequired[Optional[str]]  # Default value as string
+    mode: NotRequired[Literal["IN", "OUT", "INOUT"]]  # Parameter mode (for some databases)
+
+
+class FunctionMetadataDict(TypedDict):
+    """Type definition for the raw function metadata dictionary from Python files."""
+
+    function_name: str
+    description: NotRequired[Optional[str]]
+    function_type: NotRequired[FunctionType]  # "scalar", "aggregate", "table" (default: "scalar")
+    language: NotRequired[Optional[str]]  # "sql", "python", "javascript", etc.
+    parameters: NotRequired[Optional[List[FunctionParameter]]]
+    return_type: NotRequired[Optional[str]]  # SQL type string for scalar/aggregate functions
+    return_table_schema: NotRequired[Optional[List[ColumnDefinition]]]  # For table-valued functions
+    schema: NotRequired[Optional[str]]  # Schema name
+    deterministic: NotRequired[Optional[bool]]  # Whether function is deterministic
+    # Tests can be simple strings or dicts with parameters and severity
+    tests: NotRequired[Optional[List[Union[str, Dict[str, Any]]]]]
+    # Tags (dbt-style, list of strings)
+    tags: NotRequired[Optional[List[str]]]
+    # Object tags (database-style, key-value pairs)
+    object_tags: NotRequired[Optional[Dict[str, str]]]
+
+
+class ParsedFunctionMetadata(TypedDict):
+    """Type definition for parsed and validated function metadata."""
+
+    function_name: str
+    description: NotRequired[Optional[str]]
+    function_type: FunctionType  # Required after parsing (defaults to "scalar")
+    language: NotRequired[Optional[str]]
+    parameters: NotRequired[List[FunctionParameter]]
+    return_type: NotRequired[Optional[str]]  # For scalar/aggregate functions
+    return_table_schema: NotRequired[Optional[List[ColumnDefinition]]]  # For table functions
+    schema: NotRequired[Optional[str]]
+    deterministic: NotRequired[bool]
+    tests: NotRequired[List[Union[str, Dict[str, Any]]]]
+    tags: NotRequired[List[str]]
+    object_tags: NotRequired[Dict[str, str]]
+
+
 # OTS-specific types for the Open Transformation Specification
 
 
@@ -139,6 +192,22 @@ class OTSTransformation(TypedDict):
     metadata: Dict[str, Any]
 
 
+class OTSFunction(TypedDict):
+    """Single function definition in an OTS Module (OTS 0.2.0+)."""
+
+    function_id: str  # Fully qualified function name (e.g., "schema.function_name")
+    description: NotRequired[Optional[str]]
+    function_type: FunctionType  # "scalar", "aggregate", "table"
+    language: str  # "sql", "python", "javascript", etc.
+    parameters: NotRequired[List[FunctionParameter]]
+    return_type: NotRequired[Optional[str]]  # For scalar/aggregate functions
+    return_table_schema: NotRequired[Optional[List[ColumnDefinition]]]  # For table functions
+    deterministic: NotRequired[Optional[bool]]  # Whether function is deterministic (same inputs = same outputs)
+    code: Dict[str, Any]  # Type-based structure with generic_sql and database_specific
+    dependencies: NotRequired[Dict[str, List[str]]]  # {"functions": [], "tables": []}
+    metadata: Dict[str, Any]  # Includes tags, object_tags, file_path, etc.
+
+
 class OTSModule(TypedDict):
     """Complete OTS Module structure."""
 
@@ -150,3 +219,4 @@ class OTSModule(TypedDict):
     test_library_path: NotRequired[Optional[str]]
     target: OTSTarget
     transformations: List[OTSTransformation]
+    functions: NotRequired[Optional[List[OTSFunction]]]  # NEW in OTS 0.2.0

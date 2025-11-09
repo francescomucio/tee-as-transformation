@@ -9,9 +9,10 @@ import logging
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 
-from tee.parser.shared.types import ParsedModel
-from tee.typing.metadata import OTSModule, OTSTransformation, OTSTarget
+from tee.parser.shared.types import ParsedModel, ParsedFunction
+from tee.typing.metadata import OTSModule, OTSTransformation, OTSTarget, OTSFunction
 from tee.parser.shared.model_utils import create_model_metadata
+from tee.parser.shared.function_utils import create_function_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -33,15 +34,17 @@ class OTSConverter:
         """
         self.module_path = module_path
 
-    def convert_module(self, module: OTSModule) -> Dict[str, ParsedModel]:
+    def convert_module(
+        self, module: OTSModule
+    ) -> tuple[Dict[str, ParsedModel], Dict[str, ParsedFunction]]:
         """
-        Convert an OTS module to a dictionary of ParsedModels.
+        Convert an OTS module to dictionaries of ParsedModels and ParsedFunctions.
 
         Args:
             module: OTS module dictionary
 
         Returns:
-            Dictionary mapping transformation_id to ParsedModel
+            Tuple of (parsed_models, parsed_functions) dictionaries
 
         Raises:
             OTSConverterError: If conversion fails
@@ -63,8 +66,30 @@ class OTSConverter:
                     logger.error(f"Failed to convert transformation {transformation_id}: {e}")
                     raise OTSConverterError(f"Failed to convert transformation {transformation_id}: {e}")
 
-            logger.info(f"Converted {len(parsed_models)} transformations from OTS module")
-            return parsed_models
+            # Convert functions (OTS 0.2.0+)
+            parsed_functions = {}
+            ots_version = module.get("ots_version", "0.1.0")
+            # Check if version is 0.2.0 or higher
+            # For simple versions like "0.1.0" and "0.2.0", string comparison works
+            if ots_version >= "0.2.0":
+                functions = module.get("functions", [])
+                for function in functions:
+                    function_id = function.get("function_id")
+                    if not function_id:
+                        logger.warning("Skipping function without function_id")
+                        continue
+
+                    try:
+                        parsed_function = self._convert_function(function, module)
+                        parsed_functions[function_id] = parsed_function
+                    except Exception as e:
+                        logger.error(f"Failed to convert function {function_id}: {e}")
+                        raise OTSConverterError(f"Failed to convert function {function_id}: {e}")
+
+            logger.info(
+                f"Converted {len(parsed_models)} transformations and {len(parsed_functions)} functions from OTS module"
+            )
+            return parsed_models, parsed_functions
 
         except Exception as e:
             raise OTSConverterError(f"Failed to convert OTS module: {e}")
@@ -366,4 +391,124 @@ class OTSConverter:
                     col_def["tests"] = col_test_map[col_name]
 
         return result if result else None
+
+    def _convert_function(
+        self, function: OTSFunction, module: OTSModule
+    ) -> ParsedFunction:
+        """
+        Convert a single OTS function to ParsedFunction format.
+
+        Args:
+            function: OTS function dictionary
+            module: Parent OTS module (for module-level metadata)
+
+        Returns:
+            ParsedFunction dictionary
+        """
+        function_id = function.get("function_id", "")
+        
+        # Extract schema.function_name from function_id
+        if "." in function_id:
+            parts = function_id.split(".", 1)
+            schema = parts[0]
+            function_name = parts[1]
+        else:
+            schema = module.get("target", {}).get("schema", "default")
+            function_name = function_id
+
+        # Extract function properties
+        description = function.get("description")
+        function_type = function.get("function_type", "scalar")
+        language = function.get("language", "sql")
+        parameters = function.get("parameters", [])
+        return_type = function.get("return_type")
+        return_table_schema = function.get("return_table_schema")
+        dependencies = function.get("dependencies", {})
+
+        # Extract code structure
+        code_data = self._convert_function_code(function.get("code", {}), language, dependencies)
+
+        # Extract and merge metadata
+        metadata = function.get("metadata", {})
+        file_path = metadata.get("file_path", "")
+        
+        # Merge module-level and function-level tags
+        module_tags = module.get("tags", [])
+        function_tags = metadata.get("tags", [])
+        all_tags = list(set(module_tags + function_tags))  # Deduplicate
+
+        # Extract object_tags
+        object_tags = metadata.get("object_tags", {})
+
+        # Build nested metadata structure
+        nested_metadata: Dict[str, Any] = {
+            "tags": all_tags if all_tags else [],
+            "object_tags": object_tags if object_tags else {},
+            "tests": [],  # Functions can have tests, but we'll handle that separately if needed
+        }
+
+        # Create function_metadata structure
+        function_metadata = create_function_metadata(
+            function_name=function_name,
+            schema=schema,
+            file_path=file_path,
+            description=description,
+            function_type=function_type,
+            language=language,
+            parameters=parameters,
+            return_type=return_type,
+            metadata={
+                **nested_metadata,
+                "return_table_schema": return_table_schema,
+            },
+        )
+
+        # Build ParsedFunction structure
+        parsed_function: ParsedFunction = {
+            "function_metadata": function_metadata,
+            "code": code_data,
+            "function_hash": "",  # Will be computed if needed
+        }
+
+        return parsed_function
+
+    def _convert_function_code(
+        self, code: Dict[str, Any], language: str, dependencies: Dict[str, List[str]]
+    ) -> Dict[str, Any]:
+        """
+        Convert OTS function code structure to ParsedFunction code structure.
+
+        Args:
+            code: OTS code dictionary
+            language: Function language (e.g., "sql", "python")
+            dependencies: Dependencies dict with 'tables' and 'functions' keys
+
+        Returns:
+            ParsedFunction code dictionary
+        """
+        if language == "sql":
+            # OTS format: {"generic_sql": "...", "database_specific": {"duckdb": "...", ...}}
+            generic_sql = code.get("generic_sql", "")
+            database_specific = code.get("database_specific", {})
+
+            # For now, use generic_sql as original_sql
+            # In the future, we might want to select database-specific SQL based on target
+            original_sql = generic_sql
+
+            # Extract dependencies (consistent with models)
+            source_tables = dependencies.get("tables", [])
+            source_functions = dependencies.get("functions", [])
+
+            return {
+                "sql": {
+                    "original_sql": original_sql,
+                    # Note: resolved_sql would be generated during parsing
+                    "source_tables": source_tables,  # Store dependencies like models
+                    "source_functions": source_functions,  # Store dependencies like models
+                }
+            }
+        else:
+            # For non-SQL functions (Python, JavaScript, etc.), preserve as-is
+            logger.warning(f"Non-SQL function language '{language}' not fully supported yet")
+            return code
 

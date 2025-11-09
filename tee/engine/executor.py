@@ -109,6 +109,22 @@ class ModelExecutor:
             # This ensures all Python models have their SQLGlot expressions ready
             parsed_models = parser.orchestrator.evaluate_python_models(parsed_models, variables)
 
+            # Get parsed functions and execute them before models
+            # Functions must be created before models that depend on them
+            parsed_functions = parser.orchestrator.discover_and_parse_functions()
+            function_results = {}
+            if parsed_functions:
+                self.logger.info(f"Executing {len(parsed_functions)} functions before models")
+                function_results = self.execution_engine.execute_functions(parsed_functions, execution_order)
+                if function_results.get("failed_functions"):
+                    self.logger.warning(
+                        f"Some functions failed: {len(function_results['failed_functions'])} failed"
+                    )
+                else:
+                    self.logger.info(
+                        f"Successfully executed {len(function_results.get('executed_functions', []))} functions"
+                    )
+
             self.logger.info(f"Executing {len(execution_order)} models in dependency order")
             self.logger.info(f"Execution order: {' -> '.join(execution_order)}")
 
@@ -123,6 +139,14 @@ class ModelExecutor:
 
             # Execute all models
             results = self.execution_engine.execute_models(parsed_models, execution_order)
+            
+            # Merge function results into main results
+            if function_results:
+                results["executed_functions"] = function_results.get("executed_functions", [])
+                results["failed_functions"] = function_results.get("failed_functions", [])
+                if "execution_log" not in results:
+                    results["execution_log"] = []
+                results["execution_log"].extend(function_results.get("execution_log", []))
 
             # Update Python parser's cached models with resolved SQL from execution
             # This ensures the resolved_sql is saved back to the Python parser

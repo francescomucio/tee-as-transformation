@@ -282,6 +282,100 @@ class PostgreSQLAdapter(DatabaseAdapter):
             self.logger.error(f"Error getting table info for {table_name}: {e}")
             raise
 
+    def create_function(
+        self,
+        function_name: str,
+        function_sql: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Create or replace a user-defined function in the database."""
+        if not self.connection:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+
+        # Create schema if needed
+        if "." in function_name:
+            schema_name, _ = function_name.split(".", 1)
+            try:
+                cursor = self.connection.cursor()
+                cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {schema_name}")
+                self.connection.commit()
+                cursor.close()
+                self.logger.debug(f"Created schema: {schema_name}")
+            except Exception as e:
+                self.logger.warning(f"Could not create schema {schema_name}: {e}")
+
+        # Function SQL is already a complete CREATE OR REPLACE FUNCTION statement
+        # Execute it as-is (should already be in PostgreSQL dialect)
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute(function_sql)
+            self.connection.commit()
+            cursor.close()
+            self.logger.info(f"Created function: {function_name}")
+
+            # Attach tags if provided (PostgreSQL doesn't natively support tags, but log debug)
+            if metadata:
+                tags = metadata.get("tags", [])
+                object_tags = metadata.get("object_tags", {})
+                if tags:
+                    self.attach_tags("FUNCTION", function_name, tags)
+                if object_tags:
+                    self.attach_object_tags("FUNCTION", function_name, object_tags)
+
+        except Exception as e:
+            self.logger.error(f"Failed to create function {function_name}: {e}")
+            from tee.parser.shared.exceptions import FunctionExecutionError
+            raise FunctionExecutionError(f"Failed to create function {function_name}: {e}") from e
+
+    def function_exists(self, function_name: str, signature: Optional[str] = None) -> bool:
+        """Check if a function exists in the database."""
+        if not self.connection:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+
+        try:
+            # Extract schema and function name
+            if "." in function_name:
+                schema_name, func_name = function_name.split(".", 1)
+            else:
+                schema_name = "public"  # PostgreSQL default schema
+                func_name = function_name
+
+            # Query information_schema.routines for functions
+            cursor = self.connection.cursor()
+            cursor.execute(
+                """
+                SELECT COUNT(*) 
+                FROM information_schema.routines 
+                WHERE routine_schema = %s AND routine_name = %s AND routine_type = 'FUNCTION'
+                """,
+                [schema_name, func_name],
+            )
+            result = cursor.fetchone()
+            cursor.close()
+            return result[0] > 0 if result else False
+        except Exception as e:
+            self.logger.warning(f"Error checking if function {function_name} exists: {e}")
+            return False
+
+    def drop_function(self, function_name: str) -> None:
+        """Drop a function from the database."""
+        if not self.connection:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+
+        try:
+            # PostgreSQL requires the full signature for DROP FUNCTION
+            # For now, we'll use DROP FUNCTION IF EXISTS with just the name
+            # This may fail if there are multiple overloads - that's expected behavior
+            cursor = self.connection.cursor()
+            cursor.execute(f"DROP FUNCTION IF EXISTS {function_name}")
+            self.connection.commit()
+            cursor.close()
+            self.logger.info(f"Dropped function: {function_name}")
+        except Exception as e:
+            self.logger.error(f"Error dropping function {function_name}: {e}")
+            from tee.parser.shared.exceptions import FunctionExecutionError
+            raise FunctionExecutionError(f"Failed to drop function {function_name}: {e}") from e
+
 
 # Register the adapter
 register_adapter("postgresql", PostgreSQLAdapter)

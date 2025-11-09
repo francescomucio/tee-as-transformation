@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Dict, Any
 
 from tee.parser.output import JSONExporter
-from tee.parser.shared.types import ParsedModel
+from tee.parser.shared.types import ParsedModel, ParsedFunction
 
 
 class TestJSONExporterYAML:
@@ -117,6 +117,52 @@ class TestJSONExporterYAML:
         assert json_data["ots_version"] == yaml_data["ots_version"]
         assert json_data["module_name"] == yaml_data["module_name"]
         assert len(json_data["transformations"]) == len(yaml_data["transformations"])
+
+    def test_export_ots_modules_with_functions(self, temp_dir, sample_parsed_models, project_config):
+        """Test exporting OTS modules with functions."""
+        sample_function: ParsedFunction = {
+            "function_metadata": {
+                "function_name": "calculate_percentage",
+                "function_type": "scalar",
+                "language": "sql",
+                "schema": "schema1",
+                "file_path": "functions/schema1/calculate_percentage.sql",
+            },
+            "code": {
+                "sql": {
+                    "original_sql": "CREATE FUNCTION calculate_percentage(n FLOAT, d FLOAT) RETURNS FLOAT AS $$ SELECT n/d*100 $$",
+                }
+            },
+        }
+        parsed_functions = {"schema1.calculate_percentage": sample_function}
+
+        exporter = JSONExporter(temp_dir, project_config)
+        results = exporter.export_ots_modules(sample_parsed_models, parsed_functions=parsed_functions)
+
+        assert len(results) == 1
+        output_file = results["test_project.schema1"]
+        assert output_file.exists()
+
+        # Verify module contains functions
+        with open(output_file, "r") as f:
+            module_data = json.load(f)
+            assert module_data["ots_version"] == "0.2.0"
+            assert "functions" in module_data
+            assert len(module_data["functions"]) == 1
+            assert module_data["functions"][0]["function_id"] == "schema1.calculate_percentage"
+
+    def test_export_ots_modules_without_functions(self, temp_dir, sample_parsed_models, project_config):
+        """Test that OTS version is 0.1.0 when no functions are exported."""
+        exporter = JSONExporter(temp_dir, project_config)
+        results = exporter.export_ots_modules(sample_parsed_models)
+
+        assert len(results) == 1
+        output_file = results["test_project.schema1"]
+        
+        with open(output_file, "r") as f:
+            module_data = json.load(f)
+            assert module_data["ots_version"] == "0.1.0"
+            assert "functions" not in module_data
 
 
 class TestTestLibraryExporterYAML:

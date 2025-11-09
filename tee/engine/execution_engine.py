@@ -10,6 +10,7 @@ import logging
 from datetime import datetime, UTC
 
 from tee.adapters import get_adapter, AdapterConfig
+from tee.parser.shared.types import ParsedFunction
 from .config import load_database_config
 from .model_state import ModelStateManager
 
@@ -286,6 +287,107 @@ class ExecutionEngine:
 
         self.logger.info(
             f"Execution completed. {len(results['executed_tables'])} successful, {len(results['failed_tables'])} failed"
+        )
+        return results
+
+    def execute_functions(
+        self, parsed_functions: Dict[str, ParsedFunction], execution_order: List[str]
+    ) -> Dict[str, Any]:
+        """
+        Execute user-defined functions in dependency order.
+
+        Functions are always created/overwritten (no versioning).
+        Execution order should include functions before models that depend on them.
+
+        Args:
+            parsed_functions: Dictionary mapping function names to parsed function data
+            execution_order: List of all objects (functions and models) in execution order
+
+        Returns:
+            Dictionary with execution results and status
+        """
+        results = {
+            "executed_functions": [],
+            "failed_functions": [],
+            "execution_log": [],
+            "warnings": [],
+        }
+
+        # Filter execution order to get only functions
+        function_order = [
+            name for name in execution_order if name in parsed_functions
+        ]
+
+        if not function_order:
+            self.logger.info("No functions to execute")
+            return results
+
+        self.logger.info(
+            f"Starting execution of {len(function_order)} functions using {self.adapter.__class__.__name__}"
+        )
+
+        for function_name in function_order:
+            # Skip test nodes
+            if function_name.startswith("test:"):
+                self.logger.debug(f"Skipping test node: {function_name}")
+                continue
+
+            try:
+                self.logger.info(f"Executing function: {function_name}")
+
+                if function_name not in parsed_functions:
+                    self.logger.warning(f"Function {function_name} not found in parsed functions")
+                    results["failed_functions"].append(
+                        {"function": function_name, "error": "Function not found in parsed functions"}
+                    )
+                    continue
+
+                function_data = parsed_functions[function_name]
+
+                # Extract function SQL
+                function_sql = self._extract_function_sql(function_data, function_name)
+                if not function_sql:
+                    results["failed_functions"].append(
+                        {"function": function_name, "error": "No SQL found for function"}
+                    )
+                    continue
+
+                # Extract metadata
+                metadata = self._extract_function_metadata(function_data)
+
+                # Extract schema name and attach schema-level tags if needed
+                schema_name = self._extract_schema_name(function_name)
+                if schema_name:
+                    self._attach_schema_tags_if_needed(schema_name)
+
+                # Execute function creation (always CREATE OR REPLACE)
+                # No need to check if function exists - CREATE OR REPLACE handles replacement
+                # All supported databases (DuckDB, Snowflake, PostgreSQL, BigQuery) support CREATE OR REPLACE
+                self.adapter.create_function(function_name, function_sql, metadata)
+
+                results["executed_functions"].append(function_name)
+                results["execution_log"].append(
+                    {
+                        "function": function_name,
+                        "status": "success",
+                    }
+                )
+
+                self.logger.info(f"Successfully executed function: {function_name}")
+
+            except Exception as e:
+                error_msg = f"Error executing function {function_name}: {str(e)}"
+                self.logger.error(error_msg)
+                results["failed_functions"].append({"function": function_name, "error": str(e)})
+                results["execution_log"].append(
+                    {"function": function_name, "status": "failed", "error": str(e)}
+                )
+                # Continue with other functions even if one fails
+                # Functions are independent, so one failure shouldn't stop others
+
+        self.logger.info(
+            f"Function execution completed. {len(results['executed_functions'])} successful, "
+            f"{len(results['failed_functions'])} failed"
         )
         return results
 
@@ -708,3 +810,58 @@ class ExecutionEngine:
         except Exception as e:
             self.logger.debug(f"Could not load schema metadata for {schema_name}: {e}")
             return None
+
+    def _extract_function_sql(self, function_data: Dict[str, Any], function_name: str) -> str:
+        """
+        Extract SQL query from function data.
+
+        Args:
+            function_data: Parsed function data
+            function_name: Name of the function
+
+        Returns:
+            SQL query string or empty string if not found
+        """
+        code_data = function_data.get("code", {})
+        if not code_data or "sql" not in code_data:
+            self.logger.error(f"No code.sql found for function {function_name}")
+            return ""
+
+        sql_data = code_data["sql"]
+        # For functions, we use original_sql (the CREATE OR REPLACE FUNCTION statement)
+        if "original_sql" in sql_data:
+            return sql_data["original_sql"]
+
+        self.logger.error(f"No original_sql found for function {function_name}")
+        return ""
+
+    def _extract_function_metadata(self, function_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Extract metadata from function data.
+
+        Args:
+            function_data: Dictionary containing function data
+
+        Returns:
+            Metadata dictionary with tags, object_tags, and other info, or None if no metadata found
+        """
+        try:
+            function_metadata = function_data.get("function_metadata", {})
+            if not function_metadata:
+                return None
+
+            # Extract tags and object_tags from function metadata
+            metadata = {}
+            if "tags" in function_metadata:
+                metadata["tags"] = function_metadata["tags"]
+            if "object_tags" in function_metadata:
+                metadata["object_tags"] = function_metadata["object_tags"]
+            if "description" in function_metadata:
+                metadata["description"] = function_metadata["description"]
+
+            return metadata if metadata else None
+
+        except Exception as e:
+            self.logger.warning(f"Error extracting function metadata: {e}")
+            return None
+

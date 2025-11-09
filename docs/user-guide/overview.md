@@ -27,7 +27,26 @@ WHERE active = true
 
 Models are stored in the `models/` directory and can reference other models, creating a dependency graph.
 
-### 2. Dependency Resolution
+### 2. User-Defined Functions (UDFs)
+
+Functions allow you to encapsulate reusable business logic and calculations:
+
+```sql
+-- functions/my_schema/calculate_percentage.sql
+CREATE OR REPLACE FUNCTION my_schema.calculate_percentage(
+    numerator FLOAT,
+    denominator FLOAT
+) RETURNS FLOAT AS $$
+    SELECT CASE 
+        WHEN denominator = 0 THEN NULL
+        ELSE (numerator / denominator) * 100
+    END
+$$;
+```
+
+Functions are created before models are executed and can be used in your SQL models. See the [Functions Guide](functions.md) for more details.
+
+### 3. Dependency Resolution
 
 t4t automatically analyzes your SQL models to build a dependency graph. When you run models, t4t:
 
@@ -38,7 +57,7 @@ t4t automatically analyzes your SQL models to build a dependency graph. When you
 
 This means you don't need to manually manage execution order - t4t handles it automatically.
 
-### 3. Multi-Database Support
+### 4. Multi-Database Support
 
 Write your SQL once and run it on different databases. t4t supports:
 
@@ -48,7 +67,7 @@ Write your SQL once and run it on different databases. t4t supports:
 - **BigQuery** - Google's cloud data warehouse
 - And more via the pluggable adapter system
 
-### 4. SQL Dialect Conversion
+### 5. SQL Dialect Conversion
 
 Write your models in your preferred SQL dialect (e.g., PostgreSQL), and t4t automatically converts them to the target database dialect using SQLglot:
 
@@ -205,6 +224,7 @@ Ready to get started? Check out:
 
 ## Next Steps
 
+- [Functions](functions.md) - Learn about User-Defined Functions (UDFs)
 - [Execution Engine](execution-engine.md) - Learn how models are executed
 - [Database Adapters](database-adapters.md) - Explore multi-database support
 - [Data Quality Tests](data-quality-tests.md) - Understand testing framework

@@ -42,7 +42,7 @@ def test_impl_class():
             super().__init__(name, severity)
             self._query = query
 
-        def get_test_query(self, adapter, table_name, column_name=None, params=None):
+        def get_test_query(self, adapter, table_name=None, column_name=None, function_name=None, params=None):
             return self._query
 
         def validate_params(self, params=None, column_name=None):

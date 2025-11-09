@@ -105,9 +105,18 @@ def cmd_test(
             typer.echo("EXECUTING TESTS")
             typer.echo("=" * 50)
 
-            # Execute all tests
+            # Get parsed functions if available
+            parsed_functions = {}
+            try:
+                parsed_functions = ctx.parser.orchestrator.discover_and_parse_functions()
+            except Exception:
+                # Functions may not be available, continue with model tests only
+                pass
+
+            # Execute all tests (both models and functions)
             test_results = test_executor.execute_all_tests(
                 parsed_models=parsed_models,
+                parsed_functions=parsed_functions,
                 execution_order=execution_order,
             )
 

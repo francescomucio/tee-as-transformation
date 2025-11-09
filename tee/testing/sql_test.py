@@ -78,8 +78,9 @@ class SqlTest(StandardTest):
     def get_test_query(
         self,
         adapter,
-        table_name: str,
+        table_name: Optional[str] = None,
         column_name: Optional[str] = None,
+        function_name: Optional[str] = None,
         params: Optional[Dict[str, Any]] = None,
     ) -> str:
         """
@@ -87,9 +88,10 @@ class SqlTest(StandardTest):
 
         Args:
             adapter: Database adapter instance
-            table_name: Fully qualified table name (available as 'table_name' variable)
-            column_name: Column name if applicable (available as 'column_name' variable)
-            params: Additional parameters (available as variables)
+            table_name: Fully qualified table name (available as 'table_name' variable, for model tests)
+            column_name: Column name if applicable (available as 'column_name' variable, for model tests)
+            function_name: Fully qualified function name (available as 'function_name' variable, for function tests)
+            params: Additional parameters (available as variables, including @param1, @param2, etc.)
 
         Returns:
             SQL query string with variables substituted
@@ -99,14 +101,21 @@ class SqlTest(StandardTest):
 
         # Apply special substitutions for table_name and column_name (unquoted identifiers)
         # These should be replaced directly, not as SQL values
-        sql = sql.replace("{{ table_name }}", table_name)
-        sql = sql.replace("{{table_name}}", table_name)  # No spaces
-        sql = sql.replace("@table_name", table_name)
+        if table_name:
+            sql = sql.replace("{{ table_name }}", table_name)
+            sql = sql.replace("{{table_name}}", table_name)  # No spaces
+            sql = sql.replace("@table_name", table_name)
 
         if column_name:
             sql = sql.replace("{{ column_name }}", column_name)
             sql = sql.replace("{{column_name}}", column_name)  # No spaces
             sql = sql.replace("@column_name", column_name)
+
+        # Apply special substitutions for function_name (unquoted identifier)
+        if function_name:
+            sql = sql.replace("{{ function_name }}", function_name)
+            sql = sql.replace("{{function_name}}", function_name)  # No spaces
+            sql = sql.replace("@function_name", function_name)
 
         # Build variables dict for other parameter substitution
         variables = {}
@@ -114,6 +123,16 @@ class SqlTest(StandardTest):
         # Add any additional params as variables (these will be quoted as SQL values)
         if params:
             variables.update(params)
+            # Also support @param1, @param2, etc. as direct replacements (unquoted, for function parameters)
+            for key, value in params.items():
+                if key.startswith("param") or key.startswith("@param"):
+                    # Remove @ prefix if present
+                    param_key = key.replace("@", "")
+                    # Support both @param1 and @param_1 formats
+                    sql = sql.replace(f"@param{param_key.replace('param', '')}", str(value))
+                    sql = sql.replace(f"@param_{param_key.replace('param', '')}", str(value))
+                    sql = sql.replace(f"{{{{ param{param_key.replace('param', '')} }}}}", str(value))
+                    sql = sql.replace(f"{{{{param{param_key.replace('param', '')}}}}}", str(value))
 
         # Apply variable substitution for other variables (these are SQL values, quoted)
         # Support both {{ variable }} and @variable syntax
@@ -133,18 +152,25 @@ class SqlTest(StandardTest):
     def execute(
         self,
         adapter,
-        table_name: str,
+        table_name: Optional[str] = None,
         column_name: Optional[str] = None,
+        function_name: Optional[str] = None,
         params: Optional[Dict[str, Any]] = None,
+        expected: Optional[Any] = None,
         severity: Optional[TestSeverity] = None,
     ) -> TestResult:
         """
         Execute the SQL test.
 
-        SQL tests follow dbt pattern: 0 rows = pass, 1+ rows = fail.
+        For model tests: SQL tests follow dbt pattern: 0 rows = pass, 1+ rows = fail.
+        For function tests: Supports two patterns:
+        1. Assertion-based: Query returns boolean (TRUE/1/truthy = pass, FALSE/0/falsy = fail)
+        2. Expected value: Query returns result, compare to `expected` parameter
+
         The query can return either:
         - Rows directly (SELECT * FROM ... WHERE violation)
         - COUNT(*) result (SELECT COUNT(*) FROM ... WHERE violation)
+        - Boolean result (for function tests: SELECT function(...) = expected)
         """
         # Validate parameters
         self.validate_params(params, column_name)
@@ -154,35 +180,68 @@ class SqlTest(StandardTest):
 
         try:
             # Get test query (with variable substitution)
-            query = self.get_test_query(adapter, table_name, column_name, params)
+            query = self.get_test_query(adapter, table_name, column_name, function_name, params)
 
             # Execute query
             results = adapter.execute_query(query)
 
-            # SQL tests return rows when violations are found
-            # Count the number of rows returned (not the COUNT(*) value)
-            if isinstance(results, list):
-                row_count = len(results)
+            # Determine test result based on test type
+            if function_name is not None:
+                # Function test: support both assertion-based and expected value patterns
+                passed = self._evaluate_function_test_result(results, expected)
+                if expected is not None:
+                    # Expected value pattern
+                    if isinstance(results, list) and len(results) > 0:
+                        actual_value = results[0][0] if len(results[0]) > 0 else None
+                        message = (
+                            f"Test passed: {self.name} returned {actual_value} (expected {expected})"
+                            if passed
+                            else f"Test failed: {self.name} returned {actual_value} (expected {expected})"
+                        )
+                    else:
+                        message = (
+                            f"Test passed: {self.name}"
+                            if passed
+                            else f"Test failed: {self.name} returned no result"
+                        )
+                else:
+                    # Assertion-based pattern (boolean result)
+                    if isinstance(results, list) and len(results) > 0:
+                        result_value = results[0][0] if len(results[0]) > 0 else None
+                        message = (
+                            f"Test passed: {self.name} returned {result_value}"
+                            if passed
+                            else f"Test failed: {self.name} returned {result_value}"
+                        )
+                    else:
+                        message = (
+                            f"Test passed: {self.name}"
+                            if passed
+                            else f"Test failed: {self.name} returned no result"
+                        )
             else:
-                row_count = 0
+                # Model test: dbt pattern (0 rows = pass)
+                if isinstance(results, list):
+                    row_count = len(results)
+                else:
+                    row_count = 0
 
-            # Check if test passed (0 rows = pass for SQL tests)
-            passed = row_count == 0
-
-            # Format message
-            if passed:
-                message = f"Test passed: {self.name}"
-            else:
-                message = f"Test failed: {self.name} found {row_count} violation(s)"
+                passed = row_count == 0
+                message = (
+                    f"Test passed: {self.name}"
+                    if passed
+                    else f"Test failed: {self.name} found {row_count} violation(s)"
+                )
 
             return TestResult(
                 test_name=self.name,
                 table_name=table_name,
                 column_name=column_name,
+                function_name=function_name,
                 passed=passed,
                 message=message,
                 severity=test_severity,
-                rows_returned=row_count,
+                rows_returned=len(results) if isinstance(results, list) else 0,
             )
 
         except Exception as e:
@@ -192,8 +251,49 @@ class SqlTest(StandardTest):
                 test_name=self.name,
                 table_name=table_name,
                 column_name=column_name,
+                function_name=function_name,
                 passed=False,
                 message=error_msg,
                 severity=test_severity,
                 error=str(e),
             )
+
+    def _evaluate_function_test_result(self, results: Any, expected: Optional[Any] = None) -> bool:
+        """
+        Evaluate function test result based on pattern.
+
+        Args:
+            results: Query results from adapter
+            expected: Expected value (if provided, use expected value pattern)
+
+        Returns:
+            True if test passed, False otherwise
+        """
+        if not isinstance(results, list) or len(results) == 0:
+            return False
+
+        result_value = results[0][0] if len(results[0]) > 0 else None
+
+        if expected is not None:
+            # Expected value pattern: compare actual to expected
+            # Handle type coercion for numeric comparisons
+            try:
+                if isinstance(expected, (int, float)) and isinstance(result_value, (int, float)):
+                    return abs(float(result_value) - float(expected)) < 1e-9  # Float comparison
+                return result_value == expected
+            except (ValueError, TypeError):
+                return str(result_value) == str(expected)
+        else:
+            # Assertion-based pattern: check if result is truthy
+            # Handle boolean representations across databases
+            if result_value is None:
+                return False
+            if isinstance(result_value, bool):
+                return result_value
+            if isinstance(result_value, (int, float)):
+                return bool(result_value)  # 0 = False, non-zero = True
+            if isinstance(result_value, str):
+                # Handle string representations of booleans
+                return result_value.upper() in ("TRUE", "1", "YES", "T", "Y")
+            # For other types, use truthiness
+            return bool(result_value)

@@ -305,6 +305,110 @@ class BigQueryAdapter(DatabaseAdapter):
             self.logger.error(f"Error getting table info for {table_name}: {e}")
             raise
 
+    def create_function(
+        self,
+        function_name: str,
+        function_sql: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Create or replace a user-defined function in the database."""
+        if not self.client:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+
+        # Create fully qualified function name
+        if "." not in function_name and self.config.database:
+            # If not fully qualified, add project.dataset prefix
+            full_function_name = f"{self.config.project}.{self.config.database}.{function_name}"
+        else:
+            full_function_name = function_name
+
+        # Function SQL is already a complete CREATE OR REPLACE FUNCTION statement
+        # Execute it as-is (should already be in BigQuery dialect)
+        try:
+            # Convert SQL dialect if needed (though function_sql should already be BigQuery)
+            converted_sql = self.convert_sql_dialect(function_sql)
+
+            # Execute the CREATE OR REPLACE FUNCTION statement
+            query_job = self.client.query(converted_sql)
+            query_job.result()  # Wait for completion
+            self.logger.info(f"Created function: {full_function_name}")
+
+            # Attach tags if provided (BigQuery doesn't natively support tags, but log debug)
+            if metadata:
+                tags = metadata.get("tags", [])
+                object_tags = metadata.get("object_tags", {})
+                if tags:
+                    self.attach_tags("FUNCTION", full_function_name, tags)
+                if object_tags:
+                    self.attach_object_tags("FUNCTION", full_function_name, object_tags)
+
+        except Exception as e:
+            self.logger.error(f"Failed to create function {full_function_name}: {e}")
+            from tee.parser.shared.exceptions import FunctionExecutionError
+            raise FunctionExecutionError(f"Failed to create function {full_function_name}: {e}") from e
+
+    def function_exists(self, function_name: str, signature: Optional[str] = None) -> bool:
+        """Check if a function exists in the database."""
+        if not self.client:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+
+        try:
+            # Extract dataset and function name
+            if "." in function_name:
+                parts = function_name.split(".")
+                if len(parts) == 3:
+                    # project.dataset.function
+                    dataset_name = parts[1]
+                    func_name = parts[2]
+                elif len(parts) == 2:
+                    # dataset.function (use current project)
+                    dataset_name = parts[0]
+                    func_name = parts[1]
+                else:
+                    dataset_name = self.config.database
+                    func_name = function_name
+            else:
+                dataset_name = self.config.database
+                func_name = function_name
+
+            # Query INFORMATION_SCHEMA.ROUTINES for functions
+            query = f"""
+                SELECT COUNT(*) 
+                FROM `{self.config.project}.{dataset_name}.INFORMATION_SCHEMA.ROUTINES`
+                WHERE routine_name = '{func_name}' AND routine_type = 'FUNCTION'
+            """
+            query_job = self.client.query(query)
+            result = query_job.result()
+            row_count = next(result)[0]
+            return row_count > 0
+        except Exception as e:
+            self.logger.warning(f"Error checking if function {function_name} exists: {e}")
+            return False
+
+    def drop_function(self, function_name: str) -> None:
+        """Drop a function from the database."""
+        if not self.client:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+
+        try:
+            # Create fully qualified function name
+            if "." not in function_name and self.config.database:
+                full_function_name = f"{self.config.project}.{self.config.database}.{function_name}"
+            else:
+                full_function_name = function_name
+
+            # BigQuery requires the full signature for DROP FUNCTION
+            # For now, we'll use DROP FUNCTION IF EXISTS with just the qualified name
+            # This may fail if there are multiple overloads - that's expected behavior
+            drop_query = f"DROP FUNCTION IF EXISTS `{full_function_name}`"
+            query_job = self.client.query(drop_query)
+            query_job.result()  # Wait for completion
+            self.logger.info(f"Dropped function: {full_function_name}")
+        except Exception as e:
+            self.logger.error(f"Error dropping function {function_name}: {e}")
+            from tee.parser.shared.exceptions import FunctionExecutionError
+            raise FunctionExecutionError(f"Failed to drop function {function_name}: {e}") from e
+
 
 # Register the adapter
 register_adapter("bigquery", BigQueryAdapter)

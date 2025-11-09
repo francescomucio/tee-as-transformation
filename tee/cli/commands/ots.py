@@ -46,8 +46,17 @@ def cmd_ots_run(
 
         # Load OTS modules
         typer.echo("\nLoading OTS modules...")
-        ots_parsed_models = load_ots_modules(ots_path_obj)
-        typer.echo(f"✅ Loaded {len(ots_parsed_models)} transformations from OTS modules")
+        ots_parsed_models, ots_parsed_functions = load_ots_modules(ots_path_obj)
+        typer.echo(f"✅ Loaded {len(ots_parsed_models)} transformations", end="")
+        if ots_parsed_functions:
+            typer.echo(f" and {len(ots_parsed_functions)} functions from OTS modules")
+        else:
+            typer.echo(" from OTS modules")
+        
+        # Note: Functions from OTS modules are not yet integrated into execution
+        # This will be handled in Phase 8 (Execution Engine Integration)
+        if ots_parsed_functions:
+            typer.echo(f"⚠️  Note: {len(ots_parsed_functions)} function(s) loaded but not yet executed (Phase 8)")
 
         # Determine connection config and project folder
         if project_folder:

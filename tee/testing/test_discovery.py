@@ -26,11 +26,13 @@ class TestDiscovery:
         """
         self.project_folder = Path(project_folder)
         self.tests_folder = self.project_folder / "tests"
+        self.functions_tests_folder = self.project_folder / "tests" / "functions"
         self._discovered_tests: Dict[str, SqlTest] = {}
+        self._discovered_function_tests: Dict[str, SqlTest] = {}
 
     def discover_tests(self) -> Dict[str, SqlTest]:
         """
-        Discover all SQL test files in the tests/ folder.
+        Discover all SQL test files in the tests/ folder (excluding tests/functions/).
 
         Returns:
             Dictionary mapping test names to SqlTest instances
@@ -47,8 +49,11 @@ class TestDiscovery:
 
         discovered = {}
 
-        # Find all .sql files in tests/ folder
-        sql_files = list(self.tests_folder.rglob("*.sql"))
+        # Find all .sql files in tests/ folder, excluding tests/functions/
+        sql_files = [
+            f for f in self.tests_folder.rglob("*.sql")
+            if not str(f).startswith(str(self.functions_tests_folder))
+        ]
 
         for sql_file in sql_files:
             try:
@@ -85,14 +90,73 @@ class TestDiscovery:
         self._discovered_tests = discovered
         return discovered
 
+    def discover_function_tests(self) -> Dict[str, SqlTest]:
+        """
+        Discover all SQL test files in the tests/functions/ folder.
+
+        Returns:
+            Dictionary mapping test names to SqlTest instances
+
+        Test names are derived from file names (without .sql extension).
+        Example: tests/functions/calculate_percentage_test.sql -> test name "calculate_percentage_test"
+        """
+        if self._discovered_function_tests:
+            return self._discovered_function_tests
+
+        if not self.functions_tests_folder.exists():
+            logger.debug(f"Function tests folder not found: {self.functions_tests_folder}")
+            return {}
+
+        discovered = {}
+
+        # Find all .sql files in tests/functions/ folder
+        sql_files = list(self.functions_tests_folder.rglob("*.sql"))
+
+        for sql_file in sql_files:
+            try:
+                # Test name is the file name without extension
+                test_name = sql_file.stem  # filename without extension
+
+                if test_name in discovered:
+                    logger.warning(
+                        f"Duplicate function test name '{test_name}' found. "
+                        f"Using {sql_file} (previous: {discovered[test_name].sql_file_path})"
+                    )
+
+                # Create SqlTest instance (same class, but for functions)
+                sql_test = SqlTest(
+                    name=test_name,
+                    sql_file_path=sql_file,
+                    project_folder=self.project_folder,
+                    severity=TestSeverity.ERROR,
+                )
+
+                discovered[test_name] = sql_test
+                logger.debug(f"Discovered function SQL test: {test_name} from {sql_file}")
+
+            except Exception as e:
+                logger.error(f"Failed to load function SQL test from {sql_file}: {e}")
+                continue
+
+        logger.info(f"Discovered {len(discovered)} function SQL test(s) from {self.functions_tests_folder}")
+        self._discovered_function_tests = discovered
+        return discovered
+
     def register_discovered_tests(self) -> None:
         """
-        Discover and register all SQL tests with the TestRegistry.
+        Discover and register all SQL tests (both model and function tests) with the TestRegistry.
 
         This should be called before test execution to ensure SQL tests
         are available in the registry.
         """
+        # Register model tests
         tests = self.discover_tests()
         for test_name, sql_test in tests.items():
             TestRegistry.register(sql_test)
             logger.debug(f"Registered SQL test: {test_name}")
+
+        # Register function tests
+        function_tests = self.discover_function_tests()
+        for test_name, sql_test in function_tests.items():
+            TestRegistry.register(sql_test)
+            logger.debug(f"Registered function SQL test: {test_name}")

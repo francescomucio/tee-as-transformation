@@ -13,6 +13,7 @@ Welcome to the Tee for Transform (t4t) documentation. t4t is a powerful Python f
 - [Overview](user-guide/overview.md) - Core concepts and architecture
 - [CLI Reference](user-guide/cli-reference.md) - Complete CLI commands and options reference
 - [Execution Engine](user-guide/execution-engine.md) - Running SQL models
+- [Functions](user-guide/functions.md) - User-Defined Functions (UDFs)
 - [Seeds](user-guide/seeds.md) - Loading static data files (CSV, JSON, TSV)
 - [Data Quality Tests](user-guide/data-quality-tests.md) - Automated data validation
 - [Incremental Materialization](user-guide/incremental-materialization.md) - Efficient data processing
@@ -23,6 +24,7 @@ Welcome to the Tee for Transform (t4t) documentation. t4t is a powerful Python f
 
 ### 🔧 API Reference
 - [API Reference Overview](api-reference/README.md) - API documentation status and overview
+- [Functions API](api-reference/functions.md) - Function decorators and API reference
 - [Engine API](api-reference/engine/) - Execution engine classes and methods (coming soon)
 - [Parser API](api-reference/parser/) - SQL parsing and analysis (coming soon)
 - [Adapters API](api-reference/adapters/) - Database adapter implementations (coming soon)
@@ -35,17 +37,18 @@ Welcome to the Tee for Transform (t4t) documentation. t4t is a powerful Python f
 ## Key Features
 
 - **Multi-Database Support**: DuckDB, Snowflake, PostgreSQL, and more
+- **User-Defined Functions (UDFs)**: Create reusable SQL and Python functions with automatic dependency resolution
 - **SQL Dialect Conversion**: Write in PostgreSQL, run on any database
-- **Dependency-Aware Execution**: Automatic model dependency resolution
+- **Dependency-Aware Execution**: Automatic model and function dependency resolution
 - **Open Transformation Specification (OTS)**: Full OTS support for interoperability with other tools
   - Compile projects to OTS modules and test libraries
   - Import and merge OTS modules from other tools
   - Export in JSON or YAML format
   - Validate OTS modules for compliance
 - **Seeds**: Load static data files (CSV, JSON, TSV) into database tables
-- **Data Quality Tests**: Automated data validation with 6 standard tests and custom SQL tests (dbt-style)
+- **Data Quality Tests**: Automated data validation with 6 standard tests and custom SQL tests (dbt-style), including function tests
 - **Incremental Materialization**: Efficient data processing with append, merge, and delete+insert strategies
-- **Comprehensive Tagging**: dbt-style tags and database object tags for tables, views, and schemas
+- **Comprehensive Tagging**: dbt-style tags and database object tags for tables, views, schemas, and functions
 - **Pluggable Architecture**: Easy to add new database adapters
 - **Configuration Management**: Flexible configuration via `pyproject.toml`
 
@@ -111,14 +114,20 @@ docs/
 ├── user-guide/                  # User documentation
 │   ├── overview.md
 │   ├── execution-engine.md
+│   ├── functions.md
+│   ├── seeds.md
+│   ├── data-quality-tests.md
+│   ├── incremental-materialization.md
 │   ├── database-adapters.md
 │   ├── tags-and-metadata.md
 │   ├── sql-dialect-conversion.md
 │   └── examples/
 │       ├── basic-usage.md
-│       ├── multi-database.md
-│       └── custom-adapters.md
+│       ├── functions.md
+│       ├── incremental-example.md
+│       └── testing-example.md
 ├── api-reference/               # API documentation
+│   ├── functions.md
 │   ├── engine/
 │   ├── parser/
 │   └── adapters/
@@ -163,7 +172,7 @@ docs/
 
 ## Need Help?
 
-- Check the [FAQ](user-guide/faq.md) for common questions
 - Browse the [examples](user-guide/examples/) for practical usage
+- Check the [User Guide](user-guide/) for comprehensive documentation
 - Join our community discussions
 - Report issues on GitHub

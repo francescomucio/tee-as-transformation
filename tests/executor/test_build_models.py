@@ -502,8 +502,8 @@ class TestBuildModels:
 
         mock_test_executor = Mock()
         mock_test_executor.execute_tests_for_model.side_effect = [
-            [TestResult("not_null", "schema1.table1", None, True, 0, TestSeverity.ERROR, "Passed")],
-            [TestResult("unique", "schema1.table2", None, True, 0, TestSeverity.ERROR, "Passed")],
+            [TestResult(test_name="not_null", table_name="schema1.table1", column_name=None, passed=True, rows_returned=0, severity=TestSeverity.ERROR, message="Passed")],
+            [TestResult(test_name="unique", table_name="schema1.table2", column_name=None, passed=True, rows_returned=0, severity=TestSeverity.ERROR, message="Passed")],
         ]
         mock_test_executor_class.return_value = mock_test_executor
 

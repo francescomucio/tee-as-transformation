@@ -36,5 +36,9 @@ htmlcov/
 # Pytest cache
 .pytest_cache/
 
+# Test credentials (not committed to git)
+tests/.snowflake_config.json
+tests/.snowflake_config.toml
+
 # MkDocs build output
 site/

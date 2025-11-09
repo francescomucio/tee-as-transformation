@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional, Union, List, TYPE_CHECKING
 from tee.parser import ProjectParser
 from tee.engine import ModelExecutor
 from tee.engine.seeds import SeedDiscovery, SeedLoader
-from tee.testing import TestExecutor
+from tee.testing import TestExecutor, TestSeverity
 
 if TYPE_CHECKING:
     from tee.adapters import AdapterConfig
@@ -217,6 +217,27 @@ def execute_tests_for_model(
     return test_results
 
 
+def execute_tests_for_function(
+    function_name: str,
+    parsed_functions: Dict[str, Any],
+    model_executor: ModelExecutor,
+    test_executor: TestExecutor,
+) -> List[Any]:
+    """Execute tests for a function and return test results."""
+    function_data = parsed_functions[function_name]
+    metadata = model_executor.execution_engine._extract_function_metadata(function_data)
+    
+    if not metadata:
+        return []
+    
+    print(f"  🧪 Running tests for {function_name}...")
+    test_results = test_executor.execute_tests_for_function(
+        function_name=function_name, metadata=metadata
+    )
+    
+    return test_results
+
+
 def handle_test_results(
     node_name: str,
     test_results: List[Any],
@@ -230,7 +251,7 @@ def handle_test_results(
     """
     error_failures = [
         r for r in test_results
-        if not r.passed and r.severity.value == "error"
+        if not r.passed and r.severity == TestSeverity.ERROR
     ]
     
     if error_failures:
@@ -252,7 +273,7 @@ def handle_test_results(
     passed_count = sum(1 for r in test_results if r.passed)
     warning_count = sum(
         1 for r in test_results
-        if not r.passed and r.severity.value == "warning"
+        if not r.passed and r.severity == TestSeverity.WARNING
     )
     if warning_count > 0:
         print(f"  ⚠️  Tests: {passed_count} passed, {warning_count} warnings")
@@ -289,11 +310,11 @@ def compile_build_results(
     passed_tests = sum(1 for r in all_test_results if r.passed)
     failed_tests = sum(
         1 for r in all_test_results
-        if not r.passed and r.severity.value == "error"
+        if not r.passed and r.severity == TestSeverity.ERROR
     )
     warning_tests = sum(
         1 for r in all_test_results
-        if not r.passed and r.severity.value == "warning"
+        if not r.passed and r.severity == TestSeverity.WARNING
     )
     
     test_results_summary = {

@@ -170,6 +170,77 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
         """Get information about a table."""
         pass
 
+    # Function management methods
+    @abstractmethod
+    def create_function(
+        self,
+        function_name: str,
+        function_sql: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Create or replace a user-defined function in the database.
+
+        This method should use CREATE OR REPLACE FUNCTION syntax to ensure
+        functions are always overwritten (no versioning).
+
+        Args:
+            function_name: Fully qualified function name (schema.function_name)
+            function_sql: SQL statement to create the function (CREATE OR REPLACE FUNCTION ...)
+            metadata: Optional metadata containing function description, tags, etc.
+
+        Raises:
+            FunctionExecutionError: If function creation fails
+        """
+        pass
+
+    @abstractmethod
+    def function_exists(self, function_name: str, signature: Optional[str] = None) -> bool:
+        """
+        Check if a function exists in the database.
+        
+        Args:
+            function_name: Name of the function (can be qualified: schema.function_name)
+            signature: Optional function signature (e.g., "FLOAT, FLOAT" for parameters)
+                      If provided, checks for exact signature match (handles overloading)
+        
+        Returns:
+            True if function exists (and matches signature if provided), False otherwise
+        """
+        pass
+
+    @abstractmethod
+    def drop_function(self, function_name: str) -> None:
+        """Drop a function from the database.
+
+        Args:
+            function_name: Fully qualified function name (schema.function_name)
+
+        Raises:
+            FunctionExecutionError: If function drop fails
+        """
+        pass
+
+    def get_function_info(self, function_name: str) -> Dict[str, Any]:
+        """Get information about a function.
+
+        This is an optional method that adapters can override if they support
+        querying function metadata. By default, it returns a basic structure.
+
+        Args:
+            function_name: Fully qualified function name (schema.function_name)
+
+        Returns:
+            Dictionary containing function information (name, parameters, return_type, etc.)
+        """
+        self.logger.debug(
+            f"Adapter {self.__class__.__name__} does not support querying function info. "
+            f"Requested info for function: {function_name}"
+        )
+        return {
+            "function_name": function_name,
+            "exists": self.function_exists(function_name),
+        }
+
     # Incremental materialization methods
     def execute_incremental_append(self, table_name: str, source_sql: str) -> None:
         """Execute incremental append operation.
@@ -230,7 +301,7 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
         By default, it logs a debug message that tagging is not supported.
 
         Args:
-            object_type: Type of object ('TABLE', 'VIEW', etc.)
+            object_type: Type of object ('TABLE', 'VIEW', 'FUNCTION', etc.)
             object_name: Fully qualified object name
             tags: List of tag strings to attach (dbt-style)
         """
@@ -249,7 +320,7 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
         By default, it logs a debug message that object tagging is not supported.
 
         Args:
-            object_type: Type of object ('TABLE', 'VIEW', etc.)
+            object_type: Type of object ('TABLE', 'VIEW', 'FUNCTION', etc.)
             object_name: Fully qualified object name
             object_tags: Dictionary of tag key-value pairs (database-style)
         """

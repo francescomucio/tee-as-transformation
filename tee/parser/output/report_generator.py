@@ -2,13 +2,25 @@
 Report generation functionality for dependency graphs.
 """
 
+import logging
 from pathlib import Path
 from typing import Dict, Any, Optional
 
 from .visualizer import DependencyVisualizer
-from tee.parser.shared.types import DependencyGraph
+from .markdown_report_builder import (
+    build_statistics_section,
+    build_execution_order_section,
+    build_test_details_section,
+    build_transformation_details_section,
+    build_circular_dependencies_section,
+    separate_nodes_by_type,
+)
+from tee.parser.shared.types import DependencyGraph, ParsedFunction
 from tee.parser.shared.exceptions import OutputGenerationError
 from tee.parser.shared.constants import OUTPUT_FILES
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class ReportGenerator:
@@ -26,7 +38,7 @@ class ReportGenerator:
         self.visualizer = DependencyVisualizer()
 
     def generate_markdown_report(
-        self, graph: DependencyGraph, output_file: Optional[str] = None
+        self, graph: DependencyGraph, output_file: Optional[str] = None, parsed_functions: Optional[Dict[str, ParsedFunction]] = None
     ) -> Path:
         """
         Generate a comprehensive markdown report with Mermaid diagram.
@@ -34,6 +46,7 @@ class ReportGenerator:
         Args:
             graph: The dependency graph
             output_file: Optional custom output file path
+            parsed_functions: Optional dict of parsed functions to identify function nodes
 
         Returns:
             Path to the generated report
@@ -50,151 +63,60 @@ class ReportGenerator:
             # Ensure output directory exists
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
-            mermaid_diagram = self.visualizer.generate_mermaid_diagram(graph)
+            parsed_functions = parsed_functions or {}
+            function_names = set(parsed_functions.keys())
+            
+            mermaid_diagram = self.visualizer.generate_mermaid_diagram(graph, parsed_functions)
 
-            # Separate test nodes from table nodes
-            test_nodes = [node for node in graph["nodes"] if node.startswith("test:")]
-            table_nodes = [node for node in graph["nodes"] if not node.startswith("test:")]
+            # Separate nodes by type
+            test_nodes, function_nodes, table_nodes = separate_nodes_by_type(
+                graph["nodes"], function_names
+            )
 
-            markdown_content = f"""# Dependency Graph Report
+            # Build markdown report sections
+            markdown_content = """# Dependency Graph Report
 
 ## Overview
 
 This report provides a comprehensive analysis of the SQL model dependencies.
 
-## Statistics
-
-- **Total Tables**: {len(table_nodes)}
-- **Total Tests**: {len(test_nodes)}
-- **Total Nodes**: {len(graph["nodes"])}
-- **Total Dependencies**: {len(graph["edges"])}
-- **Circular Dependencies**: {len(graph["cycles"])}
-
-## Visual Diagram
+"""
+            
+            # Statistics section
+            markdown_content += build_statistics_section(
+                table_nodes, function_nodes, test_nodes, graph
+            )
+            
+            # Visual diagram section
+            markdown_content += f"""## Visual Diagram
 
 ```mermaid
 {mermaid_diagram}
 ```
 
-## Execution Order
-
 """
-
-            if graph["execution_order"]:
-                for i, table in enumerate(graph["execution_order"], 1):
-                    markdown_content += f"{i}. `{table}`\n"
-            else:
-                markdown_content += "No valid execution order (circular dependencies detected)\n"
-
-            # Add Tests Details section if there are any tests
-            if test_nodes:
-                markdown_content += "\n## Tests Details\n\n"
-                markdown_content += "The following tests are defined and integrated into the dependency graph:\n\n"
-
-                for test_node in sorted(test_nodes):
-                    # Parse test node: test:table.test_name or test:table.column.test_name
-                    test_parts = test_node.replace("test:", "").split(".")
-                    if len(test_parts) == 2:
-                        # Table-level test: test:table.test_name
-                        table_name, test_name = test_parts
-                        test_display = f"`{test_name}` on `{table_name}`"
-                        test_type = "Table-level"
-                    elif len(test_parts) == 3:
-                        # Column-level test: test:table.column.test_name
-                        table_name, column_name, test_name = test_parts
-                        test_display = f"`{test_name}` on `{table_name}.{column_name}`"
-                        test_type = "Column-level"
-                    else:
-                        # Fallback for unexpected format
-                        test_display = test_node.replace("test:", "")
-                        test_type = "Test"
-                    
-                    deps = graph["dependencies"][test_node]
-                    dependents = graph["dependents"][test_node]
-
-                    markdown_content += f"### {test_display}\n\n"
-                    markdown_content += f"**Type**: {test_type}\n\n"
-
-                    if deps:
-                        # Filter out test nodes from dependencies
-                        table_deps = [dep for dep in deps if not dep.startswith("test:")]
-                        test_deps = [dep for dep in deps if dep.startswith("test:")]
-                        
-                        if table_deps:
-                            markdown_content += f"**Depends on tables**: {', '.join([f'`{dep}`' for dep in table_deps])}\n\n"
-                        if test_deps:
-                            test_names = [dep.replace("test:", "") for dep in test_deps]
-                            markdown_content += f"**Depends on tests**: {', '.join([f'`{name}`' for name in test_names])}\n\n"
-                    else:
-                        markdown_content += "**No dependencies**\n\n"
-
-                    if dependents:
-                        # Filter out test nodes from dependents
-                        table_dependents = [dep for dep in dependents if not dep.startswith("test:")]
-                        test_dependents = [dep for dep in dependents if dep.startswith("test:")]
-                        
-                        if table_dependents:
-                            markdown_content += f"**Used by tables**: {', '.join([f'`{dep}`' for dep in table_dependents])}\n\n"
-                        if test_dependents:
-                            test_names = [dep.replace("test:", "") for dep in test_dependents]
-                            markdown_content += f"**Used by tests**: {', '.join([f'`{name}`' for name in test_names])}\n\n"
-                    else:
-                        markdown_content += "**No dependents**\n\n"
-
-            markdown_content += "\n## Transformation Details\n\n"
-
-            # Only include table nodes in the transformation details section (exclude tests)
-            for table in sorted(table_nodes):
-                deps = graph["dependencies"][table]
-                dependents = graph["dependents"][table]
-
-                markdown_content += f"### `{table}`\n\n"
-
-                if deps:
-                    # Filter out test nodes from dependencies display
-                    table_deps = [dep for dep in deps if not dep.startswith("test:")]
-                    test_deps = [dep for dep in deps if dep.startswith("test:")]
-                    
-                    if table_deps:
-                        markdown_content += (
-                            f"**Depends on**: {', '.join([f'`{dep}`' for dep in table_deps])}\n\n"
-                        )
-                    if test_deps:
-                        test_names = [dep.replace("test:", "") for dep in test_deps]
-                        markdown_content += (
-                            f"**Has tests**: {', '.join([f'`{name}`' for name in test_names])}\n\n"
-                        )
-                else:
-                    markdown_content += "**No dependencies** (base table)\n\n"
-
-                if dependents:
-                    # Filter out test nodes from dependents display
-                    table_dependents = [dep for dep in dependents if not dep.startswith("test:")]
-                    test_dependents = [dep for dep in dependents if dep.startswith("test:")]
-                    
-                    if table_dependents:
-                        markdown_content += (
-                            f"**Used by**: {', '.join([f'`{dep}`' for dep in table_dependents])}\n\n"
-                        )
-                    if test_dependents:
-                        test_names = [dep.replace("test:", "") for dep in test_dependents]
-                        markdown_content += (
-                            f"**Tested by**: {', '.join([f'`{name}`' for name in test_names])}\n\n"
-                        )
-                else:
-                    markdown_content += "**No dependents** (leaf table)\n\n"
-
-            if graph["cycles"]:
-                markdown_content += "## ⚠️ Circular Dependencies\n\n"
-                for i, cycle in enumerate(graph["cycles"], 1):
-                    cycle_str = " → ".join([f"`{table}`" for table in cycle]) + f" → `{cycle[0]}`"
-                    markdown_content += f"{i}. {cycle_str}\n\n"
-
+            
+            # Execution order section
+            markdown_content += build_execution_order_section(graph["execution_order"])
+            
+            # Tests details section
+            markdown_content += build_test_details_section(test_nodes, graph)
+            
+            # Transformation details section
+            markdown_content += build_transformation_details_section(
+                function_nodes, table_nodes, function_names, graph
+            )
+            
+            # Circular dependencies section
+            markdown_content += build_circular_dependencies_section(graph["cycles"])
+            
+            # Footer
             markdown_content += "---\n\n*Generated by Project Parser*"
 
             with open(output_file, "w", encoding="utf-8") as f:
                 f.write(markdown_content)
 
+            logger.info(f"Markdown report saved to {output_file}")
             print(f"Markdown report saved to {output_file}")
             print(f"Includes Mermaid diagram and detailed analysis")
 
@@ -204,7 +126,7 @@ This report provides a comprehensive analysis of the SQL model dependencies.
             raise OutputGenerationError(f"Failed to generate markdown report: {e}")
 
     def generate_mermaid_diagram(
-        self, graph: DependencyGraph, output_file: Optional[str] = None
+        self, graph: DependencyGraph, output_file: Optional[str] = None, parsed_functions: Optional[Dict[str, ParsedFunction]] = None
     ) -> Path:
         """
         Generate a standalone Mermaid diagram file.
@@ -226,19 +148,20 @@ This report provides a comprehensive analysis of the SQL model dependencies.
                 output_file = Path(output_file)
 
             # Use the visualizer to save the Mermaid diagram
-            self.visualizer.save_mermaid_diagram(graph, str(output_file))
+            self.visualizer.save_mermaid_diagram(graph, str(output_file), parsed_functions=parsed_functions)
 
             return output_file
 
         except Exception as e:
             raise OutputGenerationError(f"Failed to generate Mermaid diagram: {e}")
 
-    def generate_all_reports(self, graph: DependencyGraph) -> Dict[str, Path]:
+    def generate_all_reports(self, graph: DependencyGraph, parsed_functions: Optional[Dict[str, ParsedFunction]] = None) -> Dict[str, Path]:
         """
         Generate all available reports.
 
         Args:
             graph: The dependency graph
+            parsed_functions: Optional dict of parsed functions to identify function nodes
 
         Returns:
             Dict mapping report type to file path
@@ -250,10 +173,10 @@ This report provides a comprehensive analysis of the SQL model dependencies.
             results = {}
 
             # Generate markdown report
-            results["markdown_report"] = self.generate_markdown_report(graph)
+            results["markdown_report"] = self.generate_markdown_report(graph, parsed_functions=parsed_functions)
 
             # Generate Mermaid diagram
-            results["mermaid_diagram"] = self.generate_mermaid_diagram(graph)
+            results["mermaid_diagram"] = self.generate_mermaid_diagram(graph, parsed_functions=parsed_functions)
 
             return results
 

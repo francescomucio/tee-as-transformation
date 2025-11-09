@@ -46,7 +46,8 @@ uv run t4t run .
 ## ✨ Key Features
 
 - **Multi-Database Support**: DuckDB, Snowflake, PostgreSQL, and more
-- **Dependency-Aware Execution**: Automatic model dependency resolution
+- **User-Defined Functions (UDFs)**: Create reusable SQL and Python functions
+- **Dependency-Aware Execution**: Automatic model and function dependency resolution
 - **Incremental Materialization**: Efficient data processing with append, merge, and delete+insert strategies
 - **Rich Metadata Support**: Python-based metadata configuration with full type safety
 - **Comprehensive Tagging**: dbt-style tags and database object tags for tables, views, and schemas

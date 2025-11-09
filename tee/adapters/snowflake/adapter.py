@@ -396,6 +396,138 @@ class SnowflakeAdapter(DatabaseAdapter):
             self.logger.error(f"Error getting table info for {table_name}: {e}")
             raise
 
+    def create_function(
+        self,
+        function_name: str,
+        function_sql: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Create or replace a user-defined function in the database."""
+        if not self.connection:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+
+        # Create schema if needed (schema tags will be handled by execution engine)
+        self._create_schema_if_needed(function_name)
+
+        # Use 3-part naming for the function (DATABASE.SCHEMA.FUNCTION)
+        qualified_function_name = self._qualify_object_name(function_name)
+
+        # Replace function name in SQL with qualified name if needed
+        # Extract unqualified function name from function_sql and replace with qualified
+        import re
+        # Pattern to match CREATE OR REPLACE FUNCTION function_name(
+        pattern = r"(CREATE\s+OR\s+REPLACE\s+FUNCTION\s+)([a-zA-Z_][a-zA-Z0-9_]*)\s*\("
+        if re.search(pattern, function_sql, re.IGNORECASE):
+            # Replace function name with qualified name
+            qualified_sql = re.sub(
+                pattern,
+                rf"\1{qualified_function_name}(",
+                function_sql,
+                flags=re.IGNORECASE,
+            )
+        else:
+            # If pattern doesn't match, use SQL as-is (might already have qualified name)
+            qualified_sql = function_sql
+
+        try:
+            # Execute the CREATE OR REPLACE FUNCTION statement
+            self._execute_with_cursor(qualified_sql)
+            self.logger.info(f"Created function: {qualified_function_name}")
+
+            # Attach tags if provided (Snowflake supports full tag functionality)
+            if metadata:
+                tags = metadata.get("tags", [])
+                object_tags = metadata.get("object_tags", {})
+                if tags:
+                    self.attach_tags("FUNCTION", qualified_function_name, tags)
+                if object_tags:
+                    self.attach_object_tags("FUNCTION", qualified_function_name, object_tags)
+
+        except Exception as e:
+            self.logger.error(f"Failed to create function {qualified_function_name}: {e}")
+            from tee.parser.shared.exceptions import FunctionExecutionError
+            raise FunctionExecutionError(
+                f"Failed to create function {qualified_function_name}: {e}"
+            ) from e
+
+    def function_exists(self, function_name: str, signature: Optional[str] = None) -> bool:
+        """
+        Check if a function exists in the database.
+        
+        Args:
+            function_name: Name of the function (can be qualified: schema.function_name)
+            signature: Optional function signature (e.g., "FLOAT, FLOAT" for parameters)
+                      If provided, checks for exact signature match (handles overloading)
+        
+        Returns:
+            True if function exists (and matches signature if provided), False otherwise
+        """
+        if not self.connection:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+
+        try:
+            # Extract schema and function name
+            if "." in function_name:
+                parts = function_name.split(".")
+                func_name = parts[-1]
+                schema_name = parts[-2] if len(parts) >= 2 else self.config.schema or "PUBLIC"
+            else:
+                schema_name = self.config.schema or "PUBLIC"
+                func_name = function_name
+
+            cursor = self.connection.cursor()
+            try:
+                # If signature is provided, use DESCRIBE FUNCTION with signature for exact match
+                if signature:
+                    qualified_name = self._qualify_object_name(function_name)
+                    # DESCRIBE FUNCTION requires the full signature: function_name(param_type1, param_type2, ...)
+                    describe_query = f"DESCRIBE FUNCTION {qualified_name}({signature})"
+                    try:
+                        cursor.execute(describe_query)
+                        cursor.fetchall()  # Consume the result
+                        return True
+                    except Exception:
+                        # Function with this signature doesn't exist
+                        return False
+                
+                # Otherwise, use SHOW FUNCTIONS to check if any function with this name exists
+                show_query = f"SHOW FUNCTIONS LIKE '{func_name.replace("'", "''")}' IN SCHEMA {schema_name}"
+                cursor.execute(show_query)
+                result = cursor.fetchall()
+                # SHOW FUNCTIONS returns a result set - if any rows are returned, the function exists
+                if result:
+                    # The function name is typically in the 'name' column or first column
+                    # Check all columns for a match
+                    for row in result:
+                        for col in row:
+                            if col and str(col).upper() == func_name.upper():
+                                return True
+                return False
+            finally:
+                cursor.close()
+        except Exception as e:
+            self.logger.warning(f"Error checking if function {function_name} exists: {e}")
+            return False
+
+    def drop_function(self, function_name: str) -> None:
+        """Drop a function from the database."""
+        if not self.connection:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+
+        try:
+            # Use 3-part naming for the function (DATABASE.SCHEMA.FUNCTION)
+            qualified_function_name = self._qualify_object_name(function_name)
+
+            # Snowflake requires the full signature for DROP FUNCTION
+            # For now, we'll use DROP FUNCTION IF EXISTS with just the qualified name
+            # This may fail if there are multiple overloads - that's expected behavior
+            self._execute_with_cursor(f"DROP FUNCTION IF EXISTS {qualified_function_name}")
+            self.logger.info(f"Dropped function: {qualified_function_name}")
+        except Exception as e:
+            self.logger.error(f"Error dropping function {function_name}: {e}")
+            from tee.parser.shared.exceptions import FunctionExecutionError
+            raise FunctionExecutionError(f"Failed to drop function {function_name}: {e}") from e
+
     def get_table_columns(self, table_name: str) -> List[str]:
         """Return ordered column names for a table."""
         if not self.connection:
@@ -818,6 +950,19 @@ class SnowflakeAdapter(DatabaseAdapter):
                     
                     # Attach tag to object
                     # Snowflake syntax: ALTER TABLE/VIEW object SET TAG tag_name = 'value'
+                    # Note: Functions in Snowflake may not support tags directly
+                    # If object_type is FUNCTION, we need to include the function signature
+                    # For now, we'll try the standard syntax and catch errors
+                    if object_type.upper() == "FUNCTION":
+                        # Snowflake functions require the full signature for ALTER statements
+                        # Since we don't have the signature here, we'll skip tag attachment for functions
+                        # and log a debug message
+                        self.logger.debug(
+                            f"Skipping tag attachment for FUNCTION {object_name}: "
+                            f"Snowflake requires function signature for ALTER FUNCTION statements"
+                        )
+                        continue
+                    
                     alter_sql = f"ALTER {object_type} {object_name} SET TAG {sanitized_tag} = '{tag_value.replace("'", "''")}'"
                     cursor.execute(alter_sql)
                     self.logger.debug(f"Attached tag {sanitized_tag}='{tag_value}' to {object_type} {object_name}")
@@ -888,6 +1033,19 @@ class SnowflakeAdapter(DatabaseAdapter):
 
                     # Attach tag to object
                     # Snowflake syntax: ALTER TABLE/VIEW object SET TAG tag_name = 'value'
+                    # Note: Functions in Snowflake may not support tags directly
+                    # If object_type is FUNCTION, we need to include the function signature
+                    # For now, we'll try the standard syntax and catch errors
+                    if object_type.upper() == "FUNCTION":
+                        # Snowflake functions require the full signature for ALTER statements
+                        # Since we don't have the signature here, we'll skip tag attachment for functions
+                        # and log a debug message
+                        self.logger.debug(
+                            f"Skipping object tag attachment for FUNCTION {object_name}: "
+                            f"Snowflake requires function signature for ALTER FUNCTION statements"
+                        )
+                        continue
+                    
                     escaped_value = tag_value_str.replace("'", "''")
                     alter_sql = f"ALTER {object_type} {object_name} SET TAG {sanitized_tag_key} = '{escaped_value}'"
                     cursor.execute(alter_sql)

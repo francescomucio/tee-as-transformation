@@ -7,9 +7,10 @@ to the Open Transformation Specification (OTS) Module format.
 
 import logging
 from typing import Dict, List, Any, Optional, Tuple
+from pathlib import Path
 
-from tee.typing.metadata import OTSModule, OTSTarget, OTSTransformation
-from tee.parser.shared.types import ParsedModel
+from tee.typing.metadata import OTSModule, OTSTarget, OTSTransformation, OTSFunction
+from tee.parser.shared.types import ParsedModel, ParsedFunction
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -49,27 +50,38 @@ class OTSTransformer:
     def transform_to_ots_modules(
         self, 
         parsed_models: Dict[str, ParsedModel],
+        parsed_functions: Optional[Dict[str, ParsedFunction]] = None,
         test_library_path: Optional[Path] = None
     ) -> Dict[str, OTSModule]:
         """
-        Transform parsed models into OTS Module(s).
+        Transform parsed models and functions into OTS Module(s).
 
-        Groups models by schema and creates one module per schema.
+        Groups models and functions by schema and creates one module per schema.
 
         Args:
             parsed_models: Dictionary of parsed models
+            parsed_functions: Optional dictionary of parsed functions
+            test_library_path: Optional path to test library
 
         Returns:
             Dictionary mapping module_name to OTS Module
         """
         # Group models by schema
         models_by_schema = self._group_by_schema(parsed_models)
+        
+        # Group functions by schema
+        functions_by_schema = self._group_functions_by_schema(parsed_functions or {})
+
+        # Collect all schemas (from both models and functions)
+        all_schemas = set(models_by_schema.keys()) | set(functions_by_schema.keys())
 
         modules = {}
-        for schema, models in models_by_schema.items():
+        for schema in all_schemas:
             module_name = f"{self.database}.{schema}"
-            logger.info(f"Creating OTS module: {module_name} with {len(models)} transformations")
-            module = self._create_ots_module(module_name, schema, models, test_library_path)
+            models = models_by_schema.get(schema, [])
+            functions = functions_by_schema.get(schema, [])
+            logger.info(f"Creating OTS module: {module_name} with {len(models)} transformations and {len(functions)} functions")
+            module = self._create_ots_module(module_name, schema, models, functions, test_library_path)
             modules[module_name] = module
 
         return modules
@@ -101,11 +113,39 @@ class OTSTransformer:
         logger.debug(f"Grouped models into {len(grouped)} schemas: {list(grouped.keys())}")
         return grouped
 
+    def _group_functions_by_schema(
+        self, parsed_functions: Dict[str, ParsedFunction]
+    ) -> Dict[str, List[Tuple[str, ParsedFunction]]]:
+        """
+        Group functions by their schema (first part of function_id).
+
+        Args:
+            parsed_functions: Dictionary of parsed functions
+
+        Returns:
+            Dictionary mapping schema to list of (function_id, function_data) tuples
+        """
+        grouped = {}
+        for function_id, function_data in parsed_functions.items():
+            # Extract schema from function_id (e.g., "my_schema.function_name" → "my_schema")
+            if "." in function_id:
+                schema = function_id.split(".")[0]
+            else:
+                schema = "default"
+
+            if schema not in grouped:
+                grouped[schema] = []
+            grouped[schema].append((function_id, function_data))
+
+        logger.debug(f"Grouped functions into {len(grouped)} schemas: {list(grouped.keys())}")
+        return grouped
+
     def _create_ots_module(
         self, 
         module_name: str, 
         schema: str, 
         models: List[Tuple[str, ParsedModel]],
+        functions: List[Tuple[str, ParsedFunction]],
         test_library_path: Optional[Path] = None
     ) -> OTSModule:
         """
@@ -115,6 +155,7 @@ class OTSTransformer:
             module_name: Full module name (database.schema)
             schema: Schema name
             models: List of (model_id, model_data) tuples for this schema
+            functions: List of (function_id, function_data) tuples for this schema
 
         Returns:
             Complete OTS Module structure
@@ -124,6 +165,12 @@ class OTSTransformer:
         for model_id, model_data in models:
             transformation = self._transform_model(model_id, model_data, schema)
             transformations.append(transformation)
+
+        # Extract functions
+        ots_functions = []
+        for function_id, function_data in functions:
+            ots_function = self._transform_function(function_id, function_data, schema)
+            ots_functions.append(ots_function)
 
         # Build target configuration
         target: OTSTarget = {
@@ -147,14 +194,21 @@ class OTSTransformer:
         if not isinstance(module_tags, list):
             module_tags = []
 
+        # Determine OTS version: 0.2.0 if functions are present, 0.1.0 otherwise
+        ots_version = "0.2.0" if ots_functions else "0.1.0"
+
         # Build module
         module: OTSModule = {
-            "ots_version": "0.1.0",
+            "ots_version": ots_version,
             "module_name": module_name,
             "module_description": f"Transformations for {schema} schema",
             "target": target,
             "transformations": transformations,
         }
+
+        # Add functions if present (OTS 0.2.0)
+        if ots_functions:
+            module["functions"] = ots_functions
 
         # Add test_library_path if test library was exported
         if test_library_path:
@@ -528,6 +582,168 @@ class OTSTransformer:
 
         # Extract object_tags from metadata
         object_tags = metadata.get("object_tags", {})
+        if not isinstance(object_tags, dict):
+            return {}
+
+        # Validate that all values are strings (or convert them)
+        validated_tags = {}
+        for key, value in object_tags.items():
+            if key and isinstance(key, str):
+                # Convert value to string if it's not already
+                if value is not None:
+                    validated_tags[key] = str(value)
+
+        return validated_tags
+
+    def _transform_function(
+        self, function_id: str, function_data: ParsedFunction, schema: str
+    ) -> OTSFunction:
+        """
+        Transform a single parsed function to OTS function format.
+
+        Args:
+            function_id: Function identifier (e.g., "my_schema.function_name")
+            function_data: Parsed function data
+            schema: Schema name
+
+        Returns:
+            Transformed function as OTSFunction
+        """
+        function_metadata = function_data.get("function_metadata", {})
+        code_data = function_data.get("code", {})
+
+        # Extract function properties
+        description = function_metadata.get("description")
+        function_type = function_metadata.get("function_type", "scalar")
+        language = function_metadata.get("language", "sql")
+        parameters = function_metadata.get("parameters", [])
+        return_type = function_metadata.get("return_type")
+        return_table_schema = function_metadata.get("return_table_schema")
+
+        # Extract dependencies from code["sql"] (consistent with models)
+        dependencies = {"tables": [], "functions": []}
+        if code_data and "sql" in code_data:
+            sql_code = code_data["sql"]
+            # Read dependencies from code["sql"] (like models)
+            source_tables = sql_code.get("source_tables", [])
+            source_functions = sql_code.get("source_functions", [])
+            dependencies = {
+                "tables": source_tables,
+                "functions": source_functions,
+            }
+
+        # Build code structure for OTS
+        # OTS expects: {"generic_sql": "...", "database_specific": {"duckdb": "...", "snowflake": "..."}}
+        ots_code: Dict[str, Any] = {}
+        
+        if code_data and "sql" in code_data:
+            sql_code = code_data["sql"]
+            # Use original_sql as generic_sql
+            if "original_sql" in sql_code:
+                ots_code["generic_sql"] = sql_code["original_sql"]
+            
+            # Database-specific code would go in database_specific dict
+            # For now, we'll use generic_sql for all databases
+            # Future: extract database-specific overrides if present
+            ots_code["database_specific"] = {}
+        else:
+            # No SQL code (e.g., Python function that generates SQL)
+            ots_code["generic_sql"] = ""
+            ots_code["database_specific"] = {}
+
+        # Build OTS function
+        ots_function: OTSFunction = {
+            "function_id": function_id,
+            "description": description,
+            "function_type": function_type,
+            "language": language,
+            "code": ots_code,
+            "metadata": {"file_path": function_metadata.get("file_path", "")},
+        }
+
+        # Add optional fields
+        if parameters:
+            ots_function["parameters"] = parameters
+        if return_type:
+            ots_function["return_type"] = return_type
+        if return_table_schema:
+            ots_function["return_table_schema"] = return_table_schema
+        # Add deterministic flag if present
+        deterministic = function_metadata.get("deterministic")
+        if deterministic is not None:
+            ots_function["deterministic"] = deterministic
+        if dependencies:
+            ots_function["dependencies"] = dependencies
+
+        # Add tags (dbt-style, list of strings) if present
+        tags = self._merge_function_tags(function_data)
+        if tags:
+            ots_function["metadata"]["tags"] = tags
+
+        # Add object_tags (database-style, key-value pairs) if present
+        object_tags = self._extract_function_object_tags(function_data)
+        if object_tags:
+            ots_function["metadata"]["object_tags"] = object_tags
+
+        return ots_function
+
+    def _merge_function_tags(self, function_data: ParsedFunction) -> List[str]:
+        """
+        Merge module tags with function-specific tags.
+
+        Args:
+            function_data: Parsed function data
+
+        Returns:
+            Merged list of tags
+        """
+        # Extract module tags from project config
+        module_tags = []
+        if "module" in self.project_config:
+            module_config = self.project_config.get("module", {})
+            if isinstance(module_config, dict):
+                module_tags = module_config.get("tags", [])
+        elif "tags" in self.project_config:
+            root_tags = self.project_config.get("tags", [])
+            if isinstance(root_tags, list):
+                module_tags = root_tags
+
+        # Ensure module_tags is a list
+        if not isinstance(module_tags, list):
+            module_tags = []
+
+        # Function-specific tags
+        function_metadata = function_data.get("function_metadata", {})
+        function_tags = function_metadata.get("tags", [])
+        if not isinstance(function_tags, list):
+            function_tags = []
+
+        # Merge and deduplicate while preserving order
+        all_tags = module_tags + function_tags
+        seen = set()
+        merged_tags = []
+        for tag in all_tags:
+            tag_str = str(tag).lower() if tag else ""
+            if tag_str and tag_str not in seen:
+                seen.add(tag_str)
+                merged_tags.append(tag)
+
+        return merged_tags
+
+    def _extract_function_object_tags(self, function_data: ParsedFunction) -> Dict[str, str]:
+        """
+        Extract object_tags (database-style key-value pairs) from function data.
+
+        Args:
+            function_data: Parsed function data
+
+        Returns:
+            Dictionary of object tags (key-value pairs)
+        """
+        function_metadata = function_data.get("function_metadata", {})
+
+        # Extract object_tags from metadata
+        object_tags = function_metadata.get("object_tags", {})
         if not isinstance(object_tags, dict):
             return {}
 

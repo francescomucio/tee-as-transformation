@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 from graphlib import TopologicalSorter
 
-from tee.parser.shared.types import ParsedModel, DependencyGraph, DependencyInfo, ExecutionOrder, GraphCycles
+from tee.parser.shared.types import ParsedModel, ParsedFunction, DependencyGraph, DependencyInfo, ExecutionOrder, GraphCycles
 from tee.parser.shared.exceptions import DependencyError
 
 logger = logging.getLogger(__name__)
@@ -21,14 +21,16 @@ class DependencyGraphBuilder:
         parsed_models: Dict[str, ParsedModel],
         table_resolver,
         project_folder: Optional[Path] = None,
+        parsed_functions: Optional[Dict[str, ParsedFunction]] = None,
     ) -> DependencyGraph:
         """
-        Build a dependency graph from the parsed SQL models and tests.
+        Build a dependency graph from the parsed SQL models, functions, and tests.
 
         Args:
             parsed_models: Parsed SQL models
             table_resolver: TableResolver instance
             project_folder: Optional project folder path for discovering tests
+            parsed_functions: Optional parsed functions dict
 
         Returns:
             Dict containing dependency graph information
@@ -36,11 +38,44 @@ class DependencyGraphBuilder:
         Raises:
             DependencyError: If graph building fails
         """
+        parsed_functions = parsed_functions or {}
+        
         try:
-            # Extract dependencies from parsed models
+            # Extract dependencies from parsed models and functions
             dependencies = {}
             all_nodes = set()
 
+            # First, extract dependencies from functions (consistent with models)
+            for function_name, function_info in parsed_functions.items():
+                all_nodes.add(function_name)
+                function_deps = set()
+
+                # Get dependencies from code["sql"] (consistent with models)
+                code_data = function_info.get("code", {})
+                if code_data and "sql" in code_data:
+                    # Extract table dependencies (like models)
+                    source_tables = code_data["sql"].get("source_tables", [])
+                    for referenced_table in source_tables:
+                        # Resolve table reference
+                        full_table_name = table_resolver.resolve_table_reference(
+                            referenced_table, parsed_models
+                        )
+                        if full_table_name:
+                            function_deps.add(full_table_name)
+
+                    # Extract function dependencies (like models)
+                    source_functions = code_data["sql"].get("source_functions", [])
+                    for func_ref in source_functions:
+                        # Resolve function reference
+                        full_func_name = table_resolver.resolve_function_reference(
+                            func_ref, parsed_functions
+                        )
+                        if full_func_name and full_func_name != function_name:
+                            function_deps.add(full_func_name)
+
+                dependencies[function_name] = list(function_deps)
+
+            # Extract dependencies from parsed models
             for table_name, model_info in parsed_models.items():
                 all_nodes.add(table_name)
                 table_deps = set()
@@ -56,6 +91,15 @@ class DependencyGraphBuilder:
                         )
                         if full_ref_name and full_ref_name != table_name:
                             table_deps.add(full_ref_name)
+
+                    # Read pre-extracted function dependencies (extracted during model parsing)
+                    source_functions = code_data["sql"].get("source_functions", [])
+                    for func_ref in source_functions:
+                        full_func_name = table_resolver.resolve_function_reference(
+                            func_ref, parsed_functions
+                        )
+                        if full_func_name:
+                            table_deps.add(full_func_name)
 
                 dependencies[table_name] = list(table_deps)
 
@@ -85,7 +129,7 @@ class DependencyGraphBuilder:
             # Detect cycles and build execution order using graphlib
             cycles = self._detect_cycles_with_graphlib(dependencies)
             execution_order = (
-                self._topological_sort_with_graphlib(dependencies) if not cycles else []
+                self._topological_sort_with_graphlib(dependencies, parsed_functions) if not cycles else []
             )
 
             return {
@@ -371,15 +415,22 @@ class DependencyGraphBuilder:
             # Cycles detected, fall back to custom cycle detection for detailed info
             return self._detect_cycles(dependencies)
 
-    def _topological_sort_with_graphlib(self, dependencies: DependencyInfo) -> ExecutionOrder:
+
+    def _topological_sort_with_graphlib(
+        self, dependencies: DependencyInfo, parsed_functions: Optional[Dict[str, ParsedFunction]] = None
+    ) -> ExecutionOrder:
         """
         Perform topological sort using graphlib.TopologicalSorter.
+        The topological sort naturally respects dependencies, so functions that depend
+        on tables will come after those tables. Functions without dependencies will
+        come first.
 
         Args:
-            dependencies: Dict mapping table -> list of dependencies
+            dependencies: Dict mapping node -> list of dependencies
+            parsed_functions: Optional parsed functions dict (for reference, not used in sorting)
 
         Returns:
-            List of tables in dependency order (dependencies first)
+            List of nodes in dependency order (dependencies first)
         """
         # Create a TopologicalSorter
         ts = TopologicalSorter()
@@ -392,6 +443,7 @@ class DependencyGraphBuilder:
                 ts.add(node)
 
         # Get the static order (topological sort)
+        # This already respects dependencies - functions depending on tables will come after tables
         try:
             return list(ts.static_order())
         except ValueError:

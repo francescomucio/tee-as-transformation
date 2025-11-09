@@ -9,7 +9,7 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
-from tee.parser.shared.types import ParsedModel
+from tee.parser.shared.types import ParsedModel, ParsedFunction
 from tee.parser.input.ots_reader import OTSModuleReader, OTSModuleReaderError
 from tee.parser.input.ots_converter import OTSConverter, OTSConverterError
 
@@ -19,16 +19,16 @@ logger = logging.getLogger(__name__)
 def load_ots_modules(
     ots_path: Path,
     connection_config: Optional[Dict[str, Any]] = None,
-) -> Dict[str, ParsedModel]:
+) -> tuple[Dict[str, ParsedModel], Dict[str, ParsedFunction]]:
     """
-    Load OTS modules from a file or directory and convert them to ParsedModel format.
+    Load OTS modules from a file or directory and convert them to ParsedModel and ParsedFunction format.
 
     Args:
         ots_path: Path to OTS module file (.ots.json) or directory containing OTS modules
         connection_config: Optional connection configuration to override OTS target config
 
     Returns:
-        Dictionary mapping transformation_id to ParsedModel
+        Tuple of (parsed_models, parsed_functions) dictionaries
 
     Raises:
         OTSModuleReaderError: If OTS modules cannot be read
@@ -45,22 +45,26 @@ def load_ots_modules(
     else:
         raise OTSModuleReaderError(f"Path is neither a file nor a directory: {ots_path}")
 
-    # Convert all modules to ParsedModel format
+    # Convert all modules to ParsedModel and ParsedFunction format
     all_parsed_models = {}
+    all_parsed_functions = {}
     for module_name, module in modules.items():
         try:
             # Override target config if connection_config is provided
             if connection_config:
                 module = _override_target_config(module, connection_config)
 
-            parsed_models = converter.convert_module(module)
+            parsed_models, parsed_functions = converter.convert_module(module)
             all_parsed_models.update(parsed_models)
-            logger.info(f"Loaded {len(parsed_models)} transformations from OTS module: {module_name}")
+            all_parsed_functions.update(parsed_functions)
+            logger.info(
+                f"Loaded {len(parsed_models)} transformations and {len(parsed_functions)} functions from OTS module: {module_name}"
+            )
         except OTSConverterError as e:
             logger.error(f"Failed to convert OTS module {module_name}: {e}")
             raise
 
-    return all_parsed_models
+    return all_parsed_models, all_parsed_functions
 
 
 def merge_ots_with_parsed_models(
@@ -91,6 +95,41 @@ def merge_ots_with_parsed_models(
                 f"OTS version will be used."
             )
         merged[transformation_id] = ots_model
+
+    if conflicts:
+        logger.info(f"Resolved {len(conflicts)} conflicts by using OTS versions")
+
+    return merged
+
+
+def merge_ots_with_parsed_functions(
+    parsed_functions: Dict[str, ParsedFunction],
+    ots_parsed_functions: Dict[str, ParsedFunction],
+) -> Dict[str, ParsedFunction]:
+    """
+    Merge OTS-converted ParsedFunctions with existing ParsedFunctions.
+
+    If there are conflicts (same function_id), OTS functions take precedence.
+
+    Args:
+        parsed_functions: Existing ParsedFunctions from SQL/Python files
+        ots_parsed_functions: ParsedFunctions converted from OTS modules
+
+    Returns:
+        Merged dictionary of ParsedFunctions
+    """
+    merged = parsed_functions.copy()
+
+    # Add OTS functions (will overwrite any conflicts)
+    conflicts = []
+    for function_id, ots_function in ots_parsed_functions.items():
+        if function_id in merged:
+            conflicts.append(function_id)
+            logger.warning(
+                f"OTS function '{function_id}' conflicts with existing function. "
+                f"OTS version will be used."
+            )
+        merged[function_id] = ots_function
 
     if conflicts:
         logger.info(f"Resolved {len(conflicts)} conflicts by using OTS versions")

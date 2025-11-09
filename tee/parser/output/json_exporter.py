@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional, Literal
 import yaml
 
-from tee.parser.shared.types import ParsedModel, DependencyGraph
+from tee.parser.shared.types import ParsedModel, ParsedFunction, DependencyGraph
 from tee.parser.shared.exceptions import OutputGenerationError
 from tee.parser.shared.constants import OUTPUT_FILES
 from .ots_transformer import OTSTransformer
@@ -147,16 +147,18 @@ class JSONExporter:
     def export_ots_modules(
         self, 
         parsed_models: Dict[str, ParsedModel], 
+        parsed_functions: Optional[Dict[str, ParsedFunction]] = None,
         test_library_path: Optional[Path] = None,
         format: Literal["json", "yaml"] = "json"
     ) -> Dict[str, Path]:
         """
-        Export parsed models as OTS Modules.
+        Export parsed models and functions as OTS Modules.
 
         One file per schema module will be created.
 
         Args:
             parsed_models: Parsed models to export
+            parsed_functions: Optional parsed functions to export
             test_library_path: Optional path to test library file
             format: Output format ("json" or "yaml")
 
@@ -172,9 +174,10 @@ class JSONExporter:
             )
 
         try:
-            logger.info("Transforming models to OTS Modules")
+            logger.info("Transforming models and functions to OTS Modules")
             modules = self.transformer.transform_to_ots_modules(
-                parsed_models, 
+                parsed_models,
+                parsed_functions=parsed_functions,
                 test_library_path=test_library_path
             )
 
@@ -201,7 +204,11 @@ class JSONExporter:
                 results[module_name] = output_file
                 logger.info(f"Exported OTS module '{module_name}' to {output_file} ({format.upper()})")
                 print(f"✅ OTS module '{module_name}' saved to {output_file} ({format.upper()})")
-                print(f"   Contains {len(module_data['transformations'])} transformations")
+                print(f"   Contains {len(module_data['transformations'])} transformations", end="")
+                if "functions" in module_data and module_data["functions"]:
+                    print(f" and {len(module_data['functions'])} functions")
+                else:
+                    print()
 
             print(f"\n✨ Exported {len(results)} OTS module(s) ({format.upper()})")
 

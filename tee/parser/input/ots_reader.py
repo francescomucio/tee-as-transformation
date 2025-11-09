@@ -26,9 +26,9 @@ class OTSModuleReader:
 
     def __init__(self):
         """Initialize the OTS module reader."""
-        # Support 0.1.0 and below (semantic versioning comparison)
-        self.max_supported_version = "0.1.0"
-        self.supported_ots_versions = ["0.1.0"]  # Explicitly supported versions
+        # Support 0.1.0 and 0.2.0 (semantic versioning comparison)
+        self.max_supported_version = "0.2.0"
+        self.supported_ots_versions = ["0.1.0", "0.2.0"]  # Explicitly supported versions
 
     def read_module(self, file_path: Path) -> OTSModule:
         """
@@ -140,20 +140,35 @@ class OTSModuleReader:
             OTSModuleReaderError: If module is invalid
         """
         # Check required top-level fields
-        required_fields = ["ots_version", "module_name", "target", "transformations"]
+        # For OTS 0.2.0, transformations is optional if functions are present
+        ots_version = module_data.get("ots_version", "0.1.0")
+        required_fields = ["ots_version", "module_name", "target"]
+        
+        # Transformations is required for 0.1.0, optional for 0.2.0+ if functions exist
+        if ots_version == "0.1.0":
+            required_fields.append("transformations")
+        elif ots_version >= "0.2.0":
+            # For 0.2.0+, must have either transformations or functions
+            if "transformations" not in module_data and "functions" not in module_data:
+                raise OTSModuleReaderError(
+                    f"OTS module {file_path} (version {ots_version}) must have either 'transformations' or 'functions'"
+                )
+        else:
+            required_fields.append("transformations")
+        
         for field in required_fields:
             if field not in module_data:
                 raise OTSModuleReaderError(
                     f"Missing required field '{field}' in OTS module {file_path}"
                 )
 
-        # Validate OTS version (support 0.1.0 and below, error for above)
-        ots_version = module_data["ots_version"]
+        # Validate OTS version (support 0.1.0 and 0.2.0, error for above)
+        # Note: ots_version was already extracted above for field validation
         if not self._is_version_supported(ots_version):
             raise OTSModuleReaderError(
                 f"OTS module {file_path} uses version {ots_version}, "
                 f"which is not supported. Maximum supported version: {self.max_supported_version}. "
-                f"Please use version 0.1.0 or below."
+                f"Please use version 0.1.0 or 0.2.0."
             )
 
         # Validate target structure
@@ -241,16 +256,20 @@ class OTSModuleReader:
 
     def _is_version_supported(self, version: str) -> bool:
         """
-        Check if OTS version is supported (0.1.0 and below).
+        Check if OTS version is supported (0.1.0 and 0.2.0).
 
         Args:
-            version: OTS version string (e.g., "0.1.0")
+            version: OTS version string (e.g., "0.1.0", "0.2.0")
 
         Returns:
             True if version is supported, False otherwise
         """
         try:
-            # Simple semantic version comparison for 0.1.0 and below
+            # Check if version is in explicitly supported list
+            if version in self.supported_ots_versions:
+                return True
+
+            # Simple semantic version comparison
             # Split version into parts
             parts = version.split(".")
             if len(parts) < 2:
@@ -260,7 +279,7 @@ class OTSModuleReader:
             minor = int(parts[1])
             patch = int(parts[2]) if len(parts) > 2 else 0
             
-            # Support versions <= 0.1.0
+            # Support versions <= 0.2.0
             max_parts = self.max_supported_version.split(".")
             max_major = int(max_parts[0])
             max_minor = int(max_parts[1])

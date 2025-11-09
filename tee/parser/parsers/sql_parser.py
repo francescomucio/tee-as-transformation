@@ -3,6 +3,7 @@ Unified SQL parsing functionality using sqlglot.
 """
 
 import sqlglot
+from sqlglot import exp
 import logging
 from typing import Optional
 from pathlib import Path
@@ -14,6 +15,7 @@ from tee.parser.shared.model_utils import create_model_metadata, compute_sqlglot
 from tee.parser.shared.metadata_schema import parse_metadata_from_python_file, validate_metadata_dict
 from tee.typing.metadata import ParsedModelMetadata
 from tee.parser.analysis.sql_qualifier import generate_resolved_sql, validate_resolved_sql
+from tee.parser.shared.constants import SQL_BUILT_IN_FUNCTIONS
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -195,8 +197,37 @@ class SQLParser(BaseParser):
 
             # Extract table references
             source_tables = []
-            for table in expr.find_all(sqlglot.exp.Table):
+            for table in expr.find_all(exp.Table):
                 source_tables.append(table.name)
+
+            # Extract function calls (user-defined functions only)
+            source_functions = []
+            for func_node in expr.find_all(exp.Func):
+                # Get function name - SQLglot Function nodes have a 'name' attribute
+                func_name = func_node.name if hasattr(func_node, "name") else None
+                
+                # For qualified names (schema.func), check the 'this' attribute
+                if not func_name and hasattr(func_node, "this"):
+                    # Try to extract from 'this' (could be Identifier, Column, etc.)
+                    this_node = func_node.this
+                    if hasattr(this_node, "name"):
+                        func_name = this_node.name
+                    elif hasattr(this_node, "this") and hasattr(this_node.this, "name"):
+                        # Handle nested structures (e.g., schema.func)
+                        func_name = this_node.this.name
+                    else:
+                        func_name = str(this_node) if this_node else None
+                
+                # Fallback to string representation
+                if not func_name:
+                    func_name = str(func_node)
+                
+                # Filter out built-in functions and add to list
+                if func_name and func_name.lower() not in SQL_BUILT_IN_FUNCTIONS:
+                    source_functions.append(func_name)
+
+            # Remove duplicates while preserving order
+            source_functions = list(dict.fromkeys(source_functions))
 
             # Generate resolved SQL with table reference resolution if table_name provided
             if table_name:
@@ -215,6 +246,7 @@ class SQLParser(BaseParser):
                     "resolved_sql": resolved_sql,
                     "operation_type": expr.key if hasattr(expr, "key") else "unknown",
                     "source_tables": source_tables,
+                    "source_functions": source_functions,
                 }
             }
 

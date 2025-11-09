@@ -44,8 +44,9 @@ class TestOTSConverter:
             ],
         }
 
-        parsed_models = converter.convert_module(module)
+        parsed_models, parsed_functions = converter.convert_module(module)
         assert len(parsed_models) == 1
+        assert len(parsed_functions) == 0
         assert "test_schema.test_table" in parsed_models
 
         parsed_model = parsed_models["test_schema.test_table"]
@@ -91,7 +92,7 @@ class TestOTSConverter:
             ],
         }
 
-        parsed_models = converter.convert_module(module)
+        parsed_models, parsed_functions = converter.convert_module(module)
         parsed_model = parsed_models["test_schema.test_table"]
         
         # Check that tests are attached
@@ -139,7 +140,7 @@ class TestOTSConverter:
             ],
         }
 
-        parsed_models = converter.convert_module(module)
+        parsed_models, parsed_functions = converter.convert_module(module)
         parsed_model = parsed_models["test_schema.test_table"]
         
         metadata = parsed_model["model_metadata"]["metadata"]
@@ -177,7 +178,7 @@ class TestOTSConverter:
             ],
         }
 
-        parsed_models = converter.convert_module(module)
+        parsed_models, parsed_functions = converter.convert_module(module)
         parsed_model = parsed_models["test_schema.test_table"]
         
         metadata = parsed_model["model_metadata"]["metadata"]

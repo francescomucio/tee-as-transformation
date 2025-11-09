@@ -49,3 +49,21 @@ class OutputGenerationError(ParserError):
     """Raised when output generation fails."""
 
     pass
+
+
+class FunctionParsingError(ParserError):
+    """Raised when function parsing fails."""
+
+    pass
+
+
+class FunctionExecutionError(ParserError):
+    """Raised when function execution/creation fails."""
+
+    pass
+
+
+class FunctionMetadataError(ParserError):
+    """Raised when function metadata validation fails."""
+
+    pass

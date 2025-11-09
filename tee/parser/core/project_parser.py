@@ -136,17 +136,8 @@ class ProjectParser:
             # Use orchestrator's JSON exporter
             if output_file is None:
                 self.orchestrator.json_exporter.export_parsed_models(result)
-                # Also export OTS modules and test library if transformer is available
-                if self.orchestrator.transformer:
-                    try:
-                        # Export test library first
-                        project_name = self.orchestrator.project_config.get("project_folder", self.orchestrator.project_folder.name)
-                        test_library_path = self.orchestrator.json_exporter.export_test_library(project_name)
-                        
-                        # Export OTS modules (will include test_library_path reference)
-                        self.orchestrator.json_exporter.export_ots_modules(result, test_library_path=test_library_path)
-                    except Exception as e:
-                        logger.warning(f"Failed to export OTS modules: {e}")
+                # Note: OTS modules and test library export is handled by the compiler
+                # We don't export them here to avoid duplicate files
             else:
                 self.orchestrator.json_exporter.export_parsed_models(result, output_file)
         except Exception as e:
@@ -172,11 +163,14 @@ class ProjectParser:
             if self.graph is None:
                 self.build_dependency_graph()
 
+            # Get parsed functions from orchestrator for function identification
+            parsed_functions = self.orchestrator._parsed_functions or {}
+
             # Use orchestrator's report generator
             if output_file is None:
-                self.orchestrator.report_generator.generate_mermaid_diagram(self.graph)
+                self.orchestrator.report_generator.generate_mermaid_diagram(self.graph, parsed_functions=parsed_functions)
             else:
-                self.orchestrator.report_generator.generate_mermaid_diagram(self.graph, output_file)
+                self.orchestrator.report_generator.generate_mermaid_diagram(self.graph, output_file, parsed_functions=parsed_functions)
         except Exception as e:
             raise ParserError(f"Failed to save Mermaid diagram: {e}")
 
@@ -186,10 +180,13 @@ class ProjectParser:
             if self.graph is None:
                 self.build_dependency_graph()
 
+            # Get parsed functions from orchestrator for function identification
+            parsed_functions = self.orchestrator._parsed_functions or {}
+
             # Use orchestrator's report generator
             if output_file is None:
-                self.orchestrator.report_generator.generate_markdown_report(self.graph)
+                self.orchestrator.report_generator.generate_markdown_report(self.graph, parsed_functions=parsed_functions)
             else:
-                self.orchestrator.report_generator.generate_markdown_report(self.graph, output_file)
+                self.orchestrator.report_generator.generate_markdown_report(self.graph, output_file, parsed_functions)
         except Exception as e:
             raise ParserError(f"Failed to save markdown report: {e}")

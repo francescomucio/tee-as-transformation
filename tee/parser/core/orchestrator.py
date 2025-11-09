@@ -6,12 +6,13 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-from tee.parser.parsers import ParserFactory
+from tee.parser.parsers import ParserFactory, FunctionSQLParser, FunctionPythonParser
 from tee.parser.analysis import DependencyGraphBuilder, TableResolver
 from tee.parser.processing import FileDiscovery, substitute_sql_variables, validate_sql_variables
 from tee.parser.output import JSONExporter, ReportGenerator
-from tee.parser.shared.types import ParsedModel, DependencyGraph, ConnectionConfig, Variables
+from tee.parser.shared.types import ParsedModel, ParsedFunction, DependencyGraph, ConnectionConfig, Variables
 from tee.parser.shared.exceptions import ParserError
+from tee.parser.shared.function_utils import standardize_parsed_function
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -40,10 +41,11 @@ class ParserOrchestrator:
         self.connection = connection
         self.variables = variables or {}
         self.models_folder = self.project_folder / "models"
+        self.functions_folder = self.project_folder / "functions"
         self.project_config = project_config or {}
 
         # Initialize components
-        self.file_discovery = FileDiscovery(self.models_folder)
+        self.file_discovery = FileDiscovery(self.models_folder, functions_folder=self.functions_folder)
         self.table_resolver = TableResolver(connection)
         self.dependency_builder = DependencyGraphBuilder()
         self.json_exporter = JSONExporter(
@@ -56,6 +58,7 @@ class ParserOrchestrator:
 
         # Cached results
         self._parsed_models: Optional[Dict[str, ParsedModel]] = None
+        self._parsed_functions: Optional[Dict[str, ParsedFunction]] = None
         self._dependency_graph: Optional[DependencyGraph] = None
 
     def discover_and_parse_models(self) -> Dict[str, ParsedModel]:
@@ -174,6 +177,197 @@ class ParserOrchestrator:
         except Exception as e:
             raise ParserError(f"Failed to discover and parse models: {e}")
 
+    def discover_and_parse_functions(self) -> Dict[str, ParsedFunction]:
+        """
+        Discover and parse all function files in the project.
+
+        Returns:
+            Dict mapping qualified_function_name to parsed function data
+        """
+        if self._parsed_functions is not None:
+            return self._parsed_functions
+
+        try:
+            logger.info("Starting function discovery and parsing")
+
+            # Discover all function files
+            function_files = self.file_discovery.discover_function_files()
+            logger.info(
+                f"Discovered {len(function_files['sql'])} SQL function files, "
+                f"{len(function_files['python'])} Python function files, "
+                f"and {len(function_files['database_overrides'])} database override files"
+            )
+
+            parsed_functions = {}
+
+            # Determine current database type for override matching
+            current_db_type = None
+            if self.connection and isinstance(self.connection, dict):
+                current_db_type = self.connection.get("type", "").lower()
+            elif hasattr(self, "connection") and hasattr(self.connection, "type"):
+                current_db_type = str(self.connection.type).lower()
+
+            # Build a map of function names to their override files
+            # Format: {base_function_name: {database: override_file_path}}
+            override_map = {}
+            for override_file in function_files["database_overrides"]:
+                # Extract database name from filename (e.g., "calculate_percentage.snowflake.sql" -> "snowflake")
+                stem = override_file.stem  # filename without extension
+                if "." in stem:
+                    parts = stem.split(".")
+                    if len(parts) >= 2:
+                        db_name = parts[-1].lower()
+                        base_name = ".".join(parts[:-1])  # Everything before the database name
+                        if db_name not in override_map:
+                            override_map[db_name] = {}
+                        override_map[db_name][base_name] = override_file
+
+            # Parse SQL functions
+            sql_parser = FunctionSQLParser(connection=self.connection, project_config=self.project_config)
+            for sql_file in function_files["sql"]:
+                try:
+                    logger.debug(f"Processing SQL function file: {sql_file}")
+
+                    # Check if there's a database override for this function
+                    sql_stem = sql_file.stem  # filename without extension
+                    override_file = None
+                    if current_db_type and current_db_type in override_map:
+                        if sql_stem in override_map[current_db_type]:
+                            override_file = override_map[current_db_type][sql_stem]
+                            logger.debug(f"Found database override for {sql_stem}: {override_file}")
+
+                    # Use override file if available, otherwise use generic SQL file
+                    file_to_parse = override_file if override_file else sql_file
+
+                    # Read SQL content
+                    with open(file_to_parse, "r", encoding="utf-8") as f:
+                        sql_content = f.read()
+
+                    # Parse SQL function
+                    function_results = sql_parser.parse(sql_content, file_path=file_to_parse)
+
+                    # Process each function found in the file
+                    for function_name, function_data in function_results.items():
+                        # Generate qualified function name
+                        qualified_name = self.table_resolver.generate_full_function_name(
+                            sql_file, self.functions_folder, function_data["function_metadata"]
+                        )
+
+                        # Standardize function structure
+                        standardized = standardize_parsed_function(
+                            function_data=function_data,
+                            function_name=function_name,
+                            file_path=str(file_to_parse),
+                            is_python_function=False,
+                        )
+
+                        parsed_functions[qualified_name] = standardized
+                        logger.debug(f"Successfully parsed SQL function: {qualified_name}")
+
+                except Exception as e:
+                    logger.error(f"Error processing SQL function file {sql_file}: {e}")
+                    continue
+
+            # Also process database override files that don't have a generic SQL file
+            # (standalone database-specific functions)
+            if current_db_type and current_db_type in override_map:
+                for base_name, override_file in override_map[current_db_type].items():
+                    # Check if we already processed this function (from generic SQL file)
+                    # We need to check by qualified name, so we'll parse it first
+                    try:
+                        logger.debug(f"Processing standalone database override: {override_file}")
+
+                        # Read SQL content
+                        with open(override_file, "r", encoding="utf-8") as f:
+                            sql_content = f.read()
+
+                        # Parse SQL function
+                        function_results = sql_parser.parse(sql_content, file_path=override_file)
+
+                        # Process each function found in the file
+                        for function_name, function_data in function_results.items():
+                            # Generate qualified function name
+                            qualified_name = self.table_resolver.generate_full_function_name(
+                                override_file, self.functions_folder, function_data["function_metadata"]
+                            )
+
+                            # Only add if not already present (generic SQL takes precedence if both exist)
+                            if qualified_name not in parsed_functions:
+                                # Standardize function structure
+                                standardized = standardize_parsed_function(
+                                    function_data=function_data,
+                                    function_name=function_name,
+                                    file_path=str(override_file),
+                                    is_python_function=False,
+                                )
+
+                                parsed_functions[qualified_name] = standardized
+                                logger.debug(f"Successfully parsed standalone database override function: {qualified_name}")
+
+                    except Exception as e:
+                        logger.error(f"Error processing database override file {override_file}: {e}")
+                        continue
+
+            # Parse Python functions
+            python_parser = FunctionPythonParser()
+            for python_file in function_files["python"]:
+                try:
+                    logger.debug(f"Processing Python function file: {python_file}")
+
+                    # Read Python content
+                    with open(python_file, "r", encoding="utf-8") as f:
+                        python_content = f.read()
+
+                    # Parse Python functions
+                    function_results = python_parser.parse(python_content, file_path=python_file)
+
+                    # Process each function found in the file
+                    for function_name, function_data in function_results.items():
+                        # Generate qualified function name
+                        qualified_name = self.table_resolver.generate_full_function_name(
+                            python_file, self.functions_folder, function_data["function_metadata"]
+                        )
+
+                        # Check if this function already exists (e.g., from SQL file)
+                        if qualified_name in parsed_functions:
+                            existing_function = parsed_functions[qualified_name]
+                            # If existing function has code but Python function doesn't,
+                            # this is likely a metadata-only Python file for a SQL function
+                            if existing_function.get("code") and not function_data.get("code"):
+                                # Merge metadata from Python file into existing function
+                                existing_metadata = existing_function.get("function_metadata", {})
+                                new_metadata = function_data.get("function_metadata", {})
+                                # Merge metadata (Python metadata takes precedence)
+                                merged_metadata = {**existing_metadata, **new_metadata}
+                                # Update the existing function with merged metadata
+                                existing_function["function_metadata"] = merged_metadata
+                                logger.debug(f"Merged metadata from Python file into existing SQL function: {qualified_name}")
+                                continue
+
+                        # Standardize function structure
+                        standardized = standardize_parsed_function(
+                            function_data=function_data,
+                            function_name=function_name,
+                            file_path=str(python_file),
+                            is_python_function=True,
+                        )
+
+                        parsed_functions[qualified_name] = standardized
+                        logger.debug(f"Successfully parsed Python function: {qualified_name}")
+
+                except Exception as e:
+                    logger.error(f"Error processing Python function file {python_file}: {e}")
+                    continue
+
+            # Cache the result
+            self._parsed_functions = parsed_functions
+            logger.info(f"Successfully parsed {len(parsed_functions)} functions")
+
+            return parsed_functions
+
+        except Exception as e:
+            raise ParserError(f"Failed to discover and parse functions: {e}")
+
     def build_dependency_graph(self) -> DependencyGraph:
         """
         Build a dependency graph from the parsed models.
@@ -193,9 +387,28 @@ class ParserOrchestrator:
 
             logger.info("Building dependency graph")
 
-            # Build the graph (pass project_folder for test discovery)
+            # Get parsed functions if available
+            parsed_functions = None
+            if self._parsed_functions is not None:
+                parsed_functions = self._parsed_functions
+            else:
+                # Try to discover and parse functions
+                try:
+                    parsed_functions = self.discover_and_parse_functions()
+                except Exception as e:
+                    logger.debug(f"Could not parse functions for dependency graph: {e}")
+                    parsed_functions = {}
+
+            # Store parsed_functions for report generation (before building graph)
+            if parsed_functions:
+                self._parsed_functions = parsed_functions
+            
+            # Build the graph (pass project_folder for test discovery and parsed_functions)
             self._dependency_graph = self.dependency_builder.build_graph(
-                parsed_models, self.table_resolver, project_folder=Path(self.project_folder)
+                parsed_models, 
+                self.table_resolver, 
+                project_folder=Path(self.project_folder),
+                parsed_functions=parsed_functions
             )
 
             logger.info(f"Built dependency graph with {len(self._dependency_graph['nodes'])} nodes")
@@ -238,8 +451,9 @@ class ParserOrchestrator:
                 except Exception as e:
                     logger.warning(f"Failed to export OTS modules: {e}")
 
-            # Generate reports
-            report_results = self.report_generator.generate_all_reports(dependency_graph)
+            # Generate reports (pass parsed_functions for function identification)
+            parsed_functions = self._parsed_functions or {}
+            report_results = self.report_generator.generate_all_reports(dependency_graph, parsed_functions)
 
             # Combine results
             all_results = {**json_results, **ots_results, **report_results}

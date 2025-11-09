@@ -5,6 +5,7 @@ This section contains practical examples demonstrating t4t's capabilities.
 ## Available Examples
 
 - [Basic Usage](basic-usage.md) - Common usage patterns and workflows
+- [Functions](functions.md) - User-Defined Functions (UDFs) with complete examples
 - [Incremental Example](incremental-example.md) - Complete incremental materialization example
 - [Testing Example](testing-example.md) - Data quality testing with standard and custom SQL tests
 
@@ -95,9 +96,16 @@ t_project/
 │       ├── my_table.py
 │       ├── incremental_table.sql
 │       └── incremental_table.py
+├── functions/                    # User-Defined Functions
+│   └── my_schema/
+│       ├── calculate_percentage.sql
+│       └── calculate_percentage.py
 ├── tests/
-│   ├── my_custom_test.sql
-│   └── check_minimum_rows.sql
+│   ├── my_custom_test.sql       # Model tests
+│   ├── check_minimum_rows.sql   # Model tests
+│   └── functions/               # Function tests
+│       ├── test_calculate_percentage.sql
+│       └── test_calculate_percentage_zero.sql
 ├── data/
 │   ├── t_project.duckdb
 │   └── tee_state.db
@@ -122,6 +130,7 @@ materialization_change_behavior = "warn"
 ## Next Steps
 
 - Explore the [Basic Usage Examples](basic-usage.md) for common patterns
+- Learn about [Functions](functions.md) for creating reusable UDFs
 - Try the [Incremental Example](incremental-example.md) for advanced data processing
 - Learn about [Testing](testing-example.md) with standard and custom SQL tests
 - Check the [Incremental Materialization Guide](../incremental-materialization.md) for detailed configuration options

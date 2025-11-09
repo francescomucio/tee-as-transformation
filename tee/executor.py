@@ -275,8 +275,50 @@ def build_models(
             parsed_models, variables=variables
         )
 
+        # Step 2.5: Execute functions before models
+        # Functions must be created before models that depend on them
+        parsed_functions = {}
+        try:
+            parsed_functions = parser.orchestrator.discover_and_parse_functions()
+            if parsed_functions:
+                print(f"\n📦 Executing {len(parsed_functions)} function(s) before models...")
+                function_results = model_executor.execution_engine.execute_functions(
+                    parsed_functions, execution_order
+                )
+                if function_results.get("executed_functions"):
+                    print(f"  ✅ Executed {len(function_results['executed_functions'])} function(s)")
+                    for func_name in function_results["executed_functions"]:
+                        print(f"    - {func_name}")
+                        
+                        # Execute tests for this function
+                        func_test_results = build_helpers.execute_tests_for_function(
+                            func_name, parsed_functions, model_executor, test_executor
+                        )
+                        if func_test_results:
+                            # Handle test results (raises SystemExit on ERROR failures)
+                            build_helpers.handle_test_results(
+                                func_name, func_test_results, failed_models, parser, skipped_models
+                            )
+                            all_test_results.extend(func_test_results)
+                            
+                if function_results.get("failed_functions"):
+                    print(f"  ⚠️  Failed to execute {len(function_results['failed_functions'])} function(s)")
+                    for failure in function_results["failed_functions"]:
+                        print(f"    - {failure['function']}: {failure['error']}")
+                    # Continue with models even if some functions failed
+                    # Individual function failures are logged but don't stop the build
+        except Exception as e:
+            # If function discovery/parsing fails, log warning but continue
+            # This allows builds to work even if function parsing has issues
+            logger.warning(f"Could not discover/parse functions: {e}. Continuing with model execution.")
+
         # Step 3: Execute models and tests interleaved
         for node_name in execution_order:
+            # Skip functions (they were already executed in Step 2.5)
+            # Check if parsed_functions is a dict and contains this node
+            if isinstance(parsed_functions, dict) and node_name in parsed_functions:
+                continue
+            
             if build_helpers.should_skip_model(node_name, skipped_models, failed_models, graph):
                 # Mark as skipped if it depends on a failed model
                 if node_name not in skipped_models and not node_name.startswith("test:"):

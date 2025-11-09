@@ -24,17 +24,23 @@ class TestResult:
     __test__ = False  # Tell pytest this is not a test class
 
     test_name: str
-    table_name: str
-    column_name: Optional[str]
-    passed: bool
-    message: str
+    table_name: Optional[str] = None  # For model tests
+    column_name: Optional[str] = None
+    function_name: Optional[str] = None  # For function tests
+    passed: bool = False
+    message: str = ""
     severity: TestSeverity = TestSeverity.ERROR
     rows_returned: Optional[int] = None
     error: Optional[str] = None
 
     def __str__(self) -> str:
         status = "✅ PASS" if self.passed else f"❌ FAIL ({self.severity.value.upper()})"
-        location = f"{self.table_name}.{self.column_name}" if self.column_name else self.table_name
+        if self.function_name:
+            location = self.function_name
+        elif self.column_name:
+            location = f"{self.table_name}.{self.column_name}" if self.table_name else self.column_name
+        else:
+            location = self.table_name or "unknown"
         return f"{status} {self.test_name} on {location}: {self.message}"
 
 
@@ -56,20 +62,24 @@ class StandardTest(ABC):
     def get_test_query(
         self,
         adapter,
-        table_name: str,
+        table_name: Optional[str] = None,
         column_name: Optional[str] = None,
+        function_name: Optional[str] = None,
         params: Optional[Dict[str, Any]] = None,
     ) -> str:
         """
         Generate the SQL query for this test using the adapter.
 
-        The query should return rows when the test fails (like dbt).
+        For model tests: The query should return rows when the test fails (like dbt).
         Zero rows = test passes.
+        
+        For function tests: The query can return boolean (assertion-based) or a value (expected value pattern).
 
         Args:
             adapter: Database adapter instance (for database-specific SQL generation)
-            table_name: Fully qualified table name
-            column_name: Column name if this is a column-level test
+            table_name: Fully qualified table name (for model tests)
+            column_name: Column name if this is a column-level test (for model tests)
+            function_name: Fully qualified function name (for function tests)
             params: Optional parameters for the test
 
         Returns:
@@ -180,18 +190,20 @@ class StandardTest(ABC):
     def execute(
         self,
         adapter,
-        table_name: str,
+        table_name: Optional[str] = None,
         column_name: Optional[str] = None,
+        function_name: Optional[str] = None,
         params: Optional[Dict[str, Any]] = None,
         severity: Optional[TestSeverity] = None,
     ) -> TestResult:
         """
-        Execute the test against a table.
+        Execute the test against a table or function.
 
         Args:
             adapter: Database adapter instance
-            table_name: Fully qualified table name
-            column_name: Column name if this is a column-level test
+            table_name: Fully qualified table name (for model tests)
+            column_name: Column name if this is a column-level test (for model tests)
+            function_name: Fully qualified function name (for function tests)
             params: Optional parameters for the test
             severity: Override severity level (uses test default if None)
 
@@ -206,7 +218,7 @@ class StandardTest(ABC):
 
         try:
             # Get test query (adapter generates database-specific SQL)
-            query = self.get_test_query(adapter, table_name, column_name, params)
+            query = self.get_test_query(adapter, table_name, column_name, function_name, params)
 
             # Execute query
             results = adapter.execute_query(query)

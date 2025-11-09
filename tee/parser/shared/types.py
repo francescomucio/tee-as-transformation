@@ -7,8 +7,10 @@ from pathlib import Path
 
 # Core data structures
 ParsedModel = Dict[str, Any]
+ParsedFunction = Dict[str, Any]
 DependencyGraph = Dict[str, Any]
 TableReference = str
+FunctionReference = str
 
 # File paths
 FilePath = Union[str, Path]

@@ -557,9 +557,13 @@ SQL tests are automatically discovered from the `tests/` folder when:
 - Running `t4t test`
 - Running `t4t run` (tests execute automatically)
 
+Function tests are discovered from the `tests/functions/` folder:
+- `tests/functions/test_calculate_percentage.sql` → test name `"test_calculate_percentage"`
+
 Test names are derived from file names (without `.sql` extension):
 - `tests/my_test.sql` → test name `"my_test"`
 - `tests/check_minimum_rows.sql` → test name `"check_minimum_rows"`
+- `tests/functions/test_calculate_percentage.sql` → test name `"test_calculate_percentage"`
 
 #### Unused Generic Test Warnings
 
@@ -961,8 +965,55 @@ class MyAdapter(DatabaseAdapter):
 
 ---
 
+## Function Tests
+
+Functions can be tested using SQL tests in the `tests/functions/` folder. Function tests support two patterns:
+
+### Assertion-Based Tests (Default)
+
+The test SQL returns a boolean - `TRUE` means the test passed:
+
+```sql
+-- tests/functions/test_calculate_percentage.sql
+SELECT 
+    my_schema.calculate_percentage(10.0, 20.0) = 50.0 AS test_passed
+```
+
+### Expected Value Tests
+
+The test SQL returns a value, and the expected value is specified in function metadata:
+
+```python
+# functions/my_schema/calculate_percentage.py
+metadata = {
+    "function_name": "calculate_percentage",
+    "tests": [
+        {
+            "name": "test_calculate_percentage",
+            "expected": 50.0,
+            "params": {"numerator": 10.0, "denominator": 20.0}
+        }
+    ]
+}
+```
+
+```sql
+-- tests/functions/test_calculate_percentage.sql
+SELECT 
+    my_schema.calculate_percentage(@param1, @param2) AS result
+```
+
+### Function Test Placeholders
+
+Function tests support placeholders:
+- `@function_name` or `{{ function_name }}` - The function name
+- `@param1`, `@param2`, etc. - Function parameters from test metadata
+
+**Note:** For complete documentation on function testing, including detailed examples and best practices, see the [Functions Guide](functions.md#function-testing).
+
 ## Related Documentation
 
+- [Functions](functions.md) - User-Defined Functions (UDFs) and function testing
 - [Execution Engine](execution-engine.md) - Learn about model execution
 - [Database Adapters](database-adapters.md) - Database-specific features
 - [Examples](../user-guide/examples/) - Practical usage examples

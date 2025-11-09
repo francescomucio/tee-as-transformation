@@ -66,6 +66,7 @@ class TestLibraryExporter:
 
             # Build test library structure
             test_library = {
+                "ots_version": "0.2.0",  # Test libraries are part of OTS 0.2.0
                 "test_library_version": "1.0",
                 "description": f"Test library for {self.project_name} project",
             }
@@ -94,8 +95,8 @@ class TestLibraryExporter:
                     json.dump(test_library, f, indent=2, ensure_ascii=False)
 
             logger.info(f"Exported test library to {output_file}")
-            print(f"✅ Test library saved to {output_file}")
-            print(f"   Contains {len(generic_tests)} generic test(s) and {len(singular_tests)} singular test(s)")
+            # Note: This is a temporary export that will be merged by the compiler
+            # Don't print here to avoid confusion - the compiler will print the final merged version
 
             return output_file
 

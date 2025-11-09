@@ -22,8 +22,9 @@ class NotNullTest(StandardTest):
     def get_test_query(
         self,
         adapter,
-        table_name: str,
+        table_name: Optional[str] = None,
         column_name: Optional[str] = None,
+        function_name: Optional[str] = None,
         params: Optional[Dict[str, Any]] = None,
     ) -> str:
         """
@@ -83,8 +84,9 @@ class UniqueTest(StandardTest):
     def get_test_query(
         self,
         adapter,
-        table_name: str,
+        table_name: Optional[str] = None,
         column_name: Optional[str] = None,
+        function_name: Optional[str] = None,
         params: Optional[Dict[str, Any]] = None,
     ) -> str:
         """
@@ -161,8 +163,9 @@ class RowCountGreaterThanZeroTest(StandardTest):
     def get_test_query(
         self,
         adapter,
-        table_name: str,
+        table_name: Optional[str] = None,
         column_name: Optional[str] = None,
+        function_name: Optional[str] = None,
         params: Optional[Dict[str, Any]] = None,
     ) -> str:
         """
@@ -247,8 +250,9 @@ class AcceptedValuesTest(StandardTest):
     def get_test_query(
         self,
         adapter,
-        table_name: str,
+        table_name: Optional[str] = None,
         column_name: Optional[str] = None,
+        function_name: Optional[str] = None,
         params: Optional[Dict[str, Any]] = None,
     ) -> str:
         """
@@ -363,8 +367,9 @@ class RelationshipsTest(StandardTest):
     def get_test_query(
         self,
         adapter,
-        table_name: str,
+        table_name: Optional[str] = None,
         column_name: Optional[str] = None,
+        function_name: Optional[str] = None,
         params: Optional[Dict[str, Any]] = None,
     ) -> str:
         """
