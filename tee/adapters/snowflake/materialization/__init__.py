@@ -6,3 +6,4 @@ from .incremental_handler import IncrementalHandler
 
 __all__ = ["TableHandler", "ViewHandler", "IncrementalHandler"]
 
+

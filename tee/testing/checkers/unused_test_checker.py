@@ -253,3 +253,4 @@ class UnusedTestChecker:
             # If we can't load the SQL, assume it's generic to be safe
             return True
 
+

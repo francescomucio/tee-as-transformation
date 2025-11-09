@@ -4,3 +4,4 @@
 SELECT 
     my_schema.calculate_percentage(@param1, @param2) AS result
 
+

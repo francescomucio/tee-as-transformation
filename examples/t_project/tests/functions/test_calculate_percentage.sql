@@ -5,3 +5,4 @@
 SELECT 
     my_schema.calculate_percentage(10.0, 20.0) = 50.0 AS test_passed
 
+

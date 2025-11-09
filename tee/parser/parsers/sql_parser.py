@@ -13,6 +13,7 @@ from tee.parser.shared.types import ParsedModel, FilePath
 from tee.parser.shared.exceptions import SQLParsingError
 from tee.parser.shared.model_utils import create_model_metadata, compute_sqlglot_hash
 from tee.parser.shared.metadata_schema import parse_metadata_from_python_file, validate_metadata_dict
+from tee.parser.shared.file_utils import find_metadata_file
 from tee.typing.metadata import ParsedModelMetadata
 from tee.parser.analysis.sql_qualifier import generate_resolved_sql, validate_resolved_sql
 from tee.parser.shared.constants import SQL_BUILT_IN_FUNCTIONS
@@ -23,30 +24,6 @@ logger = logging.getLogger(__name__)
 
 class SQLParser(BaseParser):
     """Handles SQL parsing using sqlglot."""
-
-    def _find_metadata_file(self, sql_file_path: str) -> Optional[str]:
-        """
-        Find companion Python metadata file for a SQL file.
-
-        Args:
-            sql_file_path: Path to the SQL file
-
-        Returns:
-            Path to the Python metadata file if found, None otherwise
-        """
-        if not sql_file_path:
-            return None
-
-        sql_path = Path(sql_file_path)
-        if not sql_path.exists():
-            return None
-
-        # Look for Python file with same name in same directory
-        python_file = sql_path.with_suffix(".py")
-        if python_file.exists():
-            return str(python_file)
-
-        return None
 
     def _parse_metadata(self, sql_file_path: str) -> Optional[ParsedModelMetadata]:
         """
@@ -59,7 +36,7 @@ class SQLParser(BaseParser):
             Parsed metadata dictionary or None if not found
         """
         # First try companion Python file
-        metadata_file = self._find_metadata_file(sql_file_path)
+        metadata_file = find_metadata_file(sql_file_path)
         if metadata_file:
             try:
                 raw_metadata = parse_metadata_from_python_file(metadata_file)

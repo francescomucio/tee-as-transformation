@@ -160,13 +160,21 @@ Parses SQL function definitions:
 ```python
 from tee.parser.parsers import FunctionSQLParser
 
-parser = FunctionSQLParser()
+parser = FunctionSQLParser(connection={"type": "duckdb"})
+
+# Read SQL content
+with open("functions/my_schema/calculate_percentage.sql", "r") as f:
+    sql_content = f.read()
+
+# Parse the SQL content
 result = parser.parse(
-    sql_file_path="functions/my_schema/calculate_percentage.sql",
-    metadata_file_path="functions/my_schema/calculate_percentage.py",
-    connection_config={"type": "duckdb"}
+    content=sql_content,
+    file_path="functions/my_schema/calculate_percentage.sql",
+    dialect="duckdb"  # Optional, inferred from connection if not provided
 )
 ```
+
+**Note:** The parser automatically looks for a companion Python metadata file (same name with `.py` extension) in the same directory. If found, metadata from the Python file will be merged with the SQL-extracted metadata.
 
 ### `FunctionPythonParser`
 
@@ -246,4 +254,5 @@ adapter.drop_function(
     signature="FLOAT, FLOAT"  # Optional: For overloaded functions
 )
 ```
+
 

@@ -174,3 +174,4 @@ class TestTestDefinitionParser:
         assert result is not None
         assert result.severity_override == TestSeverity.WARNING
 
+

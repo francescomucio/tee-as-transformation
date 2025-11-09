@@ -6,6 +6,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 from tee.parser.parsers.function_sql_parser import FunctionSQLParser, FunctionSQLParsingError
+from tee.parser.parsers.function_sql_parser.dialect import DialectInferencer
 
 
 class TestFunctionSQLParser:
@@ -115,48 +116,44 @@ class TestFunctionSQLParser:
 
     def test_dialect_inference_from_connection(self):
         """Test dialect inference from connection type."""
+        inferencer = DialectInferencer()
+        
         # Test PostgreSQL
-        parser_pg = FunctionSQLParser(connection={"type": "postgresql"})
-        assert parser_pg._infer_dialect_from_connection() == "postgres"
+        assert inferencer.infer_from_connection({"type": "postgresql"}) == "postgres"
         
         # Test Snowflake
-        parser_sf = FunctionSQLParser(connection={"type": "snowflake"})
-        assert parser_sf._infer_dialect_from_connection() == "snowflake"
+        assert inferencer.infer_from_connection({"type": "snowflake"}) == "snowflake"
         
         # Test DuckDB
-        parser_db = FunctionSQLParser(connection={"type": "duckdb"})
-        assert parser_db._infer_dialect_from_connection() == "duckdb"
+        assert inferencer.infer_from_connection({"type": "duckdb"}) == "duckdb"
         
-        # Test default (empty connection defaults to duckdb)
-        parser_default = FunctionSQLParser(connection={})
-        # When connection type is missing, it defaults to "duckdb" in the get() call
-        result = parser_default._infer_dialect_from_connection()
-        # duckdb maps to "duckdb" in the dialect_map
-        assert result == "duckdb"
+        # Test default (empty connection defaults to postgres)
+        result = inferencer.infer_from_connection({})
+        # When connection type is missing, it defaults to "postgres" for CREATE FUNCTION parsing
+        assert result == "postgres"
         
         # Test unknown connection type defaults to postgres
-        parser_unknown = FunctionSQLParser(connection={"type": "unknown_db"})
-        result_unknown = parser_unknown._infer_dialect_from_connection()
+        result_unknown = inferencer.infer_from_connection({"type": "unknown_db"})
         # Unknown types default to "postgres" for CREATE FUNCTION parsing
         assert result_unknown == "postgres"
 
     def test_dialect_inference_from_filename(self):
         """Test dialect inference from database-specific filename."""
-        parser = FunctionSQLParser(connection={"type": "duckdb"})
+        inferencer = DialectInferencer()
         
         # Test PostgreSQL override
         file_path = Path("function.postgresql.sql")
-        dialect = parser._infer_dialect_from_filename(file_path)
+        dialect = inferencer.infer_from_filename(file_path)
         assert dialect == "postgres"
         
         # Test Snowflake override
         file_path = Path("function.snowflake.sql")
-        dialect = parser._infer_dialect_from_filename(file_path)
+        dialect = inferencer.infer_from_filename(file_path)
         assert dialect == "snowflake"
         
         # Test regular filename (no override)
         file_path = Path("function.sql")
-        dialect = parser._infer_dialect_from_filename(file_path)
+        dialect = inferencer.infer_from_filename(file_path)
         assert dialect is None
 
     def test_dialect_priority(self):

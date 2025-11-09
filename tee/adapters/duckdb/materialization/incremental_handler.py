@@ -130,3 +130,4 @@ class IncrementalHandler:
 
         return merge_sql.strip()
 
+

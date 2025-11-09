@@ -63,3 +63,4 @@ class TableHandler:
             self.logger.error(f"Failed to create table {table_name}: {e}")
             raise
 
+

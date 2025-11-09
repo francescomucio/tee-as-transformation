@@ -77,3 +77,4 @@ class MetadataExtractor:
             logger.warning(f"Error extracting function metadata: {e}")
             return None
 
+

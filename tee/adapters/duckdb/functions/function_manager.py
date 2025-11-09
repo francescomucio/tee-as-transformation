@@ -204,3 +204,4 @@ class FunctionManager:
             from tee.parser.shared.exceptions import FunctionExecutionError
             raise FunctionExecutionError(f"Failed to drop function {function_name}: {e}") from e
 
+

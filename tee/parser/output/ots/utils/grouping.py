@@ -63,3 +63,4 @@ def group_functions_by_schema(
     logger.debug(f"Grouped functions into {len(grouped)} schemas: {list(grouped.keys())}")
     return grouped
 
+

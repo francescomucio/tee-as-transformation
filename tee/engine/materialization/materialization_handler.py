@@ -194,3 +194,4 @@ class MaterializationHandler:
             # Fallback to table creation
             self.adapter.create_table(table_name, sql_query, metadata)
 
+

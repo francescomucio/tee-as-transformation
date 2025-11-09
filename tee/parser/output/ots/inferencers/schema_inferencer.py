@@ -97,3 +97,4 @@ class SchemaInferencer:
         # Default to string if can't infer
         return "string"
 
+

@@ -56,3 +56,4 @@ class ViewHandler:
             self.logger.error(f"Failed to create view {view_name}: {e}")
             raise
 
+

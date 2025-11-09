@@ -189,3 +189,4 @@ class MetadataExtractor:
             if nested_object_tags and isinstance(nested_object_tags, dict):
                 metadata["object_tags"] = nested_object_tags
 
+
