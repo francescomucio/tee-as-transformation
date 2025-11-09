@@ -1,12 +1,13 @@
 """Model transformation to OTS format."""
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any
 
-from tee.typing.metadata import OTSTransformation
 from tee.parser.shared.types import ParsedModel
-from .base import BaseTransformer
+from tee.typing.metadata import OTSTransformation
+
 from ..inferencers.schema_inferencer import SchemaInferencer
+from .base import BaseTransformer
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 class ModelTransformer(BaseTransformer):
     """Transforms parsed models to OTS transformations."""
 
-    def __init__(self, project_config: Dict[str, Any], sql_dialect: str):
+    def __init__(self, project_config: dict[str, Any], sql_dialect: str):
         """
         Initialize the model transformer.
 
@@ -79,7 +80,7 @@ class ModelTransformer(BaseTransformer):
 
         return transformation
 
-    def _transform_schema(self, model_data: ParsedModel) -> Optional[Dict[str, Any]]:
+    def _transform_schema(self, model_data: ParsedModel) -> dict[str, Any] | None:
         """
         Transform schema structure from metadata.
 
@@ -95,7 +96,7 @@ class ModelTransformer(BaseTransformer):
 
         # First try to get schema from metadata
         if "schema" in metadata and metadata["schema"]:
-            schema_data: Dict[str, Any] = {
+            schema_data: dict[str, Any] = {
                 "columns": [],
                 "partitioning": metadata.get("partitions", []),
             }
@@ -118,7 +119,7 @@ class ModelTransformer(BaseTransformer):
         # If no explicit schema in metadata, try to infer from SQL
         return self.schema_inferencer.infer_from_sql(model_data)
 
-    def _transform_materialization(self, model_data: ParsedModel) -> Dict[str, Any]:
+    def _transform_materialization(self, model_data: ParsedModel) -> dict[str, Any]:
         """
         Transform materialization configuration.
 
@@ -146,8 +147,8 @@ class ModelTransformer(BaseTransformer):
             return {"type": mat_type}
 
     def _transform_incremental_details(
-        self, inc_config: Dict[str, Any], strategy: str
-    ) -> Dict[str, Any]:
+        self, inc_config: dict[str, Any], strategy: str
+    ) -> dict[str, Any]:
         """
         Transform incremental strategy details to OTS format.
 
@@ -184,7 +185,7 @@ class ModelTransformer(BaseTransformer):
 
         return details
 
-    def _transform_tests(self, model_data: ParsedModel) -> Optional[Dict[str, Any]]:
+    def _transform_tests(self, model_data: ParsedModel) -> dict[str, Any] | None:
         """
         Extract and structure tests from model data.
 

@@ -19,19 +19,21 @@ statements. The regex parser is used as a fallback when SQLglot parsing fails
 or returns a Command object instead of a Create object.
 """
 
-import re
 import logging
+import re
+from typing import Any
+
 import sqlglot
 from sqlglot import exp
-from typing import Dict, Any, Optional
 
 from tee.typing.metadata import FunctionType
+
 from ..extractors import (
+    DependencyExtractor,
+    FunctionBodyExtractor,
     FunctionNameExtractor,
     ParameterExtractor,
     ReturnTypeExtractor,
-    FunctionBodyExtractor,
-    DependencyExtractor,
 )
 
 logger = logging.getLogger(__name__)
@@ -41,7 +43,7 @@ class SQLglotParser:
     """Parses CREATE FUNCTION statements using SQLglot."""
 
     @staticmethod
-    def parse(content: str, file_path_str: str, dialect: str = "postgres") -> Optional[Dict[str, Any]]:
+    def parse(content: str, file_path_str: str, dialect: str = "postgres") -> dict[str, Any] | None:
         """
         Parse CREATE FUNCTION using SQLglot.
 

@@ -4,13 +4,22 @@ t4t CLI Main Module
 Command-line interface for the t4t SQL model execution framework.
 """
 
+from typing import Any, Literal
+
 import typer
-from typing import Optional, List, Any, Literal
 
-from tee.cli.commands import cmd_run, cmd_test, cmd_debug, cmd_help, cmd_build, cmd_seed, cmd_init, cmd_compile
+from tee.adapters import is_adapter_supported, list_available_adapters
+from tee.cli.commands import (
+    cmd_build,
+    cmd_compile,
+    cmd_debug,
+    cmd_help,
+    cmd_init,
+    cmd_run,
+    cmd_seed,
+    cmd_test,
+)
 from tee.cli.commands import ots as ots_commands
-from tee.adapters import list_available_adapters, is_adapter_supported
-
 
 # Type aliases for better type safety and IDE support
 OutputFormat = Literal["json", "yaml"]
@@ -82,11 +91,11 @@ def _check_required_argument(ctx: typer.Context, arg_name: str, arg_value: Any) 
 @app.command()
 def run(
     ctx: typer.Context,
-    project_folder: Optional[str] = PROJECT_FOLDER_ARG,
+    project_folder: str | None = PROJECT_FOLDER_ARG,
     verbose: bool = VERBOSE_OPTION,
-    vars: Optional[str] = VARS_OPTION,
-    select: Optional[List[str]] = SELECT_OPTION,
-    exclude: Optional[List[str]] = EXCLUDE_OPTION,
+    vars: str | None = VARS_OPTION,
+    select: list[str] | None = SELECT_OPTION,
+    exclude: list[str] | None = EXCLUDE_OPTION,
 ) -> None:
     """Parse and execute SQL models."""
     _check_required_argument(ctx, "project_folder", project_folder)
@@ -102,9 +111,9 @@ def run(
 @app.command()
 def debug(
     ctx: typer.Context,
-    project_folder: Optional[str] = PROJECT_FOLDER_ARG,
+    project_folder: str | None = PROJECT_FOLDER_ARG,
     verbose: bool = VERBOSE_OPTION,
-    vars: Optional[str] = VARS_OPTION,
+    vars: str | None = VARS_OPTION,
 ) -> None:
     """Test database connectivity and configuration."""
     _check_required_argument(ctx, "project_folder", project_folder)
@@ -118,11 +127,11 @@ def debug(
 @app.command()
 def test(
     ctx: typer.Context,
-    project_folder: Optional[str] = PROJECT_FOLDER_ARG,
+    project_folder: str | None = PROJECT_FOLDER_ARG,
     verbose: bool = VERBOSE_OPTION,
-    vars: Optional[str] = VARS_OPTION,
-    select: Optional[List[str]] = SELECT_OPTION,
-    exclude: Optional[List[str]] = EXCLUDE_OPTION,
+    vars: str | None = VARS_OPTION,
+    select: list[str] | None = SELECT_OPTION,
+    exclude: list[str] | None = EXCLUDE_OPTION,
 ) -> None:
     """Run data quality tests on models."""
     _check_required_argument(ctx, "project_folder", project_folder)
@@ -138,11 +147,11 @@ def test(
 @app.command()
 def build(
     ctx: typer.Context,
-    project_folder: Optional[str] = PROJECT_FOLDER_ARG,
+    project_folder: str | None = PROJECT_FOLDER_ARG,
     verbose: bool = VERBOSE_OPTION,
-    vars: Optional[str] = VARS_OPTION,
-    select: Optional[List[str]] = SELECT_OPTION,
-    exclude: Optional[List[str]] = EXCLUDE_OPTION,
+    vars: str | None = VARS_OPTION,
+    select: list[str] | None = SELECT_OPTION,
+    exclude: list[str] | None = EXCLUDE_OPTION,
 ) -> None:
     """Build models with tests (stops on test failure)."""
     _check_required_argument(ctx, "project_folder", project_folder)
@@ -158,9 +167,9 @@ def build(
 @app.command()
 def seed(
     ctx: typer.Context,
-    project_folder: Optional[str] = PROJECT_FOLDER_ARG,
+    project_folder: str | None = PROJECT_FOLDER_ARG,
     verbose: bool = VERBOSE_OPTION,
-    vars: Optional[str] = VARS_OPTION,
+    vars: str | None = VARS_OPTION,
 ) -> None:
     """Load seed files (CSV, JSON, TSV) into database tables."""
     _check_required_argument(ctx, "project_folder", project_folder)
@@ -174,7 +183,7 @@ def seed(
 @app.command()
 def init(
     ctx: typer.Context,
-    project_name: Optional[str] = typer.Argument(None, help="Name of the project (will create a folder with this name)"),
+    project_name: str | None = typer.Argument(None, help="Name of the project (will create a folder with this name)"),
     database_type: DatabaseType = typer.Option("duckdb", "-d", "--database-type", help="Database type (duckdb, snowflake, postgresql, bigquery)", callback=validate_database_type),
 ) -> None:
     """Initialize a new t4t project."""
@@ -188,8 +197,8 @@ def init(
 @app.command()
 def compile(
     ctx: typer.Context,
-    project_folder: Optional[str] = PROJECT_FOLDER_ARG,
-    vars: Optional[str] = VARS_OPTION,
+    project_folder: str | None = PROJECT_FOLDER_ARG,
+    vars: str | None = VARS_OPTION,
     verbose: bool = VERBOSE_OPTION,
     format: OutputFormat = typer.Option("json", "-f", "--format", help="Output format: json or yaml", callback=validate_format),
 ) -> None:
@@ -230,12 +239,12 @@ def ots_callback(ctx: typer.Context):
 @ots_app.command("run")
 def ots_run(
     ctx: typer.Context,
-    ots_path: Optional[str] = typer.Argument(None, help="Path to OTS module file (.ots.json) or directory"),
-    project_folder: Optional[str] = typer.Option(None, "--project-folder", help="Project folder for connection config and merging"),
-    vars: Optional[str] = VARS_OPTION,
+    ots_path: str | None = typer.Argument(None, help="Path to OTS module file (.ots.json) or directory"),
+    project_folder: str | None = typer.Option(None, "--project-folder", help="Project folder for connection config and merging"),
+    vars: str | None = VARS_OPTION,
     verbose: bool = VERBOSE_OPTION,
-    select: Optional[List[str]] = SELECT_OPTION,
-    exclude: Optional[List[str]] = EXCLUDE_OPTION,
+    select: list[str] | None = SELECT_OPTION,
+    exclude: list[str] | None = EXCLUDE_OPTION,
 ) -> None:
     """Execute OTS modules."""
     _check_required_argument(ctx, "ots_path", ots_path)
@@ -252,7 +261,7 @@ def ots_run(
 @ots_app.command("validate")
 def ots_validate(
     ctx: typer.Context,
-    ots_path: Optional[str] = typer.Argument(None, help="Path to OTS module file (.ots.json) or directory"),
+    ots_path: str | None = typer.Argument(None, help="Path to OTS module file (.ots.json) or directory"),
     verbose: bool = VERBOSE_OPTION,
 ) -> None:
     """Validate OTS modules."""

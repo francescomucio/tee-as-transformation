@@ -1,9 +1,10 @@
 """Model execution logic."""
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Any
 
 from tee.adapters.base.core import DatabaseAdapter
+
 from ..materialization.materialization_handler import MaterializationHandler
 from ..metadata.metadata_extractor import MetadataExtractor
 from ..state.state_checker import StateChecker
@@ -18,11 +19,11 @@ class ModelExecutor:
         self,
         adapter: DatabaseAdapter,
         project_folder: str,
-        variables: Dict[str, Any],
+        variables: dict[str, Any],
         materialization_handler: MaterializationHandler,
         metadata_extractor: MetadataExtractor,
         state_checker: StateChecker,
-        config: Optional[Any] = None,
+        config: Any | None = None,
     ):
         """
         Initialize the model executor.
@@ -44,11 +45,11 @@ class ModelExecutor:
         self.state_checker = state_checker
         self.config = config
         # Track schemas that have been processed for tag attachment
-        self._processed_schemas: Dict[str, Dict[str, Any]] = {}
+        self._processed_schemas: dict[str, dict[str, Any]] = {}
 
     def execute(
-        self, parsed_models: Dict[str, Any], execution_order: List[str]
-    ) -> Dict[str, Any]:
+        self, parsed_models: dict[str, Any], execution_order: list[str]
+    ) -> dict[str, Any]:
         """
         Execute SQL models in the specified order with dialect conversion.
 
@@ -178,7 +179,7 @@ class ModelExecutor:
         )
         return results
 
-    def _extract_sql_query(self, model_data: Dict[str, Any], table_name: str) -> str:
+    def _extract_sql_query(self, model_data: dict[str, Any], table_name: str) -> str:
         """
         Extract SQL query from model data.
 
@@ -206,7 +207,7 @@ class ModelExecutor:
         logger.error(f"No SQL query found for {table_name}")
         return ""
 
-    def _get_materialization_type(self, model_data: Dict[str, Any]) -> str:
+    def _get_materialization_type(self, model_data: dict[str, Any]) -> str:
         """
         Extract materialization type from model data.
 
@@ -243,7 +244,7 @@ class ModelExecutor:
             )
             return "table"
 
-    def _extract_schema_name(self, table_name: str) -> Optional[str]:
+    def _extract_schema_name(self, table_name: str) -> str | None:
         """
         Extract schema name from table name.
 

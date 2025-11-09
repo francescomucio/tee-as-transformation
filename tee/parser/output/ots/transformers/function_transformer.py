@@ -1,10 +1,11 @@
 """Function transformation to OTS format."""
 
 import logging
-from typing import Dict, Any
+from typing import Any
 
-from tee.typing.metadata import OTSFunction
 from tee.parser.shared.types import ParsedFunction
+from tee.typing.metadata import OTSFunction
+
 from .base import BaseTransformer
 
 logger = logging.getLogger(__name__)
@@ -52,7 +53,7 @@ class FunctionTransformer(BaseTransformer):
 
         # Build code structure for OTS
         # OTS expects: {"generic_sql": "...", "database_specific": {"duckdb": "...", "snowflake": "..."}}
-        ots_code: Dict[str, Any] = {}
+        ots_code: dict[str, Any] = {}
 
         if code_data and "sql" in code_data:
             sql_code = code_data["sql"]

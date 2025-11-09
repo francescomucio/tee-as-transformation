@@ -2,8 +2,9 @@
 Standard test implementations for common data quality checks.
 """
 
-from typing import Dict, Any, Optional
-from .base import StandardTest, TestSeverity, TestRegistry
+from typing import Any
+
+from .base import StandardTest, TestRegistry, TestSeverity
 
 
 class NotNullTest(StandardTest):
@@ -13,7 +14,7 @@ class NotNullTest(StandardTest):
         super().__init__("not_null", severity=TestSeverity.ERROR)
 
     def validate_params(
-        self, params: Optional[Dict[str, Any]] = None, column_name: Optional[str] = None
+        self, params: dict[str, Any] | None = None, column_name: str | None = None
     ) -> None:
         """Validate not_null test parameters (none required currently)."""
         # Future: could support `allow_nulls` parameter
@@ -22,10 +23,10 @@ class NotNullTest(StandardTest):
     def get_test_query(
         self,
         adapter,
-        table_name: Optional[str] = None,
-        column_name: Optional[str] = None,
-        function_name: Optional[str] = None,
-        params: Optional[Dict[str, Any]] = None,
+        table_name: str | None = None,
+        column_name: str | None = None,
+        function_name: str | None = None,
+        params: dict[str, Any] | None = None,
     ) -> str:
         """
         Generate SQL query to find NULL values using adapter.
@@ -53,7 +54,7 @@ class UniqueTest(StandardTest):
         super().__init__("unique", severity=TestSeverity.ERROR)
 
     def validate_params(
-        self, params: Optional[Dict[str, Any]] = None, column_name: Optional[str] = None
+        self, params: dict[str, Any] | None = None, column_name: str | None = None
     ) -> None:
         """
         Validate unique test parameters.
@@ -84,10 +85,10 @@ class UniqueTest(StandardTest):
     def get_test_query(
         self,
         adapter,
-        table_name: Optional[str] = None,
-        column_name: Optional[str] = None,
-        function_name: Optional[str] = None,
-        params: Optional[Dict[str, Any]] = None,
+        table_name: str | None = None,
+        column_name: str | None = None,
+        function_name: str | None = None,
+        params: dict[str, Any] | None = None,
     ) -> str:
         """
         Generate SQL query to find duplicate values using adapter.
@@ -145,7 +146,7 @@ class RowCountGreaterThanZeroTest(StandardTest):
         super().__init__("row_count_gt_0", severity=TestSeverity.ERROR)
 
     def validate_params(
-        self, params: Optional[Dict[str, Any]] = None, column_name: Optional[str] = None
+        self, params: dict[str, Any] | None = None, column_name: str | None = None
     ) -> None:
         """
         Validate row_count_gt_0 test parameters.
@@ -163,10 +164,10 @@ class RowCountGreaterThanZeroTest(StandardTest):
     def get_test_query(
         self,
         adapter,
-        table_name: Optional[str] = None,
-        column_name: Optional[str] = None,
-        function_name: Optional[str] = None,
-        params: Optional[Dict[str, Any]] = None,
+        table_name: str | None = None,
+        column_name: str | None = None,
+        function_name: str | None = None,
+        params: dict[str, Any] | None = None,
     ) -> str:
         """
         Generate SQL query to count rows using adapter.
@@ -215,7 +216,7 @@ class AcceptedValuesTest(StandardTest):
         super().__init__("accepted_values", severity=TestSeverity.ERROR)
 
     def validate_params(
-        self, params: Optional[Dict[str, Any]] = None, column_name: Optional[str] = None
+        self, params: dict[str, Any] | None = None, column_name: str | None = None
     ) -> None:
         """
         Validate accepted_values test parameters.
@@ -250,10 +251,10 @@ class AcceptedValuesTest(StandardTest):
     def get_test_query(
         self,
         adapter,
-        table_name: Optional[str] = None,
-        column_name: Optional[str] = None,
-        function_name: Optional[str] = None,
-        params: Optional[Dict[str, Any]] = None,
+        table_name: str | None = None,
+        column_name: str | None = None,
+        function_name: str | None = None,
+        params: dict[str, Any] | None = None,
     ) -> str:
         """
         Generate SQL query to find values not in accepted list using adapter.
@@ -293,7 +294,7 @@ class RelationshipsTest(StandardTest):
         super().__init__("relationships", severity=TestSeverity.ERROR)
 
     def validate_params(
-        self, params: Optional[Dict[str, Any]] = None, column_name: Optional[str] = None
+        self, params: dict[str, Any] | None = None, column_name: str | None = None
     ) -> None:
         """
         Validate relationships test parameters.
@@ -367,10 +368,10 @@ class RelationshipsTest(StandardTest):
     def get_test_query(
         self,
         adapter,
-        table_name: Optional[str] = None,
-        column_name: Optional[str] = None,
-        function_name: Optional[str] = None,
-        params: Optional[Dict[str, Any]] = None,
+        table_name: str | None = None,
+        column_name: str | None = None,
+        function_name: str | None = None,
+        params: dict[str, Any] | None = None,
     ) -> str:
         """
         Generate SQL query to find orphaned rows using adapter.

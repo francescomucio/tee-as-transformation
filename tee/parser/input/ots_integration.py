@@ -7,19 +7,19 @@ existing ParsedModel dictionaries for execution.
 
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Any
 
-from tee.parser.shared.types import ParsedModel, ParsedFunction
-from tee.parser.input.ots_reader import OTSModuleReader, OTSModuleReaderError
 from tee.parser.input.ots_converter import OTSConverter, OTSConverterError
+from tee.parser.input.ots_reader import OTSModuleReader, OTSModuleReaderError
+from tee.parser.shared.types import ParsedFunction, ParsedModel
 
 logger = logging.getLogger(__name__)
 
 
 def load_ots_modules(
     ots_path: Path,
-    connection_config: Optional[Dict[str, Any]] = None,
-) -> tuple[Dict[str, ParsedModel], Dict[str, ParsedFunction]]:
+    connection_config: dict[str, Any] | None = None,
+) -> tuple[dict[str, ParsedModel], dict[str, ParsedFunction]]:
     """
     Load OTS modules from a file or directory and convert them to ParsedModel and ParsedFunction format.
 
@@ -68,9 +68,9 @@ def load_ots_modules(
 
 
 def merge_ots_with_parsed_models(
-    parsed_models: Dict[str, ParsedModel],
-    ots_parsed_models: Dict[str, ParsedModel],
-) -> Dict[str, ParsedModel]:
+    parsed_models: dict[str, ParsedModel],
+    ots_parsed_models: dict[str, ParsedModel],
+) -> dict[str, ParsedModel]:
     """
     Merge OTS-converted ParsedModels with existing ParsedModels.
 
@@ -103,9 +103,9 @@ def merge_ots_with_parsed_models(
 
 
 def merge_ots_with_parsed_functions(
-    parsed_functions: Dict[str, ParsedFunction],
-    ots_parsed_functions: Dict[str, ParsedFunction],
-) -> Dict[str, ParsedFunction]:
+    parsed_functions: dict[str, ParsedFunction],
+    ots_parsed_functions: dict[str, ParsedFunction],
+) -> dict[str, ParsedFunction]:
     """
     Merge OTS-converted ParsedFunctions with existing ParsedFunctions.
 
@@ -138,8 +138,8 @@ def merge_ots_with_parsed_functions(
 
 
 def _override_target_config(
-    module: Dict[str, Any], connection_config: Dict[str, Any]
-) -> Dict[str, Any]:
+    module: dict[str, Any], connection_config: dict[str, Any]
+) -> dict[str, Any]:
     """
     Override OTS module target config with provided connection config.
 

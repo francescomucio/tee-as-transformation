@@ -1,7 +1,7 @@
 """Utility methods for Snowflake operations."""
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ class SnowflakeUtils:
         return f"{database_name}.{object_name}"
 
     def create_schema_if_needed(
-        self, object_name: str, schema_metadata: Optional[Dict[str, Any]] = None
+        self, object_name: str, schema_metadata: dict[str, Any] | None = None
     ) -> None:
         """
         Create schema if needed for the given object name and attach tags if provided.
@@ -80,7 +80,7 @@ class SnowflakeUtils:
             except Exception as e:
                 self.logger.warning(f"Could not create schema {qualified_schema_name}: {e}")
 
-    def execute_with_cursor(self, query: str, params: Optional[tuple] = None) -> Any:
+    def execute_with_cursor(self, query: str, params: tuple | None = None) -> Any:
         """Execute a query with proper cursor management."""
         if not self.adapter.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
@@ -117,7 +117,7 @@ class SnowflakeUtils:
         finally:
             cursor.close()
 
-    def add_column_comments(self, table_name: str, column_descriptions: Dict[str, str]) -> None:
+    def add_column_comments(self, table_name: str, column_descriptions: dict[str, str]) -> None:
         """
         Add column comments to a table using Snowflake's COMMENT ON COLUMN syntax.
 

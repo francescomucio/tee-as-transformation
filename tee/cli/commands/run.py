@@ -2,19 +2,20 @@
 Run command implementation.
 """
 
+
 import typer
-from typing import Optional, List
+
+from tee.executor import execute_models
 from tee.cli.context import CommandContext
 from tee.engine.connection_manager import ConnectionManager
-from tee import execute_models
 
 
 def cmd_run(
     project_folder: str,
-    vars: Optional[str] = None,
+    vars: str | None = None,
     verbose: bool = False,
-    select: Optional[List[str]] = None,
-    exclude: Optional[List[str]] = None,
+    select: list[str] | None = None,
+    exclude: list[str] | None = None,
 ) -> None:
     """Execute the run command."""
     ctx = CommandContext(

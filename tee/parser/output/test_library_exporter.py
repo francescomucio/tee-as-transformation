@@ -6,11 +6,11 @@ import json
 import logging
 import re
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any
 
-from tee.testing.test_discovery import TestDiscovery
-from tee.testing.sql_test import SqlTest
 from tee.parser.shared.exceptions import OutputGenerationError
+from tee.testing.sql_test import SqlTest
+from tee.testing.test_discovery import TestDiscovery
 
 logger = logging.getLogger(__name__)
 
@@ -101,9 +101,9 @@ class TestLibraryExporter:
             return output_file
 
         except Exception as e:
-            raise OutputGenerationError(f"Failed to export test library: {e}")
+            raise OutputGenerationError(f"Failed to export test library: {e}") from e
 
-    def _extract_test_metadata(self, sql_test: SqlTest) -> Dict[str, Any]:
+    def _extract_test_metadata(self, sql_test: SqlTest) -> dict[str, Any]:
         """
         Extract metadata from a SQL test to build OTS test definition.
 
@@ -186,7 +186,7 @@ class TestLibraryExporter:
         ]
         return any(re.search(pattern, sql_content, re.IGNORECASE) for pattern in placeholder_patterns)
 
-    def _extract_description(self, sql_content: str) -> Optional[str]:
+    def _extract_description(self, sql_content: str) -> str | None:
         """
         Extract description from SQL comments.
 
@@ -254,7 +254,7 @@ class TestLibraryExporter:
         
         return '\n'.join(cleaned_lines)
 
-    def _extract_parameters(self, sql_content: str) -> Dict[str, Dict[str, Any]]:
+    def _extract_parameters(self, sql_content: str) -> dict[str, dict[str, Any]]:
         """
         Extract parameter definitions from SQL using @param:default syntax.
 
@@ -282,7 +282,7 @@ class TestLibraryExporter:
         # First match quoted strings
         for match in re.finditer(quoted_pattern, sql_content):
             param_name = match.group(1)
-            quote_char = match.group(2)
+            match.group(2)
             default_value = match.group(3)
             
             # Skip table_name and column_name as they're special placeholders
@@ -374,12 +374,12 @@ class TestLibraryExporter:
             try:
                 import ast
                 return ast.literal_eval(value)
-            except:
+            except Exception:
                 return []
         else:
             return value
 
-    def _extract_target_transformation(self, sql_content: str) -> Optional[str]:
+    def _extract_target_transformation(self, sql_content: str) -> str | None:
         """
         Extract target transformation ID from singular test SQL.
 

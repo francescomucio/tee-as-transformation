@@ -4,14 +4,14 @@ Function test execution logic.
 Handles execution of tests for user-defined functions.
 """
 
-import logging
 import inspect
-from typing import Dict, Any, List, Optional
+import logging
+from typing import Any
 
+from tee.adapters.base import DatabaseAdapter
 from tee.testing.base import TestRegistry, TestResult, TestSeverity
 from tee.testing.parsers import TestDefinitionParser
 from tee.typing.metadata import TestDefinition
-from tee.adapters.base import DatabaseAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +33,9 @@ class FunctionTestExecutor:
     def execute_tests_for_function(
         self,
         function_name: str,
-        metadata: Dict[str, Any],
-        severity_overrides: Optional[Dict[str, TestSeverity]] = None,
-    ) -> List[TestResult]:
+        metadata: dict[str, Any],
+        severity_overrides: dict[str, TestSeverity] | None = None,
+    ) -> list[TestResult]:
         """
         Execute all tests for a given function based on its metadata.
 
@@ -71,8 +71,8 @@ class FunctionTestExecutor:
         self,
         function_name: str,
         test_def: TestDefinition,
-        severity_overrides: Dict[str, TestSeverity],
-    ) -> Optional[TestResult]:
+        severity_overrides: dict[str, TestSeverity],
+    ) -> TestResult | None:
         """
         Execute a single function test definition.
 
@@ -125,9 +125,9 @@ class FunctionTestExecutor:
         test: Any,
         function_name: str,
         test_name: str,
-        params: Optional[Dict[str, Any]],
-        expected: Optional[Any],
-        severity_override: Optional[TestSeverity],
+        params: dict[str, Any] | None,
+        expected: Any | None,
+        severity_override: TestSeverity | None,
     ) -> TestResult:
         """
         Run a function test.

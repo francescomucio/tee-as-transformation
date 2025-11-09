@@ -4,11 +4,11 @@ Simplified ProjectParser class that delegates to the orchestrator.
 
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any
 
 from tee.parser.core.orchestrator import ParserOrchestrator
-from tee.parser.shared.types import ParsedModel, DependencyGraph, ConnectionConfig, Variables
 from tee.parser.shared.exceptions import ParserError
+from tee.parser.shared.types import ConnectionConfig, DependencyGraph, ParsedModel, Variables
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -29,8 +29,8 @@ class ProjectParser:
         self,
         project_folder: str,
         connection: ConnectionConfig,
-        variables: Optional[Variables] = None,
-        project_config: Optional[Dict[str, Any]] = None,
+        variables: Variables | None = None,
+        project_config: dict[str, Any] | None = None,
     ):
         """
         Initialize the ProjectParser.
@@ -52,10 +52,10 @@ class ProjectParser:
 
         # Backward compatibility properties
         self.models_folder = self.project_folder / "models"
-        self.parsed_models: Optional[Dict[str, ParsedModel]] = None
-        self.graph: Optional[DependencyGraph] = None
+        self.parsed_models: dict[str, ParsedModel] | None = None
+        self.graph: DependencyGraph | None = None
 
-    def collect_models(self) -> Dict[str, ParsedModel]:
+    def collect_models(self) -> dict[str, ParsedModel]:
         """
         Collect all .sql and .py files in the project folder, parse them,
         and return a JSON structure with parsed arguments.
@@ -70,7 +70,7 @@ class ProjectParser:
             self.parsed_models = self.orchestrator.discover_and_parse_models()
             return self.parsed_models
         except Exception as e:
-            raise ParserError(f"Failed to collect models: {e}")
+            raise ParserError(f"Failed to collect models: {e}") from e
 
     def build_dependency_graph(self) -> DependencyGraph:
         """
@@ -96,9 +96,9 @@ class ProjectParser:
 
             return self.graph
         except Exception as e:
-            raise ParserError(f"Failed to build dependency graph: {e}")
+            raise ParserError(f"Failed to build dependency graph: {e}") from e
 
-    def update_parsed_models(self, updated_models: Dict[str, Any]) -> None:
+    def update_parsed_models(self, updated_models: dict[str, Any]) -> None:
         """
         Update the parser's cached models with updated model data.
 
@@ -141,7 +141,7 @@ class ProjectParser:
             else:
                 self.orchestrator.json_exporter.export_parsed_models(result, output_file)
         except Exception as e:
-            raise ParserError(f"Failed to save to JSON: {e}")
+            raise ParserError(f"Failed to save to JSON: {e}") from e
 
     def save_dependency_graph(self, output_file: str = None) -> None:
         """Save the dependency graph to JSON file."""
@@ -155,7 +155,7 @@ class ProjectParser:
             else:
                 self.orchestrator.json_exporter.export_dependency_graph(self.graph, output_file)
         except Exception as e:
-            raise ParserError(f"Failed to save dependency graph: {e}")
+            raise ParserError(f"Failed to save dependency graph: {e}") from e
 
     def save_mermaid_diagram(self, output_file: str = None) -> None:
         """Save the dependency graph as a Mermaid diagram file."""
@@ -172,7 +172,7 @@ class ProjectParser:
             else:
                 self.orchestrator.report_generator.generate_mermaid_diagram(self.graph, output_file, parsed_functions=parsed_functions)
         except Exception as e:
-            raise ParserError(f"Failed to save Mermaid diagram: {e}")
+            raise ParserError(f"Failed to save Mermaid diagram: {e}") from e
 
     def save_markdown_report(self, output_file: str = None) -> None:
         """Save a comprehensive markdown report with Mermaid diagram."""
@@ -189,4 +189,4 @@ class ProjectParser:
             else:
                 self.orchestrator.report_generator.generate_markdown_report(self.graph, output_file, parsed_functions)
         except Exception as e:
-            raise ParserError(f"Failed to save markdown report: {e}")
+            raise ParserError(f"Failed to save markdown report: {e}") from e

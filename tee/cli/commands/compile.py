@@ -2,10 +2,12 @@
 Compile command implementation.
 """
 
+from typing import Literal
+
 import typer
-from typing import Optional, Literal
+
 from tee.cli.context import CommandContext
-from tee.compiler import compile_project, CompilationError
+from tee.compiler import CompilationError, compile_project
 
 # Type alias for output format
 OutputFormat = Literal["json", "yaml"]
@@ -13,7 +15,7 @@ OutputFormat = Literal["json", "yaml"]
 
 def cmd_compile(
     project_folder: str,
-    vars: Optional[str] = None,
+    vars: str | None = None,
     verbose: bool = False,
     format: OutputFormat = "json",
 ) -> None:

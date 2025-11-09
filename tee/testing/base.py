@@ -3,9 +3,9 @@ Base classes and types for the testing framework.
 """
 
 from abc import ABC, abstractmethod
-from enum import Enum
-from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
+from enum import Enum
+from typing import Any
 
 
 class TestSeverity(Enum):
@@ -24,14 +24,14 @@ class TestResult:
     __test__ = False  # Tell pytest this is not a test class
 
     test_name: str
-    table_name: Optional[str] = None  # For model tests
-    column_name: Optional[str] = None
-    function_name: Optional[str] = None  # For function tests
+    table_name: str | None = None  # For model tests
+    column_name: str | None = None
+    function_name: str | None = None  # For function tests
     passed: bool = False
     message: str = ""
     severity: TestSeverity = TestSeverity.ERROR
-    rows_returned: Optional[int] = None
-    error: Optional[str] = None
+    rows_returned: int | None = None
+    error: str | None = None
 
     def __str__(self) -> str:
         status = "✅ PASS" if self.passed else f"❌ FAIL ({self.severity.value.upper()})"
@@ -62,10 +62,10 @@ class StandardTest(ABC):
     def get_test_query(
         self,
         adapter,
-        table_name: Optional[str] = None,
-        column_name: Optional[str] = None,
-        function_name: Optional[str] = None,
-        params: Optional[Dict[str, Any]] = None,
+        table_name: str | None = None,
+        column_name: str | None = None,
+        function_name: str | None = None,
+        params: dict[str, Any] | None = None,
     ) -> str:
         """
         Generate the SQL query for this test using the adapter.
@@ -89,7 +89,7 @@ class StandardTest(ABC):
 
     @abstractmethod
     def validate_params(
-        self, params: Optional[Dict[str, Any]] = None, column_name: Optional[str] = None
+        self, params: dict[str, Any] | None = None, column_name: str | None = None
     ) -> None:
         """
         Validate test parameters.
@@ -103,7 +103,7 @@ class StandardTest(ABC):
         """
         pass
 
-    def _validate_model_level_only(self, column_name: Optional[str]) -> None:
+    def _validate_model_level_only(self, column_name: str | None) -> None:
         """
         Validate that a model-level test is not applied to a column.
 
@@ -119,7 +119,7 @@ class StandardTest(ABC):
             )
 
     def _validate_unknown_params(
-        self, params: Optional[Dict[str, Any]], allowed_params: set
+        self, params: dict[str, Any] | None, allowed_params: set
     ) -> None:
         """
         Validate that no unknown parameters are provided.
@@ -190,11 +190,11 @@ class StandardTest(ABC):
     def execute(
         self,
         adapter,
-        table_name: Optional[str] = None,
-        column_name: Optional[str] = None,
-        function_name: Optional[str] = None,
-        params: Optional[Dict[str, Any]] = None,
-        severity: Optional[TestSeverity] = None,
+        table_name: str | None = None,
+        column_name: str | None = None,
+        function_name: str | None = None,
+        params: dict[str, Any] | None = None,
+        severity: TestSeverity | None = None,
     ) -> TestResult:
         """
         Execute the test against a table or function.
@@ -258,7 +258,7 @@ class StandardTest(ABC):
 class TestRegistry:
     """Registry for standard tests."""
 
-    _tests: Dict[str, StandardTest] = {}
+    _tests: dict[str, StandardTest] = {}
 
     @classmethod
     def register(cls, test: StandardTest) -> None:
@@ -271,7 +271,7 @@ class TestRegistry:
         cls._tests[test.name] = test
 
     @classmethod
-    def get(cls, name: str) -> Optional[StandardTest]:
+    def get(cls, name: str) -> StandardTest | None:
         """
         Get a registered test by name.
 
@@ -284,7 +284,7 @@ class TestRegistry:
         return cls._tests.get(name)
 
     @classmethod
-    def list_all(cls) -> List[str]:
+    def list_all(cls) -> list[str]:
         """
         List all registered test names.
 

@@ -1,7 +1,7 @@
 """Table creation and management for DuckDB."""
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class TableHandler:
         self.logger = adapter.logger
 
     def create(
-        self, table_name: str, query: str, metadata: Optional[Dict[str, Any]] = None
+        self, table_name: str, query: str, metadata: dict[str, Any] | None = None
     ) -> None:
         """Create a table from a qualified SQL query with optional column metadata."""
         if not self.adapter.connection:

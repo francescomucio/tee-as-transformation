@@ -1,10 +1,11 @@
 """Function execution logic."""
 
 import logging
-from typing import Dict, Any, List
+from typing import Any
 
 from tee.adapters.base.core import DatabaseAdapter
 from tee.parser.shared.types import ParsedFunction
+
 from ..metadata.metadata_extractor import MetadataExtractor
 
 logger = logging.getLogger(__name__)
@@ -31,11 +32,11 @@ class FunctionExecutor:
         self.project_folder = project_folder
         self.metadata_extractor = metadata_extractor
         # Track schemas that have been processed for tag attachment
-        self._processed_schemas: Dict[str, Dict[str, Any]] = {}
+        self._processed_schemas: dict[str, dict[str, Any]] = {}
 
     def execute(
-        self, parsed_functions: Dict[str, ParsedFunction], execution_order: List[str]
-    ) -> Dict[str, Any]:
+        self, parsed_functions: dict[str, ParsedFunction], execution_order: list[str]
+    ) -> dict[str, Any]:
         """
         Execute user-defined functions in dependency order.
 
@@ -134,7 +135,7 @@ class FunctionExecutor:
         )
         return results
 
-    def _extract_function_sql(self, function_data: Dict[str, Any], function_name: str) -> str:
+    def _extract_function_sql(self, function_data: dict[str, Any], function_name: str) -> str:
         """
         Extract SQL query from function data.
 

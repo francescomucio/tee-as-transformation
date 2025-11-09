@@ -5,14 +5,14 @@ Python function file parsing functionality for UDFs.
 import ast
 import importlib.util
 import logging
-import sys
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Any
+
+from tee.parser.shared.exceptions import FunctionParsingError
+from tee.parser.shared.types import FilePath
+from tee.typing.metadata import FunctionMetadataDict, FunctionType, ParsedFunctionMetadata
 
 from .base import BaseParser
-from tee.parser.shared.types import FilePath
-from tee.parser.shared.exceptions import PythonParsingError, FunctionParsingError
-from tee.typing.metadata import ParsedFunctionMetadata, FunctionMetadataDict, FunctionType
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -31,14 +31,14 @@ class FunctionPythonParser(BaseParser):
         """Initialize the Python function parser."""
         super().__init__()
         # Cache for evaluated functions (lazy evaluation)
-        self._evaluation_cache: Dict[str, Any] = {}
+        self._evaluation_cache: dict[str, Any] = {}
 
     def clear_cache(self) -> None:
         """Clear all caches."""
         super().clear_cache()
         self._evaluation_cache.clear()
 
-    def parse(self, content: str, file_path: FilePath = None) -> Dict[str, Dict[str, Any]]:
+    def parse(self, content: str, file_path: FilePath = None) -> dict[str, dict[str, Any]]:
         """
         Parse Python content and extract UDF functions using static analysis.
 
@@ -118,9 +118,9 @@ class FunctionPythonParser(BaseParser):
         except Exception as e:
             if isinstance(e, FunctionPythonParsingError):
                 raise
-            raise FunctionPythonParsingError(f"Error parsing Python function file {file_path}: {str(e)}")
+            raise FunctionPythonParsingError(f"Error parsing Python function file {file_path}: {str(e)}") from e
 
-    def _try_parse_metadata_only(self, content: str, file_path_str: str) -> Optional[FunctionMetadataDict]:
+    def _try_parse_metadata_only(self, content: str, file_path_str: str) -> FunctionMetadataDict | None:
         """
         Try to parse the file as a metadata-only file (with a `metadata` dict).
 
@@ -165,7 +165,7 @@ class FunctionPythonParser(BaseParser):
 
         return None
 
-    def _parse_metadata_dict(self, metadata_dict: FunctionMetadataDict, file_path_str: str) -> Dict[str, Dict[str, Any]]:
+    def _parse_metadata_dict(self, metadata_dict: FunctionMetadataDict, file_path_str: str) -> dict[str, dict[str, Any]]:
         """
         Parse a metadata dictionary into a function structure.
 
@@ -205,7 +205,7 @@ class FunctionPythonParser(BaseParser):
 
         return {function_name: function_data}
 
-    def _extract_function_metadata(self, node: ast.FunctionDef) -> Optional[Dict[str, Any]]:
+    def _extract_function_metadata(self, node: ast.FunctionDef) -> dict[str, Any] | None:
         """
         Extract function metadata from a function node by looking for @functions.sql() or @functions.python() decorators.
 
@@ -245,7 +245,7 @@ class FunctionPythonParser(BaseParser):
 
         return None
 
-    def _extract_decorator_arguments(self, decorator: ast.Call, language: str) -> Optional[Dict[str, Any]]:
+    def _extract_decorator_arguments(self, decorator: ast.Call, language: str) -> dict[str, Any] | None:
         """
         Extract arguments from a decorator call.
 
@@ -296,7 +296,7 @@ class FunctionPythonParser(BaseParser):
         # For complex expressions, return None (caller should handle)
         return None
 
-    def _extract_function_signature(self, node: ast.FunctionDef) -> List[Dict[str, Any]]:
+    def _extract_function_signature(self, node: ast.FunctionDef) -> list[dict[str, Any]]:
         """
         Extract function parameters from AST node signature.
 
@@ -309,7 +309,7 @@ class FunctionPythonParser(BaseParser):
         parameters = []
 
         for arg in node.args.args:
-            param: Dict[str, Any] = {
+            param: dict[str, Any] = {
                 "name": arg.arg,
             }
 
@@ -333,7 +333,7 @@ class FunctionPythonParser(BaseParser):
 
         return parameters
 
-    def _extract_type_hint(self, annotation: ast.AST) -> Optional[str]:
+    def _extract_type_hint(self, annotation: ast.AST) -> str | None:
         """
         Extract type hint as string from AST annotation node.
 

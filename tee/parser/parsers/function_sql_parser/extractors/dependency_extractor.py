@@ -3,7 +3,6 @@ Dependency extraction from function body SQL.
 """
 
 import re
-from typing import Dict, List
 
 from tee.parser.shared.constants import SQL_BUILT_IN_FUNCTIONS
 
@@ -12,7 +11,7 @@ class DependencyExtractor:
     """Extracts dependencies (tables and functions) from function body."""
 
     @staticmethod
-    def extract(function_body: str) -> Dict[str, List[str]]:
+    def extract(function_body: str) -> dict[str, list[str]]:
         """
         Extract dependencies from function body (table references and function calls).
 

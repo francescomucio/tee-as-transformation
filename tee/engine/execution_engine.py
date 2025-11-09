@@ -6,12 +6,13 @@ for database-agnostic SQL model execution with automatic dialect conversion.
 """
 
 import logging
-from typing import Dict, Any, List, Optional, Union
+from typing import Any
 
-from tee.adapters import get_adapter, AdapterConfig
+from tee.adapters import AdapterConfig, get_adapter
 from tee.parser.shared.types import ParsedFunction
+
 from .config import load_database_config
-from .executors import ModelExecutor, FunctionExecutor
+from .executors import FunctionExecutor, ModelExecutor
 from .materialization import MaterializationHandler
 from .metadata import MetadataExtractor
 from .state import StateChecker
@@ -33,10 +34,10 @@ class ExecutionEngine:
 
     def __init__(
         self,
-        config: Optional[Union[AdapterConfig, Dict[str, Any]]] = None,
+        config: AdapterConfig | dict[str, Any] | None = None,
         config_name: str = "default",
         project_folder: str = ".",
-        variables: Optional[Dict[str, Any]] = None,
+        variables: dict[str, Any] | None = None,
     ):
         """
         Initialize the execution engine.
@@ -82,8 +83,8 @@ class ExecutionEngine:
         self.state_checker.close()
 
     def execute_models(
-        self, parsed_models: Dict[str, Any], execution_order: List[str]
-    ) -> Dict[str, Any]:
+        self, parsed_models: dict[str, Any], execution_order: list[str]
+    ) -> dict[str, Any]:
         """
         Execute SQL models in the specified order with dialect conversion.
 
@@ -97,8 +98,8 @@ class ExecutionEngine:
         return self.model_executor.execute(parsed_models, execution_order)
 
     def execute_functions(
-        self, parsed_functions: Dict[str, ParsedFunction], execution_order: List[str]
-    ) -> Dict[str, Any]:
+        self, parsed_functions: dict[str, ParsedFunction], execution_order: list[str]
+    ) -> dict[str, Any]:
         """
         Execute user-defined functions in dependency order.
 
@@ -114,6 +115,6 @@ class ExecutionEngine:
         """
         return self.function_executor.execute(parsed_functions, execution_order)
 
-    def get_database_info(self) -> Dict[str, Any]:
+    def get_database_info(self) -> dict[str, Any]:
         """Get information about the connected database."""
         return self.adapter.get_database_info()

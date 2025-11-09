@@ -6,7 +6,7 @@ All components are re-exported here for backward compatibility.
 """
 
 # Import core components
-from .config import MaterializationType, AdapterConfig
+from .config import AdapterConfig, MaterializationType
 from .core import DatabaseAdapter
 
 # Re-export everything for backward compatibility

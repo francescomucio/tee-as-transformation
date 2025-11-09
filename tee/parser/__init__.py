@@ -11,17 +11,17 @@ from .core import ProjectParser
 __all__ = ["ProjectParser"]
 
 # Re-export key components for advanced usage
-from .parsers import SQLParser, PythonParser, ParserFactory
 from .analysis import DependencyGraphBuilder, TableResolver
-from .processing import substitute_sql_variables, validate_sql_variables, model
 from .output import DependencyVisualizer, JSONExporter, ReportGenerator
+from .parsers import ParserFactory, PythonParser, SQLParser
+from .processing import model, substitute_sql_variables, validate_sql_variables
 from .shared import (
-    ParserError,
-    SQLParsingError,
-    PythonParsingError,
     DependencyError,
-    VariableSubstitutionError,
-    TableResolutionError,
     FileDiscoveryError,
     OutputGenerationError,
+    ParserError,
+    PythonParsingError,
+    SQLParsingError,
+    TableResolutionError,
+    VariableSubstitutionError,
 )

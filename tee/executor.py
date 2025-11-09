@@ -5,12 +5,11 @@ Handles the complete workflow of parsing and executing SQL models based on proje
 """
 
 import logging
-from pathlib import Path
-from typing import Dict, Any, Optional, Union, List, TYPE_CHECKING
-from tee.parser import ProjectParser
+from typing import TYPE_CHECKING, Any
+
 from tee.engine import ModelExecutor
-from tee.testing import TestExecutor
 from tee.executor_helpers import build_helpers
+from tee.parser import ProjectParser
 
 if TYPE_CHECKING:
     from tee.adapters import AdapterConfig
@@ -18,13 +17,13 @@ if TYPE_CHECKING:
 
 def execute_models(
     project_folder: str,
-    connection_config: Union[Dict[str, Any], AdapterConfig],
+    connection_config: dict[str, Any] | AdapterConfig,
     save_analysis: bool = True,
-    variables: Optional[Dict[str, Any]] = None,
-    select_patterns: Optional[List[str]] = None,
-    exclude_patterns: Optional[List[str]] = None,
-    project_config: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    variables: dict[str, Any] | None = None,
+    select_patterns: list[str] | None = None,
+    exclude_patterns: list[str] | None = None,
+    project_config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """
     Execute SQL models by compiling to OTS modules and running them in dependency order.
 
@@ -181,13 +180,13 @@ def execute_models(
 
 def build_models(
     project_folder: str,
-    connection_config: Union[Dict[str, Any], AdapterConfig],
+    connection_config: dict[str, Any] | AdapterConfig,
     save_analysis: bool = True,
-    variables: Optional[Dict[str, Any]] = None,
-    select_patterns: Optional[List[str]] = None,
-    exclude_patterns: Optional[List[str]] = None,
-    project_config: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    variables: dict[str, Any] | None = None,
+    select_patterns: list[str] | None = None,
+    exclude_patterns: list[str] | None = None,
+    project_config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """
     Build models with interleaved test execution, stopping on test failures.
 
@@ -359,7 +358,7 @@ def build_models(
                 print(f"  ❌ Model execution failed: {error_msg}")
                 build_helpers.mark_dependents_as_skipped(node_name, parser, skipped_models)
                 print(f"\n❌ Build stopped: Model {node_name} failed")
-                raise SystemExit(1)
+                raise SystemExit(1) from None
 
         # Step 4: Save analysis files if requested
         if save_analysis:

@@ -3,14 +3,13 @@ Return type extraction from SQL content.
 """
 
 import re
-from typing import Optional
 
 
 class ReturnTypeExtractor:
     """Extracts function return type from SQL content."""
 
     @staticmethod
-    def extract(content: str) -> Optional[str]:
+    def extract(content: str) -> str | None:
         """
         Extract return type from SQL content.
 

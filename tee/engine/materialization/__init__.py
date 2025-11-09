@@ -1,7 +1,7 @@
 """Materialization components."""
 
-from .materialization_handler import MaterializationHandler
 from .incremental_executor import IncrementalExecutor
+from .materialization_handler import MaterializationHandler
 
 __all__ = ["MaterializationHandler", "IncrementalExecutor"]
 

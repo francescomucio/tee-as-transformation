@@ -5,11 +5,11 @@ This module handles loading database configurations from pyproject.toml
 and environment variables with proper precedence and validation.
 """
 
-import os
 import logging
-from typing import Dict, Any, Optional
-from pathlib import Path
+import os
 import tomllib
+from pathlib import Path
+from typing import Any
 
 from tee.adapters.base import AdapterConfig
 
@@ -17,7 +17,7 @@ from tee.adapters.base import AdapterConfig
 class DatabaseConfigManager:
     """Manages database configurations from multiple sources."""
 
-    def __init__(self, project_root: Optional[str] = None):
+    def __init__(self, project_root: str | None = None):
         self.project_root = Path(project_root) if project_root else Path.cwd()
         self.logger = logging.getLogger(self.__class__.__name__)
 
@@ -46,7 +46,7 @@ class DatabaseConfigManager:
         # Validate and create AdapterConfig
         return self._create_adapter_config(merged_config)
 
-    def _load_toml_config(self, config_name: str) -> Dict[str, Any]:
+    def _load_toml_config(self, config_name: str) -> dict[str, Any]:
         """Load configuration from pyproject.toml or project.toml."""
         # Try pyproject.toml first
         toml_file = self.project_root / "pyproject.toml"
@@ -93,7 +93,7 @@ class DatabaseConfigManager:
             self.logger.warning(f"Could not read pyproject.toml: {e}")
             return {}
 
-    def _load_env_config(self) -> Dict[str, Any]:
+    def _load_env_config(self) -> dict[str, Any]:
         """Load configuration from environment variables."""
         env_config = {}
 
@@ -126,14 +126,14 @@ class DatabaseConfigManager:
         return env_config
 
     def _merge_configs(
-        self, toml_config: Dict[str, Any], env_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, toml_config: dict[str, Any], env_config: dict[str, Any]
+    ) -> dict[str, Any]:
         """Merge TOML and environment configurations."""
         merged = toml_config.copy()
         merged.update(env_config)
         return merged
 
-    def _create_adapter_config(self, config_dict: Dict[str, Any]) -> AdapterConfig:
+    def _create_adapter_config(self, config_dict: dict[str, Any]) -> AdapterConfig:
         """Create AdapterConfig from dictionary."""
         if not config_dict:
             raise ValueError("No database configuration found")
@@ -165,7 +165,7 @@ class DatabaseConfigManager:
 
 
 def load_database_config(
-    config_name: str = "default", project_root: Optional[str] = None
+    config_name: str = "default", project_root: str | None = None
 ) -> AdapterConfig:
     """
     Convenience function to load database configuration.

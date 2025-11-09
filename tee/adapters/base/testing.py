@@ -4,7 +4,7 @@ Test SQL generation methods for database adapters.
 These methods are mixed into DatabaseAdapter via multiple inheritance.
 """
 
-from typing import List, Optional, Any
+from typing import Any
 
 
 class TestQueryGenerator:
@@ -33,7 +33,7 @@ class TestQueryGenerator:
         # Using COUNT(*) for better performance on large tables
         return f"SELECT COUNT(*) FROM {table_name} WHERE {column_name} IS NULL"
 
-    def generate_unique_test_query(self, table_name: str, columns: Optional[List[str]] = None) -> str:
+    def generate_unique_test_query(self, table_name: str, columns: list[str] | None = None) -> str:
         """
         Generate SQL query for unique test.
 
@@ -81,7 +81,7 @@ class TestQueryGenerator:
             """
 
     def generate_no_duplicates_test_query(
-        self, table_name: str, columns: Optional[List[str]] = None
+        self, table_name: str, columns: list[str] | None = None
     ) -> str:
         """
         DEPRECATED: Use generate_unique_test_query instead.
@@ -110,7 +110,7 @@ class TestQueryGenerator:
         return f"SELECT COUNT(*) FROM {table_name}"
 
     def generate_accepted_values_test_query(
-        self, table_name: str, column_name: str, values: List[Any]
+        self, table_name: str, column_name: str, values: list[Any]
     ) -> str:
         """
         Generate SQL query for accepted_values test.
@@ -156,9 +156,9 @@ class TestQueryGenerator:
     def generate_relationships_test_query(
         self,
         source_table: str,
-        source_columns: List[str],
+        source_columns: list[str],
         target_table: str,
-        target_columns: List[str],
+        target_columns: list[str],
     ) -> str:
         """
         Generate SQL query for relationships test.

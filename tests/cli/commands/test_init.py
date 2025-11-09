@@ -82,7 +82,6 @@ class TestInitCommand:
                 os.chdir(tmpdir_path)
                 
                 with patch("sys.exit"):
-                    with patch("tee.cli.commands.init.is_adapter_supported", return_value=True):
                         # Call function directly with parameters
                         cmd_init(project_name=project_name, database_type="duckdb")
                         
@@ -116,7 +115,6 @@ class TestInitCommand:
                 os.chdir(tmpdir_path)
                 
                 with patch("sys.exit"):
-                    with patch("tee.cli.commands.init.is_adapter_supported", return_value=True):
                         # Call function directly with parameters
                         cmd_init(project_name=project_name, database_type="snowflake")
                         
@@ -143,16 +141,15 @@ class TestInitCommand:
         original_cwd = Path.cwd()
         try:
             os.chdir(temp_project_dir)
-            with patch("tee.cli.commands.init.is_adapter_supported", return_value=True):
-                try:
-                    # Call function directly with parameters
-                    cmd_init(project_name=project_name, database_type="duckdb")
-                    # Should not reach here - should have exited
-                    assert False, "Expected typer.Exit but command completed"
-                except (SystemExit, ClickExit) as e:
-                    # Should exit with code 1 when directory exists
-                    exit_code = getattr(e, 'exit_code', getattr(e, 'code', 0))
-                    assert exit_code == 1, f"Expected exit code 1, got {exit_code}"
+            try:
+                # Call function directly with parameters
+                cmd_init(project_name=project_name, database_type="duckdb")
+                # Should not reach here - should have exited
+                assert False, "Expected typer.Exit but command completed"
+            except (SystemExit, ClickExit) as e:
+                # Should exit with code 1 when directory exists
+                exit_code = getattr(e, 'exit_code', getattr(e, 'code', 0))
+                assert exit_code == 1, f"Expected exit code 1, got {exit_code}"
         finally:
             os.chdir(original_cwd)
 
@@ -186,42 +183,39 @@ class TestInitCommand:
                 import os
                 os.chdir(tmpdir_path)
                 
-                with patch("tee.cli.commands.init.is_adapter_supported", return_value=True):
-                    # Make project.toml write fail
-                    with patch("pathlib.Path.write_text", side_effect=Exception("Write failed")):
-                        try:
-                            # Call function directly with parameters
-                            cmd_init(project_name=project_name, database_type="duckdb")
-                            assert False, "Expected typer.Exit"
-                        except (SystemExit, ClickExit) as e:
-                            exit_code = getattr(e, 'exit_code', getattr(e, 'code', 0))
-                            assert exit_code == 1
-                            # Verify directory was cleaned up
-                            assert not project_path.exists()
+                # Make project.toml write fail
+                with patch("pathlib.Path.write_text", side_effect=Exception("Write failed")):
+                    try:
+                        # Call function directly with parameters
+                        cmd_init(project_name=project_name, database_type="duckdb")
+                        assert False, "Expected typer.Exit"
+                    except (SystemExit, ClickExit) as e:
+                        exit_code = getattr(e, 'exit_code', getattr(e, 'code', 0))
+                        assert exit_code == 1
+                        # Verify directory was cleaned up
+                        assert not project_path.exists()
             finally:
                 os.chdir(original_cwd)
 
     def test_cmd_init_validates_empty_project_name(self):
         """Test that init command rejects empty project name."""
-        with patch("tee.cli.commands.init.is_adapter_supported", return_value=True):
-            try:
-                # Call function directly with parameters
-                cmd_init(project_name="", database_type="duckdb")
-                assert False, "Expected typer.Exit for empty project name"
-            except (SystemExit, ClickExit) as e:
-                exit_code = getattr(e, 'exit_code', getattr(e, 'code', 0))
-                assert exit_code == 1
+        try:
+            # Call function directly with parameters
+            cmd_init(project_name="", database_type="duckdb")
+            assert False, "Expected typer.Exit for empty project name"
+        except (SystemExit, ClickExit) as e:
+            exit_code = getattr(e, 'exit_code', getattr(e, 'code', 0))
+            assert exit_code == 1
 
     def test_cmd_init_validates_whitespace_project_name(self):
         """Test that init command rejects project name with leading/trailing whitespace."""
-        with patch("tee.cli.commands.init.is_adapter_supported", return_value=True):
-            try:
-                # Call function directly with parameters
-                cmd_init(project_name="  my_project  ", database_type="duckdb")
-                assert False, "Expected typer.Exit for whitespace project name"
-            except (SystemExit, ClickExit) as e:
-                exit_code = getattr(e, 'exit_code', getattr(e, 'code', 0))
-                assert exit_code == 1
+        try:
+            # Call function directly with parameters
+            cmd_init(project_name="  my_project  ", database_type="duckdb")
+            assert False, "Expected typer.Exit for whitespace project name"
+        except (SystemExit, ClickExit) as e:
+            exit_code = getattr(e, 'exit_code', getattr(e, 'code', 0))
+            assert exit_code == 1
 
     def test_cmd_init_creates_project_with_postgresql(self):
         """Test that init command creates project with PostgreSQL config."""
@@ -238,7 +232,6 @@ class TestInitCommand:
                 os.chdir(tmpdir_path)
                 
                 with patch("sys.exit"):
-                    with patch("tee.cli.commands.init.is_adapter_supported", return_value=True):
                         # Call function directly with parameters
                         cmd_init(project_name=project_name, database_type="postgresql")
                         
@@ -270,7 +263,6 @@ class TestInitCommand:
                 os.chdir(tmpdir_path)
                 
                 with patch("sys.exit"):
-                    with patch("tee.cli.commands.init.is_adapter_supported", return_value=True):
                         # Call function directly with parameters
                         cmd_init(project_name=project_name, database_type="bigquery")
                         
@@ -301,7 +293,6 @@ class TestInitCommand:
                 os.chdir(tmpdir_path)
                 
                 with patch("sys.exit"):
-                    with patch("tee.cli.commands.init.is_adapter_supported", return_value=True):
                         # Call function directly with parameters
                         cmd_init(project_name=project_name, database_type="DUCKDB")  # Uppercase
                         
@@ -327,7 +318,6 @@ class TestInitCommand:
                 os.chdir(tmpdir_path)
                 
                 with patch("sys.exit"):
-                    with patch("tee.cli.commands.init.is_adapter_supported", return_value=True):
                         # Call function directly with parameters
                         cmd_init(project_name=project_name, database_type="duckdb")
                         
@@ -355,7 +345,6 @@ class TestInitCommand:
                 os.chdir(tmpdir_path)
                 
                 with patch("sys.exit"):
-                    with patch("tee.cli.commands.init.is_adapter_supported", return_value=True):
                         # Call function directly with parameters
                         cmd_init(project_name=project_name, database_type="duckdb")
                         
@@ -392,7 +381,6 @@ class TestInitCommand:
                 os.chdir(tmpdir_path)
                 
                 with patch("sys.exit"):
-                    with patch("tee.cli.commands.init.is_adapter_supported", return_value=True):
                         # Call function directly with parameters (using default)
                         cmd_init(project_name=project_name, database_type="duckdb")
                         
@@ -423,28 +411,27 @@ class TestInitCommand:
                 os.chdir(tmpdir_path)
                 
                 with patch("sys.exit", side_effect=SystemExit) as mock_exit:
-                    with patch("tee.cli.commands.init.is_adapter_supported", return_value=True):
-                        # Create the project directory first, then make subdirectory creation fail
-                        project_path.mkdir()
-                        
-                        # Make subdirectory creation raise OSError
-                        original_mkdir = Path.mkdir
-                        def failing_mkdir(self, *args, **kwargs):
-                            if self == project_path:
-                                # Allow project directory creation
-                                return original_mkdir(self, *args, **kwargs)
-                            else:
-                                # Fail on subdirectory creation
-                                raise OSError("Permission denied")
-                        
-                        with patch("pathlib.Path.mkdir", side_effect=failing_mkdir):
-                            try:
-                                # Call function directly with parameters
-                                cmd_init(project_name=project_name, database_type="duckdb")
-                                assert False, "Expected typer.Exit"
-                            except (SystemExit, ClickExit) as e:
-                                exit_code = getattr(e, 'exit_code', getattr(e, 'code', 0))
-                                assert exit_code == 1
+                    # Create the project directory first, then make subdirectory creation fail
+                    project_path.mkdir()
+                    
+                    # Make subdirectory creation raise OSError
+                    original_mkdir = Path.mkdir
+                    def failing_mkdir(self, *args, **kwargs):
+                        if self == project_path:
+                            # Allow project directory creation
+                            return original_mkdir(self, *args, **kwargs)
+                        else:
+                            # Fail on subdirectory creation
+                            raise OSError("Permission denied")
+                    
+                    with patch("pathlib.Path.mkdir", side_effect=failing_mkdir):
+                        try:
+                            # Call function directly with parameters
+                            cmd_init(project_name=project_name, database_type="duckdb")
+                            assert False, "Expected typer.Exit"
+                        except (SystemExit, ClickExit) as e:
+                            exit_code = getattr(e, 'exit_code', getattr(e, 'code', 0))
+                            assert exit_code == 1
             finally:
                 os.chdir(original_cwd)
 

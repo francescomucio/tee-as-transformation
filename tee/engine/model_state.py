@@ -8,10 +8,9 @@ This is now a wrapper around the centralized StateManager for backward compatibi
 """
 
 import logging
-from typing import Optional, Dict, Any, List
-from dataclasses import dataclass
+from typing import Any
 
-from .state_manager import StateManager, ModelState
+from .state_manager import ModelState, StateManager
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +22,7 @@ class ModelStateManager:
     This is a wrapper around the centralized StateManager for backward compatibility.
     """
 
-    def __init__(self, state_database_path: Optional[str] = None, project_folder: str = "."):
+    def __init__(self, state_database_path: str | None = None, project_folder: str = "."):
         """
         Initialize the model state manager.
 
@@ -43,7 +42,7 @@ class ModelStateManager:
         """Initialize the state database."""
         self.state_manager._initialize_database()
 
-    def get_model_state(self, model_name: str) -> Optional[ModelState]:
+    def get_model_state(self, model_name: str) -> ModelState | None:
         """Get the current state of a model."""
         return self.state_manager.get_model_state(model_name)
 
@@ -53,8 +52,8 @@ class ModelStateManager:
         materialization: str,
         sql_hash: str,
         config_hash: str,
-        last_processed_value: Optional[str] = None,
-        strategy: Optional[str] = None,
+        last_processed_value: str | None = None,
+        strategy: str | None = None,
     ) -> None:
         """Save or update model state."""
         self.state_manager.save_model_state(
@@ -62,7 +61,7 @@ class ModelStateManager:
         )
 
     def update_processed_value(
-        self, model_name: str, value: str, strategy: Optional[str] = None
+        self, model_name: str, value: str, strategy: str | None = None
     ) -> None:
         """Update the last processed value for a model."""
         self.state_manager.update_processed_value(model_name, value, strategy)
@@ -71,7 +70,7 @@ class ModelStateManager:
         """Check if the model exists in the target database."""
         return self.state_manager.check_database_existence(adapter, table_name)
 
-    def rebuild_state_from_database(self, adapter, model_name: str) -> Optional[ModelState]:
+    def rebuild_state_from_database(self, adapter, model_name: str) -> ModelState | None:
         """Rebuild model state from database existence."""
         return self.state_manager.rebuild_state_from_database(adapter, model_name)
 
@@ -83,7 +82,7 @@ class ModelStateManager:
             model_name, current_materialization, behavior
         )
 
-    def get_all_models(self) -> List[ModelState]:
+    def get_all_models(self) -> list[ModelState]:
         """Get all model states."""
         return self.state_manager.get_all_models()
 
@@ -91,7 +90,7 @@ class ModelStateManager:
         """Compute hash for SQL query using the centralized state manager."""
         return self.state_manager.compute_sql_hash(sql_query)
 
-    def compute_config_hash(self, config: Dict[str, Any]) -> str:
+    def compute_config_hash(self, config: dict[str, Any]) -> str:
         """Compute hash for configuration using the centralized state manager."""
         return self.state_manager.compute_config_hash(config)
 

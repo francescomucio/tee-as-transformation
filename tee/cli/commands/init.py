@@ -2,18 +2,17 @@
 Init command implementation.
 """
 
-import typer
 import shutil
 from pathlib import Path
-from typing import Dict, Any, Literal
+from typing import Any, Literal
 
-from tee.adapters import list_available_adapters, is_adapter_supported
+import typer
 
 # Type alias for database type
 DatabaseType = Literal["duckdb", "snowflake", "postgresql", "bigquery"]
 
 
-def _get_default_connection_config(db_type: str, project_name: str) -> Dict[str, Any]:
+def _get_default_connection_config(db_type: str, project_name: str) -> dict[str, Any]:
     """
     Get default connection configuration for a database type.
     
@@ -121,7 +120,7 @@ def cmd_init(
         error_msg = typer.style("Error: ", fg=typer.colors.RED, bold=True) + \
                    f"Directory '{project_name}' already exists"
         typer.echo(error_msg, err=True)
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     
     # Create project directory (with race condition handling)
     try:
@@ -131,7 +130,7 @@ def cmd_init(
         error_msg = typer.style("Error: ", fg=typer.colors.RED, bold=True) + \
                    f"Directory '{project_name}' already exists"
         typer.echo(error_msg, err=True)
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     
     try:
         typer.echo(f"Created project directory: {project_name}/")
@@ -166,7 +165,7 @@ def cmd_init(
         error_msg = typer.style("Error: ", fg=typer.colors.RED, bold=True) + \
                    f"Failed to create project directory: {e}"
         typer.echo(error_msg, err=True)
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     except Exception as e:
         # Cleanup on error
         if project_path.exists():
@@ -174,5 +173,5 @@ def cmd_init(
         error_msg = typer.style("Error: ", fg=typer.colors.RED, bold=True) + \
                    f"Failed to initialize project: {e}"
         typer.echo(error_msg, err=True)
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 

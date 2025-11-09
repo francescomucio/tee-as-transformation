@@ -6,11 +6,11 @@ Supports nested object access, default values, and proper error handling.
 """
 
 import re
-from typing import Dict, Any, Optional
+from typing import Any
 
-from tee.parser.shared.types import Variables
-from tee.parser.shared.exceptions import VariableSubstitutionError
 from tee.parser.shared.constants import SQL_VARIABLE_PATTERNS
+from tee.parser.shared.exceptions import VariableSubstitutionError
+from tee.parser.shared.types import Variables
 
 
 def _format_sql_value(value: Any) -> str:
@@ -39,7 +39,7 @@ def _format_sql_value(value: Any) -> str:
         return f"'{escaped_value}'"
 
 
-def get_nested_value(data: Dict[str, Any], key_path: str) -> Any:
+def get_nested_value(data: dict[str, Any], key_path: str) -> Any:
     """
     Get a nested value from a dictionary using dot notation.
 
@@ -168,10 +168,10 @@ def substitute_sql_variables(sql_content: str, variables: Variables) -> str:
     except Exception as e:
         if isinstance(e, VariableSubstitutionError):
             raise
-        raise VariableSubstitutionError(f"Variable substitution failed: {str(e)}")
+        raise VariableSubstitutionError(f"Variable substitution failed: {str(e)}") from e
 
 
-def validate_sql_variables(sql_content: str, variables: Variables) -> Dict[str, Any]:
+def validate_sql_variables(sql_content: str, variables: Variables) -> dict[str, Any]:
     """
     Validate that all variables referenced in SQL content are available.
 
@@ -234,4 +234,4 @@ def validate_sql_variables(sql_content: str, variables: Variables) -> Dict[str, 
     except Exception as e:
         if isinstance(e, VariableSubstitutionError):
             raise
-        raise VariableSubstitutionError(f"Variable validation failed: {str(e)}")
+        raise VariableSubstitutionError(f"Variable validation failed: {str(e)}") from e

@@ -2,14 +2,13 @@
 Helper functions for building markdown report sections.
 """
 
-from typing import Dict, Any, List, Set, Tuple
 
 from tee.parser.shared.types import DependencyGraph
 
 
 def separate_nodes_by_type(
-    all_nodes: List[str], function_names: Set[str]
-) -> Tuple[List[str], List[str], List[str]]:
+    all_nodes: list[str], function_names: set[str]
+) -> tuple[list[str], list[str], list[str]]:
     """
     Separate nodes into test, function, and table nodes.
     
@@ -32,7 +31,7 @@ def separate_nodes_by_type(
     return test_nodes, function_nodes, table_nodes
 
 
-def _filter_dependencies(deps: List[str]) -> Tuple[List[str], List[str]]:
+def _filter_dependencies(deps: list[str]) -> tuple[list[str], list[str]]:
     """
     Filter dependencies into table dependencies and test dependencies.
     
@@ -47,7 +46,7 @@ def _filter_dependencies(deps: List[str]) -> Tuple[List[str], List[str]]:
     return table_deps, test_deps
 
 
-def _format_dependency_list(deps: List[str], prefix: str = "`", suffix: str = "`") -> str:
+def _format_dependency_list(deps: list[str], prefix: str = "`", suffix: str = "`") -> str:
     """
     Format a list of dependencies as a comma-separated markdown string.
     
@@ -63,9 +62,9 @@ def _format_dependency_list(deps: List[str], prefix: str = "`", suffix: str = "`
 
 
 def build_statistics_section(
-    table_nodes: List[str],
-    function_nodes: List[str],
-    test_nodes: List[str],
+    table_nodes: list[str],
+    function_nodes: list[str],
+    test_nodes: list[str],
     graph: DependencyGraph
 ) -> str:
     """
@@ -91,7 +90,7 @@ def build_statistics_section(
 """
 
 
-def build_execution_order_section(execution_order: List[str]) -> str:
+def build_execution_order_section(execution_order: list[str]) -> str:
     """
     Build the execution order section of the markdown report.
     
@@ -113,7 +112,7 @@ def build_execution_order_section(execution_order: List[str]) -> str:
 
 
 def build_test_details_section(
-    test_nodes: List[str],
+    test_nodes: list[str],
     graph: DependencyGraph
 ) -> str:
     """
@@ -182,9 +181,9 @@ def build_test_details_section(
 
 
 def build_transformation_details_section(
-    function_nodes: List[str],
-    table_nodes: List[str],
-    function_names: Set[str],
+    function_nodes: list[str],
+    table_nodes: list[str],
+    function_names: set[str],
     graph: DependencyGraph
 ) -> str:
     """
@@ -239,7 +238,7 @@ def build_transformation_details_section(
     return content
 
 
-def build_circular_dependencies_section(cycles: List[List[str]]) -> str:
+def build_circular_dependencies_section(cycles: list[list[str]]) -> str:
     """
     Build the circular dependencies section of the markdown report.
     

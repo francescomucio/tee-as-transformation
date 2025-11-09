@@ -7,15 +7,16 @@ import importlib.util
 import logging
 import sys
 from pathlib import Path
-from typing import Dict, Any, Optional, List
-import sqlglot
+from typing import Any
+
 from sqlglot import exp
+
+from tee.parser.shared.exceptions import PythonParsingError
+from tee.parser.shared.model_utils import standardize_parsed_model
+from tee.parser.shared.types import FilePath, ParsedModel, Variables
 
 from .base import BaseParser
 from .sql_parser import SQLParser
-from tee.parser.shared.types import ParsedModel, FilePath, Variables
-from tee.parser.shared.exceptions import PythonParsingError
-from tee.parser.shared.model_utils import standardize_parsed_model
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ class PythonParser(BaseParser):
         """Initialize the Python parser."""
         super().__init__()
         # Cache for evaluated functions (lazy evaluation)
-        self._evaluation_cache: Dict[str, Any] = {}
+        self._evaluation_cache: dict[str, Any] = {}
         # SQL parser for parsing SQLGlot expressions
         self._sql_parser = SQLParser()
 
@@ -112,14 +113,14 @@ class PythonParser(BaseParser):
         except Exception as e:
             if isinstance(e, PythonParsingError):
                 raise
-            raise PythonParsingError(f"Error parsing Python file {file_path}: {str(e)}")
+            raise PythonParsingError(f"Error parsing Python file {file_path}: {str(e)}") from e
 
     def evaluate_model_function(
         self,
-        model_data: Dict[str, Any],
+        model_data: dict[str, Any],
         full_table_name: str = None,
-        variables: Optional[Variables] = None,
-    ) -> Dict[str, Any]:
+        variables: Variables | None = None,
+    ) -> dict[str, Any]:
         """
         Evaluate a model function and return the SQLGlot expression.
 
@@ -194,11 +195,11 @@ class PythonParser(BaseParser):
                 raise
             raise PythonModelError(
                 f"Error evaluating function {function_name} in {file_path}: {str(e)}"
-            )
+            ) from e
 
     def evaluate_all_models(
-        self, parsed_models: Dict[str, Any], variables: Optional[Variables] = None
-    ) -> Dict[str, Any]:
+        self, parsed_models: dict[str, Any], variables: Variables | None = None
+    ) -> dict[str, Any]:
         """
         Evaluate all Python models that need evaluation.
 
@@ -228,7 +229,7 @@ class PythonParser(BaseParser):
 
         return updated_models
 
-    def update_models_with_resolved_sql(self, updated_models: Dict[str, Any]) -> None:
+    def update_models_with_resolved_sql(self, updated_models: dict[str, Any]) -> None:
         """
         Update the parser's cached models with resolved SQL from execution.
 
@@ -264,7 +265,7 @@ class PythonParser(BaseParser):
                     self._cache[file_path][table_name] = model_data
                     logger.debug(f"Updated file cache with qualified SQL for {table_name}")
 
-    def _extract_model_metadata(self, node: ast.FunctionDef) -> Optional[Dict[str, Any]]:
+    def _extract_model_metadata(self, node: ast.FunctionDef) -> dict[str, Any] | None:
         """
         Extract model metadata from a function node by looking for @model decorator.
 
@@ -330,7 +331,7 @@ class PythonParser(BaseParser):
         return str(node)
 
     def _execute_function(
-        self, file_path: Path, function_name: str, variables: Optional[Variables] = None
+        self, file_path: Path, function_name: str, variables: Variables | None = None
     ) -> exp.Expression:
         """
         Execute a function from a Python file and return its result.
@@ -420,7 +421,7 @@ class PythonParser(BaseParser):
                 raise
             raise PythonModelError(
                 f"Error executing function {function_name} in {file_path}: {str(e)}"
-            )
+            ) from e
 
         finally:
             # Clean up

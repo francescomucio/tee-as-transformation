@@ -8,20 +8,20 @@ This adapter provides DuckDB-specific functionality including:
 - Materialization support
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Any
 
 try:
     import duckdb
 except ImportError:
     duckdb = None
 
-from tee.adapters.base import DatabaseAdapter, AdapterConfig, MaterializationType
+from tee.adapters.base import AdapterConfig, DatabaseAdapter, MaterializationType
 from tee.adapters.registry import register_adapter
 
 from .functions.function_manager import FunctionManager
+from .materialization.incremental_handler import IncrementalHandler
 from .materialization.table_handler import TableHandler
 from .materialization.view_handler import ViewHandler
-from .materialization.incremental_handler import IncrementalHandler
 from .utils.helpers import DuckDBUtils
 
 
@@ -45,7 +45,7 @@ class DuckDBAdapter(DatabaseAdapter):
         """Get the default SQL dialect for DuckDB."""
         return "duckdb"
 
-    def get_supported_materializations(self) -> List[MaterializationType]:
+    def get_supported_materializations(self) -> list[MaterializationType]:
         """Get list of supported materialization types for DuckDB."""
         return [
             MaterializationType.TABLE,
@@ -80,13 +80,13 @@ class DuckDBAdapter(DatabaseAdapter):
             raise
 
     def create_table(
-        self, table_name: str, query: str, metadata: Optional[Dict[str, Any]] = None
+        self, table_name: str, query: str, metadata: dict[str, Any] | None = None
     ) -> None:
         """Create a table from a qualified SQL query with optional column metadata."""
         self.table_handler.create(table_name, query, metadata)
 
     def create_view(
-        self, view_name: str, query: str, metadata: Optional[Dict[str, Any]] = None
+        self, view_name: str, query: str, metadata: dict[str, Any] | None = None
     ) -> None:
         """Create a view from a qualified SQL query."""
         self.view_handler.create(view_name, query, metadata)
@@ -116,7 +116,7 @@ class DuckDBAdapter(DatabaseAdapter):
             self.logger.error(f"Error dropping table {table_name}: {e}")
             raise
 
-    def get_table_info(self, table_name: str) -> Dict[str, Any]:
+    def get_table_info(self, table_name: str) -> dict[str, Any]:
         """Get information about a table."""
         if not self.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
@@ -142,12 +142,12 @@ class DuckDBAdapter(DatabaseAdapter):
         self,
         function_name: str,
         function_sql: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Create or replace a user-defined function in the database."""
         self.function_manager.create(function_name, function_sql, metadata)
 
-    def function_exists(self, function_name: str, signature: Optional[str] = None) -> bool:
+    def function_exists(self, function_name: str, signature: str | None = None) -> bool:
         """Check if a function exists in the database."""
         return self.function_manager.exists(function_name, signature)
 
@@ -155,7 +155,7 @@ class DuckDBAdapter(DatabaseAdapter):
         """Drop a function from the database."""
         self.function_manager.drop(function_name)
 
-    def get_database_info(self) -> Dict[str, Any]:
+    def get_database_info(self) -> dict[str, Any]:
         """Get DuckDB-specific database information."""
         base_info = super().get_database_info()
 
@@ -173,7 +173,7 @@ class DuckDBAdapter(DatabaseAdapter):
 
         return base_info
 
-    def get_table_columns(self, table_name: str) -> List[str]:
+    def get_table_columns(self, table_name: str) -> list[str]:
         """Get column names for a table."""
         if not self.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
@@ -192,7 +192,7 @@ class DuckDBAdapter(DatabaseAdapter):
         self.incremental_handler.execute_append(table_name, sql_query)
 
     def execute_incremental_merge(
-        self, table_name: str, source_sql: str, config: Dict[str, Any]
+        self, table_name: str, source_sql: str, config: dict[str, Any]
     ) -> None:
         """Execute incremental merge operation."""
         self.incremental_handler.execute_merge(table_name, source_sql, config)
@@ -204,13 +204,13 @@ class DuckDBAdapter(DatabaseAdapter):
         self.incremental_handler.execute_delete_insert(table_name, delete_sql, insert_sql)
 
     def _generate_merge_sql(
-        self, table_name: str, source_sql: str, unique_key: List[str], columns: List[str]
+        self, table_name: str, source_sql: str, unique_key: list[str], columns: list[str]
     ) -> str:
         """Generate DuckDB-specific MERGE SQL statement."""
         return self.incremental_handler._generate_merge_sql(table_name, source_sql, unique_key, columns)
 
     def generate_no_duplicates_test_query(
-        self, table_name: str, columns: Optional[List[str]] = None
+        self, table_name: str, columns: list[str] | None = None
     ) -> str:
         """
         Generate SQL query for no_duplicates test (DuckDB-specific).

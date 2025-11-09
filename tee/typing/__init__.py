@@ -4,10 +4,10 @@ Type definitions for the TEE project.
 
 from .metadata import (
     ColumnDefinition,
+    DataType,
+    MaterializationType,
     ModelMetadataDict,
     ParsedModelMetadata,
-    MaterializationType,
-    DataType,
 )
 
 __all__ = [

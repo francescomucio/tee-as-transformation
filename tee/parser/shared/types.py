@@ -2,30 +2,30 @@
 Common type definitions for the parser module.
 """
 
-from typing import Dict, Any, List, Optional, Union
 from pathlib import Path
+from typing import Any, Union
 
 # Core data structures
-ParsedModel = Dict[str, Any]
-ParsedFunction = Dict[str, Any]
-DependencyGraph = Dict[str, Any]
+ParsedModel = dict[str, Any]
+ParsedFunction = dict[str, Any]
+DependencyGraph = dict[str, Any]
 TableReference = str
 FunctionReference = str
 
 # File paths
-FilePath = Union[str, Path]
+FilePath = str | Path
 
 # Connection configuration
-ConnectionConfig = Dict[str, Any]
+ConnectionConfig = dict[str, Any]
 
 # Variable substitution
-Variables = Dict[str, Any]
+Variables = dict[str, Any]
 
 
 # Dependency information
-DependencyInfo = Dict[str, List[str]]
+DependencyInfo = dict[str, list[str]]
 
 # Execution order
-ExecutionOrder = List[str]
+ExecutionOrder = list[str]
 
-GraphCycles = List[List[str]]
+GraphCycles = list[list[str]]

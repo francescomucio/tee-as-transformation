@@ -8,10 +8,11 @@ module files in JSON and YAML formats.
 import json
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Any
+
 import yaml
 
-from tee.typing.metadata import OTSModule, OTSTransformation
+from tee.typing.metadata import OTSModule
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +66,7 @@ class OTSModuleReader:
             is_yaml = file_path.suffix in [".yaml", ".yml"]
 
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 if is_json or (not is_yaml and file_path.suffix == ".json"):
                     module_data = json.load(f)
                 else:
@@ -73,18 +74,18 @@ class OTSModuleReader:
                     if module_data is None:
                         raise OTSModuleReaderError(f"Empty YAML file: {file_path}")
         except json.JSONDecodeError as e:
-            raise OTSModuleReaderError(f"Invalid JSON in OTS module file {file_path}: {e}")
+            raise OTSModuleReaderError(f"Invalid JSON in OTS module file {file_path}: {e}") from e
         except yaml.YAMLError as e:
-            raise OTSModuleReaderError(f"Invalid YAML in OTS module file {file_path}: {e}")
+            raise OTSModuleReaderError(f"Invalid YAML in OTS module file {file_path}: {e}") from e
         except Exception as e:
-            raise OTSModuleReaderError(f"Error reading OTS module file {file_path}: {e}")
+            raise OTSModuleReaderError(f"Error reading OTS module file {file_path}: {e}") from e
 
         # Validate the module structure
         self._validate_module(module_data, file_path)
 
         return module_data
 
-    def read_modules_from_directory(self, directory: Path) -> Dict[str, OTSModule]:
+    def read_modules_from_directory(self, directory: Path) -> dict[str, OTSModule]:
         """
         Read all OTS modules from a directory.
 
@@ -128,7 +129,7 @@ class OTSModuleReader:
 
         return modules
 
-    def _validate_module(self, module_data: Dict[str, Any], file_path: Path) -> None:
+    def _validate_module(self, module_data: dict[str, Any], file_path: Path) -> None:
         """
         Validate an OTS module structure.
 
@@ -197,7 +198,7 @@ class OTSModuleReader:
         for i, transformation in enumerate(transformations):
             self._validate_transformation(transformation, file_path, i)
 
-    def _validate_transformation(self, transformation: Dict[str, Any], file_path: Path, index: int) -> None:
+    def _validate_transformation(self, transformation: dict[str, Any], file_path: Path, index: int) -> None:
         """
         Validate a single transformation.
 
@@ -297,7 +298,7 @@ class OTSModuleReader:
             # If version format is invalid, don't support it
             return False
 
-    def get_module_info(self, module: OTSModule) -> Dict[str, Any]:
+    def get_module_info(self, module: OTSModule) -> dict[str, Any]:
         """
         Extract summary information from an OTS module.
 

@@ -1,13 +1,14 @@
 """OTS module building and assembly."""
 
 import logging
-from typing import Dict, List, Any, Optional, Tuple
 from pathlib import Path
+from typing import Any
 
+from tee.parser.shared.types import ParsedFunction, ParsedModel
 from tee.typing.metadata import OTSModule, OTSTarget
-from tee.parser.shared.types import ParsedModel, ParsedFunction
-from ..transformers.model_transformer import ModelTransformer
+
 from ..transformers.function_transformer import FunctionTransformer
+from ..transformers.model_transformer import ModelTransformer
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 class ModuleBuilder:
     """Builds OTS modules from transformations and functions."""
 
-    def __init__(self, project_config: Dict[str, Any], database: str, sql_dialect: str):
+    def __init__(self, project_config: dict[str, Any], database: str, sql_dialect: str):
         """
         Initialize the module builder.
 
@@ -30,12 +31,12 @@ class ModuleBuilder:
 
     def build_modules(
         self,
-        models_by_schema: Dict[str, List[Tuple[str, ParsedModel]]],
-        functions_by_schema: Dict[str, List[Tuple[str, ParsedFunction]]],
-        test_library_path: Optional[Path],
+        models_by_schema: dict[str, list[tuple[str, ParsedModel]]],
+        functions_by_schema: dict[str, list[tuple[str, ParsedFunction]]],
+        test_library_path: Path | None,
         model_transformer: ModelTransformer,
         function_transformer: FunctionTransformer,
-    ) -> Dict[str, OTSModule]:
+    ) -> dict[str, OTSModule]:
         """
         Build OTS modules for all schemas.
 
@@ -71,9 +72,9 @@ class ModuleBuilder:
         self,
         module_name: str,
         schema: str,
-        models: List[Tuple[str, ParsedModel]],
-        functions: List[Tuple[str, ParsedFunction]],
-        test_library_path: Optional[Path],
+        models: list[tuple[str, ParsedModel]],
+        functions: list[tuple[str, ParsedFunction]],
+        test_library_path: Path | None,
         model_transformer: ModelTransformer,
         function_transformer: FunctionTransformer,
     ) -> OTSModule:

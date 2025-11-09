@@ -11,17 +11,17 @@ The main FunctionSQLParser class orchestrates these components.
 """
 
 import logging
-from typing import Dict, Any, Optional
 from pathlib import Path
+from typing import Any, Dict, Optional
+
+from tee.parser.shared.exceptions import FunctionMetadataError, FunctionParsingError
+from tee.parser.shared.file_utils import find_metadata_file
+from tee.parser.shared.metadata_schema import parse_metadata_from_python_file
+from tee.parser.shared.types import FilePath
 
 from ..base import BaseParser
-from tee.parser.shared.types import FilePath
-from tee.parser.shared.exceptions import FunctionParsingError, FunctionMetadataError
-from tee.parser.shared.metadata_schema import parse_metadata_from_python_file
-from tee.parser.shared.file_utils import find_metadata_file
-
 from .dialect import DialectInferencer
-from .parsers import SQLglotParser, RegexParser
+from .parsers import RegexParser, SQLglotParser
 from .utils import MetadataMerger
 
 # Configure logging
@@ -43,7 +43,7 @@ class FunctionSQLParser(BaseParser):
     a SQLglot bug - see parsers/sqlglot_parser.py for details).
     """
 
-    def __init__(self, connection: Optional[Dict[str, Any]] = None, project_config: Optional[Dict[str, Any]] = None):
+    def __init__(self, connection: dict[str, Any] | None = None, project_config: dict[str, Any] | None = None):
         """
         Initialize the SQL function parser.
 
@@ -57,8 +57,8 @@ class FunctionSQLParser(BaseParser):
         self._dialect_inferencer = DialectInferencer()
 
     def parse(
-        self, content: str, file_path: FilePath = None, dialect: Optional[str] = None
-    ) -> Dict[str, Dict[str, Any]]:
+        self, content: str, file_path: FilePath = None, dialect: str | None = None
+    ) -> dict[str, dict[str, Any]]:
         """
         Parse SQL function content and extract function metadata.
 
@@ -177,7 +177,7 @@ class FunctionSQLParser(BaseParser):
         except Exception as e:
             if isinstance(e, FunctionSQLParsingError):
                 raise
-            raise FunctionSQLParsingError(f"Error parsing SQL function file {file_path}: {str(e)}")
+            raise FunctionSQLParsingError(f"Error parsing SQL function file {file_path}: {str(e)}") from e
 
 
 # Export the main class for backward compatibility

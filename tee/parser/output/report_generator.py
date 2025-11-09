@@ -4,20 +4,20 @@ Report generation functionality for dependency graphs.
 
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional
 
-from .visualizer import DependencyVisualizer
+from tee.parser.shared.constants import OUTPUT_FILES
+from tee.parser.shared.exceptions import OutputGenerationError
+from tee.parser.shared.types import DependencyGraph, ParsedFunction
+
 from .markdown_report_builder import (
-    build_statistics_section,
+    build_circular_dependencies_section,
     build_execution_order_section,
+    build_statistics_section,
     build_test_details_section,
     build_transformation_details_section,
-    build_circular_dependencies_section,
     separate_nodes_by_type,
 )
-from tee.parser.shared.types import DependencyGraph, ParsedFunction
-from tee.parser.shared.exceptions import OutputGenerationError
-from tee.parser.shared.constants import OUTPUT_FILES
+from .visualizer import DependencyVisualizer
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ class ReportGenerator:
         self.visualizer = DependencyVisualizer()
 
     def generate_markdown_report(
-        self, graph: DependencyGraph, output_file: Optional[str] = None, parsed_functions: Optional[Dict[str, ParsedFunction]] = None
+        self, graph: DependencyGraph, output_file: str | None = None, parsed_functions: dict[str, ParsedFunction] | None = None
     ) -> Path:
         """
         Generate a comprehensive markdown report with Mermaid diagram.
@@ -123,10 +123,10 @@ This report provides a comprehensive analysis of the SQL model dependencies.
             return output_file
 
         except Exception as e:
-            raise OutputGenerationError(f"Failed to generate markdown report: {e}")
+            raise OutputGenerationError(f"Failed to generate markdown report: {e}") from e
 
     def generate_mermaid_diagram(
-        self, graph: DependencyGraph, output_file: Optional[str] = None, parsed_functions: Optional[Dict[str, ParsedFunction]] = None
+        self, graph: DependencyGraph, output_file: str | None = None, parsed_functions: dict[str, ParsedFunction] | None = None
     ) -> Path:
         """
         Generate a standalone Mermaid diagram file.
@@ -153,9 +153,9 @@ This report provides a comprehensive analysis of the SQL model dependencies.
             return output_file
 
         except Exception as e:
-            raise OutputGenerationError(f"Failed to generate Mermaid diagram: {e}")
+            raise OutputGenerationError(f"Failed to generate Mermaid diagram: {e}") from e
 
-    def generate_all_reports(self, graph: DependencyGraph, parsed_functions: Optional[Dict[str, ParsedFunction]] = None) -> Dict[str, Path]:
+    def generate_all_reports(self, graph: DependencyGraph, parsed_functions: dict[str, ParsedFunction] | None = None) -> dict[str, Path]:
         """
         Generate all available reports.
 
@@ -181,4 +181,4 @@ This report provides a comprehensive analysis of the SQL model dependencies.
             return results
 
         except Exception as e:
-            raise OutputGenerationError(f"Failed to generate all reports: {e}")
+            raise OutputGenerationError(f"Failed to generate all reports: {e}") from e

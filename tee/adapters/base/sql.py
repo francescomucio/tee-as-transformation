@@ -4,14 +4,14 @@ SQL processing methods for database adapters.
 These methods are mixed into DatabaseAdapter via multiple inheritance.
 """
 
-from typing import Optional
+
 import sqlglot
 
 
 class SQLProcessor:
     """Mixin class for SQL dialect conversion and processing."""
 
-    def convert_sql_dialect(self, sql: str, source_dialect: Optional[str] = None) -> str:
+    def convert_sql_dialect(self, sql: str, source_dialect: str | None = None) -> str:
         """
         Convert SQL from source dialect to target dialect.
 
@@ -51,9 +51,9 @@ class SQLProcessor:
             self.logger.error(
                 f"Failed to convert SQL from {source} to {self.get_default_dialect()}: {e}"
             )
-            raise ValueError(f"SQL dialect conversion failed: {e}")
+            raise ValueError(f"SQL dialect conversion failed: {e}") from e
 
-    def qualify_table_references(self, sql: str, schema: Optional[str] = None) -> str:
+    def qualify_table_references(self, sql: str, schema: str | None = None) -> str:
         """
         Qualify table references with schema names.
 

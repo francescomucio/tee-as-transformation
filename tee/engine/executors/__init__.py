@@ -1,7 +1,7 @@
 """Execution components for models and functions."""
 
-from .model_executor import ModelExecutor
 from .function_executor import FunctionExecutor
+from .model_executor import ModelExecutor
 
 __all__ = ["ModelExecutor", "FunctionExecutor"]
 

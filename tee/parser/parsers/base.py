@@ -3,11 +3,8 @@ Abstract base parser class for all parsers.
 """
 
 from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import Dict, Any
 
-from tee.parser.shared.types import ParsedModel, FilePath
-from tee.parser.shared.exceptions import ParserError
+from tee.parser.shared.types import FilePath, ParsedModel
 
 
 class BaseParser(ABC):
@@ -15,7 +12,7 @@ class BaseParser(ABC):
 
     def __init__(self):
         """Initialize the parser."""
-        self._cache: Dict[str, ParsedModel] = {}
+        self._cache: dict[str, ParsedModel] = {}
 
     def clear_cache(self) -> None:
         """Clear the parser cache."""

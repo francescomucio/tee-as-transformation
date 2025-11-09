@@ -3,20 +3,19 @@ Utility functions for model metadata standardization.
 """
 
 import hashlib
-from typing import Dict, Any, Optional
-from pathlib import Path
+from typing import Any
 
 from tee.typing.metadata import ParsedModelMetadata
 
 
 def create_model_metadata(
     table_name: str,
-    function_name: Optional[str] = None,
-    file_path: Optional[str] = None,
-    description: Optional[str] = None,
-    variables: Optional[list] = None,
-    metadata: Optional[ParsedModelMetadata] = None,
-) -> Dict[str, Any]:
+    function_name: str | None = None,
+    file_path: str | None = None,
+    description: str | None = None,
+    variables: list | None = None,
+    metadata: ParsedModelMetadata | None = None,
+) -> dict[str, Any]:
     """
     Create standardized model metadata for both SQL and Python models.
 
@@ -51,7 +50,7 @@ def create_model_metadata(
     return result
 
 
-def compute_sqlglot_hash(sql_data: Dict[str, Any]) -> str:
+def compute_sqlglot_hash(sql_data: dict[str, Any]) -> str:
     """
     Compute SHA256 hash of the resolved_sql from code data.
 
@@ -70,11 +69,11 @@ def compute_sqlglot_hash(sql_data: Dict[str, Any]) -> str:
 
 
 def standardize_parsed_model(
-    model_data: Dict[str, Any],
+    model_data: dict[str, Any],
     table_name: str,
-    file_path: Optional[str] = None,
+    file_path: str | None = None,
     is_python_model: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Standardize a parsed model to have both code and model_metadata keys.
 

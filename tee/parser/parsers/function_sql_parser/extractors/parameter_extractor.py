@@ -3,7 +3,7 @@ Parameter extraction from SQLglot AST or parameter strings.
 """
 
 import re
-from typing import List
+
 from sqlglot import exp
 
 from tee.typing.metadata import FunctionParameter
@@ -13,7 +13,7 @@ class ParameterExtractor:
     """Extracts function parameters from various sources."""
 
     @staticmethod
-    def extract_from_udf(udf: exp.UserDefinedFunction) -> List[FunctionParameter]:
+    def extract_from_udf(udf: exp.UserDefinedFunction) -> list[FunctionParameter]:
         """
         Extract parameters from SQLglot UserDefinedFunction.
 
@@ -59,7 +59,7 @@ class ParameterExtractor:
         return parameters
 
     @staticmethod
-    def extract_from_string(params_str: str) -> List[FunctionParameter]:
+    def extract_from_string(params_str: str) -> list[FunctionParameter]:
         """
         Parse function parameters from parameter string.
 
@@ -110,7 +110,7 @@ class ParameterExtractor:
         return parameters
 
     @staticmethod
-    def _split_parameters(params_str: str) -> List[str]:
+    def _split_parameters(params_str: str) -> list[str]:
         """
         Split parameter string by commas, handling nested parentheses.
 

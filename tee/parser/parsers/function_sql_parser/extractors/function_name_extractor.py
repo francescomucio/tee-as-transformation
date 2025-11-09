@@ -2,7 +2,7 @@
 Function name extraction from SQLglot AST or regex matches.
 """
 
-from typing import Optional, Tuple
+
 from sqlglot import exp
 
 
@@ -10,7 +10,7 @@ class FunctionNameExtractor:
     """Extracts function name and schema from various sources."""
 
     @staticmethod
-    def extract_from_udf(udf: exp.UserDefinedFunction) -> Optional[Tuple[str, Optional[str]]]:
+    def extract_from_udf(udf: exp.UserDefinedFunction) -> tuple[str, str | None] | None:
         """
         Extract function name and schema from SQLglot UserDefinedFunction.
 
@@ -44,7 +44,7 @@ class FunctionNameExtractor:
         return function_name, schema
 
     @staticmethod
-    def extract_from_string(function_name_full: str) -> Tuple[str, Optional[str]]:
+    def extract_from_string(function_name_full: str) -> tuple[str, str | None]:
         """
         Extract function name and schema from string.
 

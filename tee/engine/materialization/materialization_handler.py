@@ -1,7 +1,7 @@
 """Materialization handler for different materialization types."""
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any
 
 from tee.adapters.base.core import DatabaseAdapter
 
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class MaterializationHandler:
     """Handles different materialization types (table, view, incremental, etc.)."""
 
-    def __init__(self, adapter: DatabaseAdapter, state_manager, variables: Dict[str, Any]):
+    def __init__(self, adapter: DatabaseAdapter, state_manager, variables: dict[str, Any]):
         """
         Initialize the materialization handler.
 
@@ -29,8 +29,8 @@ class MaterializationHandler:
         table_name: str,
         sql_query: str,
         materialization: str,
-        metadata: Optional[Dict[str, Any]] = None,
-        config: Optional[Any] = None,
+        metadata: dict[str, Any] | None = None,
+        config: Any | None = None,
     ) -> None:
         """
         Execute the appropriate materialization based on type.
@@ -76,11 +76,12 @@ class MaterializationHandler:
             self.adapter.create_table(table_name, sql_query, metadata)
 
     def _execute_incremental_materialization(
-        self, table_name: str, sql_query: str, metadata: Optional[Dict[str, Any]] = None
+        self, table_name: str, sql_query: str, metadata: dict[str, Any] | None = None
     ) -> None:
         """Execute incremental materialization using the universal state manager."""
+        from datetime import UTC, datetime
+
         from .incremental_executor import IncrementalExecutor
-        from datetime import datetime, UTC
 
         # Use the universal state manager
         executor = IncrementalExecutor(self.state_manager)

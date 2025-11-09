@@ -1,7 +1,7 @@
 """State checking and management for models."""
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any
 
 from ..model_state import ModelStateManager
 
@@ -33,7 +33,7 @@ class StateChecker:
         """
         return self.state_manager.compute_sql_hash(sql_query)
 
-    def generate_config_hash(self, metadata: Optional[Dict[str, Any]]) -> str:
+    def generate_config_hash(self, metadata: dict[str, Any] | None) -> str:
         """
         Generate a hash for model configuration using the centralized state manager.
 
@@ -51,8 +51,8 @@ class StateChecker:
         self,
         table_name: str,
         materialization: str,
-        metadata: Optional[Dict[str, Any]],
-        adapter: Optional[Any] = None,
+        metadata: dict[str, Any] | None,
+        adapter: Any | None = None,
     ) -> None:
         """
         Check model state for materialization changes and database existence.
@@ -79,7 +79,7 @@ class StateChecker:
             behavior = flags.get("materialization_change_behavior", "warn")
             self.state_manager.check_materialization_change(table_name, materialization, behavior)
 
-    def _load_flags(self) -> Dict[str, Any]:
+    def _load_flags(self) -> dict[str, Any]:
         """Load flags from project configuration."""
         try:
             from ..config import load_database_config
@@ -97,7 +97,7 @@ class StateChecker:
         table_name: str,
         materialization: str,
         sql_query: str,
-        metadata: Optional[Dict[str, Any]],
+        metadata: dict[str, Any] | None,
     ) -> None:
         """
         Save model state after successful execution.

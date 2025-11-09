@@ -4,15 +4,12 @@ File discovery functionality for finding SQL and Python model files.
 
 import logging
 from pathlib import Path
-from typing import List, Dict, Any, Optional
 
 from tee.parser.shared.constants import (
-    SUPPORTED_SQL_EXTENSIONS,
-    SUPPORTED_PYTHON_EXTENSIONS,
-    DEFAULT_MODELS_FOLDER,
-    DEFAULT_FUNCTIONS_FOLDER,
-    SUPPORTED_FUNCTION_OVERRIDE_EXTENSIONS,
     KNOWN_DATABASE_NAMES,
+    SUPPORTED_FUNCTION_OVERRIDE_EXTENSIONS,
+    SUPPORTED_PYTHON_EXTENSIONS,
+    SUPPORTED_SQL_EXTENSIONS,
 )
 from tee.parser.shared.exceptions import FileDiscoveryError
 
@@ -23,7 +20,7 @@ logger = logging.getLogger(__name__)
 class FileDiscovery:
     """Handles discovery of SQL and Python model files, and function files."""
 
-    def __init__(self, models_folder: Path, functions_folder: Optional[Path] = None):
+    def __init__(self, models_folder: Path, functions_folder: Path | None = None):
         """
         Initialize the file discovery.
 
@@ -33,9 +30,9 @@ class FileDiscovery:
         """
         self.models_folder = models_folder
         self.functions_folder = functions_folder
-        self._file_cache: Dict[str, List[Path]] = {}
+        self._file_cache: dict[str, list[Path]] = {}
 
-    def discover_sql_files(self) -> List[Path]:
+    def discover_sql_files(self) -> list[Path]:
         """
         Discover all SQL files in the models folder.
 
@@ -69,9 +66,9 @@ class FileDiscovery:
         except Exception as e:
             if isinstance(e, FileDiscoveryError):
                 raise
-            raise FileDiscoveryError(f"Failed to discover SQL files: {e}")
+            raise FileDiscoveryError(f"Failed to discover SQL files: {e}") from e
 
-    def discover_python_files(self) -> List[Path]:
+    def discover_python_files(self) -> list[Path]:
         """
         Discover all Python files in the models folder.
 
@@ -105,9 +102,9 @@ class FileDiscovery:
         except Exception as e:
             if isinstance(e, FileDiscoveryError):
                 raise
-            raise FileDiscoveryError(f"Failed to discover Python files: {e}")
+            raise FileDiscoveryError(f"Failed to discover Python files: {e}") from e
 
-    def discover_ots_modules(self) -> List[Path]:
+    def discover_ots_modules(self) -> list[Path]:
         """
         Discover all OTS module files in the models folder.
 
@@ -144,9 +141,9 @@ class FileDiscovery:
         except Exception as e:
             if isinstance(e, FileDiscoveryError):
                 raise
-            raise FileDiscoveryError(f"Failed to discover OTS module files: {e}")
+            raise FileDiscoveryError(f"Failed to discover OTS module files: {e}") from e
 
-    def discover_all_files(self) -> Dict[str, List[Path]]:
+    def discover_all_files(self) -> dict[str, list[Path]]:
         """
         Discover all supported files in the models folder.
 
@@ -165,9 +162,9 @@ class FileDiscovery:
         except Exception as e:
             if isinstance(e, FileDiscoveryError):
                 raise
-            raise FileDiscoveryError(f"Failed to discover files: {e}")
+            raise FileDiscoveryError(f"Failed to discover files: {e}") from e
 
-    def discover_function_files(self) -> Dict[str, List[Path]]:
+    def discover_function_files(self) -> dict[str, list[Path]]:
         """
         Discover all function files in the functions folder.
 
@@ -261,7 +258,7 @@ class FileDiscovery:
         except Exception as e:
             if isinstance(e, FileDiscoveryError):
                 raise
-            raise FileDiscoveryError(f"Failed to discover function files: {e}")
+            raise FileDiscoveryError(f"Failed to discover function files: {e}") from e
 
     def clear_cache(self) -> None:
         """Clear the file discovery cache."""

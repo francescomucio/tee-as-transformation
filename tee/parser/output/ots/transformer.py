@@ -6,14 +6,15 @@ to the Open Transformation Specification (OTS) Module format.
 """
 
 import logging
-from typing import Dict, Any, Optional
 from pathlib import Path
+from typing import Any
 
+from tee.parser.shared.types import ParsedFunction, ParsedModel
 from tee.typing.metadata import OTSModule
-from tee.parser.shared.types import ParsedModel, ParsedFunction
-from .utils import infer_sql_dialect, group_models_by_schema, group_functions_by_schema
-from .transformers import ModelTransformer, FunctionTransformer
+
 from .builders import ModuleBuilder
+from .transformers import FunctionTransformer, ModelTransformer
+from .utils import group_functions_by_schema, group_models_by_schema, infer_sql_dialect
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 class OTSTransformer:
     """Transforms parsed models to OTS Module format."""
 
-    def __init__(self, project_config: Dict[str, Any]):
+    def __init__(self, project_config: dict[str, Any]):
         """
         Initialize the OTS transformer.
 
@@ -44,10 +45,10 @@ class OTSTransformer:
 
     def transform_to_ots_modules(
         self,
-        parsed_models: Dict[str, ParsedModel],
-        parsed_functions: Optional[Dict[str, ParsedFunction]] = None,
-        test_library_path: Optional[Path] = None,
-    ) -> Dict[str, OTSModule]:
+        parsed_models: dict[str, ParsedModel],
+        parsed_functions: dict[str, ParsedFunction] | None = None,
+        test_library_path: Path | None = None,
+    ) -> dict[str, OTSModule]:
         """
         Transform parsed models and functions into OTS Module(s).
 

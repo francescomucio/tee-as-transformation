@@ -1,9 +1,9 @@
 """SQL dialect inference utilities."""
 
-from typing import Dict, Any
+from typing import Any
 
 
-def infer_sql_dialect(project_config: Dict[str, Any]) -> str:
+def infer_sql_dialect(project_config: dict[str, Any]) -> str:
     """
     Infer SQL dialect from connection type in project configuration.
 

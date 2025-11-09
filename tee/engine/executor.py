@@ -7,11 +7,13 @@ for database-agnostic SQL model execution.
 
 import logging
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Union
-from .execution_engine import ExecutionEngine
-from .config import load_database_config
-from .seeds import SeedDiscovery, SeedLoader
+from typing import Any
+
 from tee.adapters import AdapterConfig
+
+from .config import load_database_config
+from .execution_engine import ExecutionEngine
+from .seeds import SeedDiscovery, SeedLoader
 
 
 class ModelExecutor:
@@ -20,7 +22,7 @@ class ModelExecutor:
     def __init__(
         self,
         project_folder: str,
-        config: Optional[Union[AdapterConfig, Dict[str, Any]]] = None,
+        config: AdapterConfig | dict[str, Any] | None = None,
         config_name: str = "default",
     ):
         """
@@ -38,8 +40,9 @@ class ModelExecutor:
             self.config = load_database_config(config_name, project_folder)
         elif isinstance(config, dict):
             # Convert dict to AdapterConfig, handling adapter-specific fields
-            from ..adapters.base import AdapterConfig
             from pathlib import Path
+
+            from ..adapters.base import AdapterConfig
 
             # Resolve relative paths relative to project folder
             if "path" in config and config["path"] and not Path(config["path"]).is_absolute():
@@ -71,10 +74,10 @@ class ModelExecutor:
     def execute_models(
         self,
         parser,
-        variables: Optional[Dict[str, Any]] = None,
-        parsed_models: Optional[Dict[str, Any]] = None,
-        execution_order: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
+        variables: dict[str, Any] | None = None,
+        parsed_models: dict[str, Any] | None = None,
+        execution_order: list[str] | None = None,
+    ) -> dict[str, Any]:
         """
         Execute the parsed SQL models using the enhanced execution engine.
 
@@ -195,7 +198,7 @@ class ModelExecutor:
                 self.execution_engine.disconnect()
                 self.logger.info("Disconnected from database")
 
-    def get_database_info(self) -> Optional[Dict[str, Any]]:
+    def get_database_info(self) -> dict[str, Any] | None:
         """Get database connection information."""
         if self.execution_engine:
             return self.execution_engine.get_database_info()
@@ -220,7 +223,7 @@ class ModelExecutor:
             if self.execution_engine:
                 self.execution_engine.disconnect()
 
-    def list_supported_materializations(self) -> List[str]:
+    def list_supported_materializations(self) -> list[str]:
         """Get list of supported materialization types for the current adapter."""
         try:
             self.execution_engine = ExecutionEngine(self.config, project_folder=self.project_folder)

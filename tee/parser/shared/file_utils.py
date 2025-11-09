@@ -3,10 +3,9 @@ Shared file utilities for parsers.
 """
 
 from pathlib import Path
-from typing import Optional
 
 
-def find_metadata_file(sql_file_path: str) -> Optional[str]:
+def find_metadata_file(sql_file_path: str) -> str | None:
     """
     Find companion Python metadata file for a SQL file.
 

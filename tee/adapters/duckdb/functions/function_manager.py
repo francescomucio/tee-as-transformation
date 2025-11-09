@@ -1,7 +1,7 @@
 """Function management for DuckDB."""
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class FunctionManager:
         self,
         function_name: str,
         function_sql: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Create or replace a user-defined function in the database."""
         if not self.adapter.connection:
@@ -73,7 +73,7 @@ class FunctionManager:
             from tee.parser.shared.exceptions import FunctionExecutionError
             raise FunctionExecutionError(f"Failed to create function {function_name}: {e}") from e
 
-    def exists(self, function_name: str, signature: Optional[str] = None) -> bool:
+    def exists(self, function_name: str, signature: str | None = None) -> bool:
         """
         Check if a function exists in the database.
 
@@ -103,7 +103,7 @@ class FunctionManager:
         return self._check_function_via_show_commands(schema_name, func_name)
 
     def _check_function_via_information_schema(
-        self, schema_name: str, func_name: str, signature: Optional[str] = None
+        self, schema_name: str, func_name: str, signature: str | None = None
     ) -> bool:
         """Check function existence via information_schema (may not be available in all contexts)."""
         try:

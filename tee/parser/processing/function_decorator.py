@@ -4,7 +4,7 @@ Inspired by the model decorator pattern.
 """
 
 import logging
-from typing import Dict, Any, Optional, Callable, List, Union
+from typing import Any, Callable
 
 from tee.parser.shared.exceptions import ParserError
 from tee.typing.metadata import FunctionParameter, FunctionType
@@ -20,17 +20,17 @@ class FunctionDecoratorError(ParserError):
 
 
 def sql(
-    function_name: Optional[str] = None,
-    description: Optional[str] = None,
-    function_type: Optional[FunctionType] = None,
-    parameters: Optional[List[FunctionParameter]] = None,
-    return_type: Optional[str] = None,
-    return_table_schema: Optional[List[Dict[str, Any]]] = None,
-    schema: Optional[str] = None,
-    deterministic: Optional[bool] = None,
-    database_name: Optional[str] = None,
-    tags: Optional[List[str]] = None,
-    object_tags: Optional[Dict[str, str]] = None,
+    function_name: str | None = None,
+    description: str | None = None,
+    function_type: FunctionType | None = None,
+    parameters: list[FunctionParameter] | None = None,
+    return_type: str | None = None,
+    return_table_schema: list[dict[str, Any]] | None = None,
+    schema: str | None = None,
+    deterministic: bool | None = None,
+    database_name: str | None = None,
+    tags: list[str] | None = None,
+    object_tags: dict[str, str] | None = None,
     **metadata: Any,
 ) -> Callable:
     """
@@ -106,23 +106,23 @@ def sql(
         except Exception as e:
             if isinstance(e, FunctionDecoratorError):
                 raise
-            raise FunctionDecoratorError(f"Failed to create SQL function decorator: {str(e)}")
+            raise FunctionDecoratorError(f"Failed to create SQL function decorator: {str(e)}") from e
 
     return decorator
 
 
 def python(
-    function_name: Optional[str] = None,
-    description: Optional[str] = None,
-    function_type: Optional[FunctionType] = None,
-    parameters: Optional[List[FunctionParameter]] = None,
-    return_type: Optional[str] = None,
-    return_table_schema: Optional[List[Dict[str, Any]]] = None,
-    schema: Optional[str] = None,
-    deterministic: Optional[bool] = None,
-    database_name: Optional[str] = None,
-    tags: Optional[List[str]] = None,
-    object_tags: Optional[Dict[str, str]] = None,
+    function_name: str | None = None,
+    description: str | None = None,
+    function_type: FunctionType | None = None,
+    parameters: list[FunctionParameter] | None = None,
+    return_type: str | None = None,
+    return_table_schema: list[dict[str, Any]] | None = None,
+    schema: str | None = None,
+    deterministic: bool | None = None,
+    database_name: str | None = None,
+    tags: list[str] | None = None,
+    object_tags: dict[str, str] | None = None,
     **metadata: Any,
 ) -> Callable:
     """
@@ -196,7 +196,7 @@ def python(
         except Exception as e:
             if isinstance(e, FunctionDecoratorError):
                 raise
-            raise FunctionDecoratorError(f"Failed to create Python function decorator: {str(e)}")
+            raise FunctionDecoratorError(f"Failed to create Python function decorator: {str(e)}") from e
 
     return decorator
 

@@ -2,11 +2,11 @@
 Output layer for visualization, export, and report generation.
 """
 
-from .visualizer import DependencyVisualizer
 from .json_exporter import JSONExporter
-from .report_generator import ReportGenerator
 from .ots.transformer import OTSTransformer
+from .report_generator import ReportGenerator
 from .test_library_exporter import TestLibraryExporter
+from .visualizer import DependencyVisualizer
 
 __all__ = [
     "DependencyVisualizer",

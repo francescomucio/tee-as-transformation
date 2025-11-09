@@ -9,10 +9,10 @@ and state tracking.
 import hashlib
 import json
 import logging
-from datetime import datetime, UTC
-from pathlib import Path
-from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
 
 import duckdb
 
@@ -30,8 +30,8 @@ class ModelState:
     config_hash: str
     created_at: str
     updated_at: str
-    last_processed_value: Optional[str] = None
-    strategy: Optional[str] = None
+    last_processed_value: str | None = None
+    strategy: str | None = None
 
 
 class StateManager:
@@ -43,7 +43,7 @@ class StateManager:
     and state tracking.
     """
 
-    def __init__(self, state_database_path: Optional[str] = None, project_folder: str = "."):
+    def __init__(self, state_database_path: str | None = None, project_folder: str = "."):
         """
         Initialize the state manager.
 
@@ -89,7 +89,7 @@ class StateManager:
         """Compute hash for SQL query."""
         return hashlib.sha256(sql_query.encode("utf-8")).hexdigest()
 
-    def compute_config_hash(self, config: Dict[str, Any]) -> str:
+    def compute_config_hash(self, config: dict[str, Any]) -> str:
         """Compute hash for configuration using JSON serialization."""
         if not config:
             return hashlib.sha256(b"").hexdigest()
@@ -98,7 +98,7 @@ class StateManager:
         config_str = json.dumps(config, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(config_str.encode("utf-8")).hexdigest()
 
-    def get_model_state(self, model_name: str) -> Optional[ModelState]:
+    def get_model_state(self, model_name: str) -> ModelState | None:
         """Get the current state of a model."""
         conn = self._get_connection()
         query = "SELECT * FROM tee_model_state WHERE model_name = ?"
@@ -124,8 +124,8 @@ class StateManager:
         materialization: str,
         sql_hash: str,
         config_hash: str,
-        last_processed_value: Optional[str] = None,
-        strategy: Optional[str] = None,
+        last_processed_value: str | None = None,
+        strategy: str | None = None,
     ) -> None:
         """Save or update model state."""
         conn = self._get_connection()
@@ -183,7 +183,7 @@ class StateManager:
         conn.commit()
 
     def update_processed_value(
-        self, model_name: str, value: str, strategy: Optional[str] = None
+        self, model_name: str, value: str, strategy: str | None = None
     ) -> None:
         """Update the last processed value for a model."""
         state = self.get_model_state(model_name)
@@ -196,7 +196,7 @@ class StateManager:
         )
 
         # Update the state with new processed value
-        now = datetime.now(UTC).isoformat()
+        datetime.now(UTC).isoformat()
         self.save_model_state(
             model_name=model_name,
             materialization=state.materialization,
@@ -219,7 +219,7 @@ class StateManager:
         # For adapters without view_exists method, assume it doesn't exist
         return False
 
-    def rebuild_state_from_database(self, adapter, model_name: str) -> Optional[ModelState]:
+    def rebuild_state_from_database(self, adapter, model_name: str) -> ModelState | None:
         """Rebuild model state from database existence."""
         if not self.check_database_existence(adapter, model_name):
             return None
@@ -263,7 +263,7 @@ class StateManager:
             elif behavior == "ignore":
                 logger.info(f"Ignoring materialization change for {model_name}")
 
-    def get_all_models(self) -> List[ModelState]:
+    def get_all_models(self) -> list[ModelState]:
         """Get all model states."""
         conn = self._get_connection()
         query = "SELECT * FROM tee_model_state ORDER BY model_name"

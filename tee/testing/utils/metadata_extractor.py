@@ -5,7 +5,7 @@ Extracts metadata extraction logic from TestExecutor to eliminate duplication.
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ class MetadataExtractor:
     """Extracts metadata from model and function data."""
 
     @staticmethod
-    def extract_model_metadata(model_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def extract_model_metadata(model_data: dict[str, Any]) -> dict[str, Any] | None:
         """
         Extract metadata from model data.
 
@@ -44,7 +44,7 @@ class MetadataExtractor:
             return None
 
     @staticmethod
-    def extract_function_metadata(function_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def extract_function_metadata(function_data: dict[str, Any]) -> dict[str, Any] | None:
         """
         Extract metadata from function data.
 

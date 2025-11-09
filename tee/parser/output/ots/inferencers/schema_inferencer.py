@@ -1,7 +1,7 @@
 """Schema inference from SQL using sqlglot."""
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any
 
 from tee.parser.shared.types import ParsedModel
 
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class SchemaInferencer:
     """Infers schema from SQL queries using sqlglot."""
 
-    def infer_from_sql(self, model_data: ParsedModel) -> Optional[Dict[str, Any]]:
+    def infer_from_sql(self, model_data: ParsedModel) -> dict[str, Any] | None:
         """
         Infer schema from SQL query using sqlglot.
 

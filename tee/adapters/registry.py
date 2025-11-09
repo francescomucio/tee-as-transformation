@@ -5,19 +5,20 @@ This module provides a registry system for discovering and managing
 database adapters with automatic registration and factory methods.
 """
 
-from typing import Dict, Type, Optional, List, Union, Any
 import logging
-from .base import DatabaseAdapter, AdapterConfig
+from typing import Any
+
+from .base import AdapterConfig, DatabaseAdapter
 
 
 class AdapterRegistry:
     """Registry for managing database adapters."""
 
     def __init__(self):
-        self._adapters: Dict[str, Type[DatabaseAdapter]] = {}
+        self._adapters: dict[str, type[DatabaseAdapter]] = {}
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    def register(self, adapter_type: str, adapter_class: Type[DatabaseAdapter]) -> None:
+    def register(self, adapter_type: str, adapter_class: type[DatabaseAdapter]) -> None:
         """
         Register a database adapter.
 
@@ -28,7 +29,7 @@ class AdapterRegistry:
         self._adapters[adapter_type.lower()] = adapter_class
         self.logger.debug(f"Registered adapter: {adapter_type} -> {adapter_class.__name__}")
 
-    def get_adapter_class(self, adapter_type: str) -> Optional[Type[DatabaseAdapter]]:
+    def get_adapter_class(self, adapter_type: str) -> type[DatabaseAdapter] | None:
         """
         Get adapter class for a database type.
 
@@ -40,7 +41,7 @@ class AdapterRegistry:
         """
         return self._adapters.get(adapter_type.lower())
 
-    def create_adapter(self, config: Union[AdapterConfig, Dict[str, Any]]) -> DatabaseAdapter:
+    def create_adapter(self, config: AdapterConfig | dict[str, Any]) -> DatabaseAdapter:
         """
         Create an adapter instance from configuration.
 
@@ -94,7 +95,7 @@ class AdapterRegistry:
 
         return adapter_class(config_dict)
 
-    def list_adapters(self) -> List[str]:
+    def list_adapters(self) -> list[str]:
         """Get list of registered adapter types."""
         return list(self._adapters.keys())
 
@@ -107,12 +108,12 @@ class AdapterRegistry:
 _registry = AdapterRegistry()
 
 
-def register_adapter(adapter_type: str, adapter_class: Type[DatabaseAdapter]) -> None:
+def register_adapter(adapter_type: str, adapter_class: type[DatabaseAdapter]) -> None:
     """Register an adapter with the global registry."""
     _registry.register(adapter_type, adapter_class)
 
 
-def get_adapter(config: Union[AdapterConfig, Dict[str, Any]]) -> DatabaseAdapter:
+def get_adapter(config: AdapterConfig | dict[str, Any]) -> DatabaseAdapter:
     """
     Get an adapter instance from configuration.
 
@@ -125,7 +126,7 @@ def get_adapter(config: Union[AdapterConfig, Dict[str, Any]]) -> DatabaseAdapter
     return _registry.create_adapter(config)
 
 
-def list_available_adapters() -> List[str]:
+def list_available_adapters() -> list[str]:
     """Get list of available adapter types."""
     return _registry.list_adapters()
 

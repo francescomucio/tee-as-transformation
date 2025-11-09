@@ -8,7 +8,7 @@ This adapter provides Snowflake-specific functionality including:
 - Materialization support including external tables
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Any
 
 try:
     import snowflake.connector
@@ -20,14 +20,14 @@ try:
 except ImportError:
     sqlglot = None
 
-from tee.adapters.base import DatabaseAdapter, AdapterConfig, MaterializationType
+from tee.adapters.base import AdapterConfig, DatabaseAdapter, MaterializationType
 from tee.adapters.registry import register_adapter
 
-from .tags.tag_manager import TagManager
 from .functions.function_manager import FunctionManager
+from .materialization.incremental_handler import IncrementalHandler
 from .materialization.table_handler import TableHandler
 from .materialization.view_handler import ViewHandler
-from .materialization.incremental_handler import IncrementalHandler
+from .tags.tag_manager import TagManager
 from .utils.helpers import SnowflakeUtils
 
 
@@ -37,7 +37,7 @@ class SnowflakeAdapter(DatabaseAdapter):
     # Snowflake-specific required fields
     REQUIRED_FIELDS = ["type", "user", "password", "database"]
 
-    def __init__(self, config_dict: Dict[str, Any]):
+    def __init__(self, config_dict: dict[str, Any]):
         if snowflake is None:
             raise ImportError(
                 "Snowflake connector is not installed. Install it with: uv add snowflake-connector-python"
@@ -53,7 +53,7 @@ class SnowflakeAdapter(DatabaseAdapter):
         self.incremental_handler = IncrementalHandler(self)
         self.utils = SnowflakeUtils(self)
 
-    def _validate_field_values(self, config_dict: Dict[str, Any]) -> None:
+    def _validate_field_values(self, config_dict: dict[str, Any]) -> None:
         """Validate Snowflake-specific field values."""
         super()._validate_field_values(config_dict)
 
@@ -76,7 +76,7 @@ class SnowflakeAdapter(DatabaseAdapter):
             if not isinstance(config_dict["role"], str) or not config_dict["role"].strip():
                 raise ValueError("Snowflake role must be a non-empty string")
 
-    def _create_adapter_config(self, config_dict: Dict[str, Any]) -> AdapterConfig:
+    def _create_adapter_config(self, config_dict: dict[str, Any]) -> AdapterConfig:
         """Create Snowflake-specific AdapterConfig."""
         # Prepare extra fields for Snowflake-specific settings
         extra_fields = {}
@@ -108,7 +108,7 @@ class SnowflakeAdapter(DatabaseAdapter):
         """Get the default SQL dialect for Snowflake."""
         return "snowflake"
 
-    def get_supported_materializations(self) -> List[MaterializationType]:
+    def get_supported_materializations(self) -> list[MaterializationType]:
         """Get list of supported materialization types for Snowflake."""
         return [
             MaterializationType.TABLE,
@@ -176,13 +176,13 @@ class SnowflakeAdapter(DatabaseAdapter):
             raise
 
     def create_table(
-        self, table_name: str, query: str, metadata: Optional[Dict[str, Any]] = None
+        self, table_name: str, query: str, metadata: dict[str, Any] | None = None
     ) -> None:
         """Create a table from a qualified SQL query with optional column metadata."""
         self.table_handler.create(table_name, query, metadata)
 
     def create_view(
-        self, view_name: str, query: str, metadata: Optional[Dict[str, Any]] = None
+        self, view_name: str, query: str, metadata: dict[str, Any] | None = None
     ) -> None:
         """Create a view from a qualified SQL query."""
         self.view_handler.create(view_name, query, metadata)
@@ -202,7 +202,7 @@ class SnowflakeAdapter(DatabaseAdapter):
         except Exception:
             return False
 
-    def get_table_info(self, table_name: str) -> Dict[str, Any]:
+    def get_table_info(self, table_name: str) -> dict[str, Any]:
         """Get information about a table."""
         if not self.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
@@ -242,12 +242,12 @@ class SnowflakeAdapter(DatabaseAdapter):
         self,
         function_name: str,
         function_sql: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Create or replace a user-defined function in the database."""
         self.function_manager.create(function_name, function_sql, metadata)
 
-    def function_exists(self, function_name: str, signature: Optional[str] = None) -> bool:
+    def function_exists(self, function_name: str, signature: str | None = None) -> bool:
         """Check if a function exists in the database."""
         return self.function_manager.exists(function_name, signature)
 
@@ -255,7 +255,7 @@ class SnowflakeAdapter(DatabaseAdapter):
         """Drop a function from the database."""
         self.function_manager.drop(function_name)
 
-    def get_table_columns(self, table_name: str) -> List[str]:
+    def get_table_columns(self, table_name: str) -> list[str]:
         """Return ordered column names for a table."""
         if not self.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
@@ -287,7 +287,7 @@ class SnowflakeAdapter(DatabaseAdapter):
             # Fallback to empty list; callers should handle
             return []
 
-    def qualify_table_references(self, sql: str, schema: Optional[str] = None) -> str:
+    def qualify_table_references(self, sql: str, schema: str | None = None) -> str:
         """
         Qualify table references with schema names for Snowflake.
 
@@ -333,7 +333,7 @@ class SnowflakeAdapter(DatabaseAdapter):
             self.logger.warning(f"Failed to qualify table references: {e}")
             return sql
 
-    def get_database_info(self) -> Dict[str, Any]:
+    def get_database_info(self) -> dict[str, Any]:
         """Get Snowflake-specific database information."""
         base_info = super().get_database_info()
 
@@ -379,12 +379,12 @@ class SnowflakeAdapter(DatabaseAdapter):
         return self.utils.qualify_object_name(object_name)
 
     def _create_schema_if_needed(
-        self, object_name: str, schema_metadata: Optional[Dict[str, Any]] = None
+        self, object_name: str, schema_metadata: dict[str, Any] | None = None
     ) -> None:
         """Create schema if needed for the given object name and attach tags if provided."""
         self.utils.create_schema_if_needed(object_name, schema_metadata)
 
-    def _execute_with_cursor(self, query: str, params: Optional[tuple] = None) -> Any:
+    def _execute_with_cursor(self, query: str, params: tuple | None = None) -> Any:
         """Execute a query with proper cursor management."""
         return self.utils.execute_with_cursor(query, params)
 
@@ -392,7 +392,7 @@ class SnowflakeAdapter(DatabaseAdapter):
         """Add a comment to a table using Snowflake's COMMENT ON TABLE syntax."""
         self.utils.add_table_comment(table_name, description)
 
-    def _add_column_comments(self, table_name: str, column_descriptions: Dict[str, str]) -> None:
+    def _add_column_comments(self, table_name: str, column_descriptions: dict[str, str]) -> None:
         """Add column comments to a table using Snowflake's COMMENT ON COLUMN syntax."""
         self.utils.add_column_comments(table_name, column_descriptions)
 
@@ -401,7 +401,7 @@ class SnowflakeAdapter(DatabaseAdapter):
         self.incremental_handler.execute_append(table_name, sql_query)
 
     def execute_incremental_merge(
-        self, table_name: str, source_sql: str, config: Dict[str, Any]
+        self, table_name: str, source_sql: str, config: dict[str, Any]
     ) -> None:
         """Execute incremental merge (upsert) with dedup and tuple ON for composite keys."""
         self.incremental_handler.execute_merge(table_name, source_sql, config)
@@ -413,19 +413,19 @@ class SnowflakeAdapter(DatabaseAdapter):
         self.incremental_handler.execute_delete_insert(table_name, delete_sql, insert_sql)
 
     def attach_tags(
-        self, object_type: str, object_name: str, tags: List[str]
+        self, object_type: str, object_name: str, tags: list[str]
     ) -> None:
         """Attach tags to a Snowflake database object."""
         self.tag_manager.attach_tags(object_type, object_name, tags)
 
     def attach_object_tags(
-        self, object_type: str, object_name: str, object_tags: Dict[str, str]
+        self, object_type: str, object_name: str, object_tags: dict[str, str]
     ) -> None:
         """Attach object tags (key-value pairs) to a Snowflake database object."""
         self.tag_manager.attach_object_tags(object_type, object_name, object_tags)
 
     def generate_no_duplicates_test_query(
-        self, table_name: str, columns: Optional[List[str]] = None
+        self, table_name: str, columns: list[str] | None = None
     ) -> str:
         """
         Generate SQL query for no_duplicates test (Snowflake-specific).

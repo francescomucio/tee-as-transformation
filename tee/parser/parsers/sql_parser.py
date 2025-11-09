@@ -2,21 +2,24 @@
 Unified SQL parsing functionality using sqlglot.
 """
 
+import logging
+
 import sqlglot
 from sqlglot import exp
-import logging
-from typing import Optional
-from pathlib import Path
 
-from .base import BaseParser
-from tee.parser.shared.types import ParsedModel, FilePath
-from tee.parser.shared.exceptions import SQLParsingError
-from tee.parser.shared.model_utils import create_model_metadata, compute_sqlglot_hash
-from tee.parser.shared.metadata_schema import parse_metadata_from_python_file, validate_metadata_dict
-from tee.parser.shared.file_utils import find_metadata_file
-from tee.typing.metadata import ParsedModelMetadata
 from tee.parser.analysis.sql_qualifier import generate_resolved_sql, validate_resolved_sql
 from tee.parser.shared.constants import SQL_BUILT_IN_FUNCTIONS
+from tee.parser.shared.exceptions import SQLParsingError
+from tee.parser.shared.file_utils import find_metadata_file
+from tee.parser.shared.metadata_schema import (
+    parse_metadata_from_python_file,
+    validate_metadata_dict,
+)
+from tee.parser.shared.model_utils import compute_sqlglot_hash, create_model_metadata
+from tee.parser.shared.types import FilePath, ParsedModel
+from tee.typing.metadata import ParsedModelMetadata
+
+from .base import BaseParser
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -25,7 +28,7 @@ logger = logging.getLogger(__name__)
 class SQLParser(BaseParser):
     """Handles SQL parsing using sqlglot."""
 
-    def _parse_metadata(self, sql_file_path: str) -> Optional[ParsedModelMetadata]:
+    def _parse_metadata(self, sql_file_path: str) -> ParsedModelMetadata | None:
         """
         Parse metadata from companion Python file or SQL comments.
 
@@ -67,12 +70,12 @@ class SQLParser(BaseParser):
         # If no Python file, try to extract metadata from SQL comments
         try:
             logger.info(f"Trying to extract metadata from SQL comments in {sql_file_path}")
-            with open(sql_file_path, "r", encoding="utf-8") as f:
+            with open(sql_file_path, encoding="utf-8") as f:
                 content = f.read()
 
             # Look for metadata comment: -- metadata: {...}
-            import re
             import json
+            import re
 
             metadata_match = re.search(r"--\s*metadata:\s*(\{.*\})", content, re.DOTALL)
             if metadata_match:
@@ -153,7 +156,7 @@ class SQLParser(BaseParser):
         except Exception as e:
             if isinstance(e, SQLParsingError):
                 raise
-            raise SQLParsingError(f"SQL parsing error: {str(e)}")
+            raise SQLParsingError(f"SQL parsing error: {str(e)}") from e
 
     def _parse_sqlglot_expression(
         self, expr, table_name: str = None, file_path: str = None
@@ -251,4 +254,4 @@ class SQLParser(BaseParser):
             }
 
         except Exception as e:
-            raise SQLParsingError(f"SQLGlot expression parsing error: {str(e)}")
+            raise SQLParsingError(f"SQLGlot expression parsing error: {str(e)}") from e

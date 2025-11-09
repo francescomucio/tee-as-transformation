@@ -2,17 +2,14 @@
 SQL qualification functionality for resolving table references.
 """
 
-import re
 import logging
-from typing import List
-
-from tee.parser.shared.exceptions import ParserError
+import re
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 
-def generate_resolved_sql(sql_str: str, tables: List[str], table_name: str) -> str:
+def generate_resolved_sql(sql_str: str, tables: list[str], table_name: str) -> str:
     """
     Generate resolved SQL by resolving table references with fully qualified names.
 

@@ -3,7 +3,6 @@ Function body extraction from SQL content.
 """
 
 import re
-from typing import Optional
 
 
 class FunctionBodyExtractor:

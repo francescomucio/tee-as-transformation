@@ -6,7 +6,8 @@ for both debug and run commands, eliminating code duplication.
 """
 
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Any
+
 from .executor import ModelExecutor
 
 
@@ -24,8 +25,8 @@ class ConnectionManager:
     def __init__(
         self,
         project_folder: str,
-        connection_config: Dict[str, Any],
-        variables: Optional[Dict[str, Any]] = None,
+        connection_config: dict[str, Any],
+        variables: dict[str, Any] | None = None,
     ):
         """
         Initialize the connection manager.
@@ -61,7 +62,7 @@ class ConnectionManager:
             self.logger.error(f"Connection test failed: {e}")
             return False
 
-    def get_database_info(self) -> Optional[Dict[str, Any]]:
+    def get_database_info(self) -> dict[str, Any] | None:
         """Get database information."""
         try:
             executor = self.create_executor()
@@ -70,7 +71,7 @@ class ConnectionManager:
             self.logger.error(f"Failed to get database info: {e}")
             return None
 
-    def get_supported_materializations(self) -> List[str]:
+    def get_supported_materializations(self) -> list[str]:
         """Get list of supported materializations."""
         try:
             executor = self.create_executor()
@@ -79,7 +80,7 @@ class ConnectionManager:
             self.logger.error(f"Failed to get materializations: {e}")
             return []
 
-    def execute_models(self, parser, save_analysis: bool = True) -> Dict[str, Any]:
+    def execute_models(self, parser, save_analysis: bool = True) -> dict[str, Any]:
         """
         Execute SQL models.
 

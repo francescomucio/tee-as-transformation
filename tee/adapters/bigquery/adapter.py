@@ -9,7 +9,8 @@ This module provides BigQuery-specific functionality including:
 """
 
 from typing import Any
-from tee.adapters.base import DatabaseAdapter, AdapterConfig, MaterializationType
+
+from tee.adapters.base import AdapterConfig, DatabaseAdapter, MaterializationType
 from tee.adapters.registry import register_adapter
 
 
@@ -22,7 +23,7 @@ class BigQueryAdapter(DatabaseAdapter):
         except ImportError:
             raise ImportError(
                 "google-cloud-bigquery is not installed. Install it with: uv add google-cloud-bigquery"
-            )
+            ) from None
 
         super().__init__(config)
 

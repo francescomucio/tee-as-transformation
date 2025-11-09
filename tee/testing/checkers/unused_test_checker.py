@@ -6,7 +6,7 @@ Checks for generic SQL tests that are never used in model or function metadata.
 
 import logging
 from pathlib import Path
-from typing import Dict, Any, List, Set
+from typing import Any
 
 from tee.testing.test_discovery import TestDiscovery
 from tee.testing.utils import MetadataExtractor
@@ -31,10 +31,10 @@ class UnusedTestChecker:
 
     def check_unused_tests(
         self,
-        parsed_models: Dict[str, Any],
-        parsed_functions: Dict[str, Any],
-        used_test_names: Set[str],
-    ) -> List[str]:
+        parsed_models: dict[str, Any],
+        parsed_functions: dict[str, Any],
+        used_test_names: set[str],
+    ) -> list[str]:
         """
         Check for unused generic SQL tests and return warning messages.
 
@@ -78,8 +78,8 @@ class UnusedTestChecker:
         return warnings
 
     def _collect_referenced_tests(
-        self, parsed_models: Dict[str, Any], parsed_functions: Dict[str, Any]
-    ) -> Set[str]:
+        self, parsed_models: dict[str, Any], parsed_functions: dict[str, Any]
+    ) -> set[str]:
         """
         Collect all test names referenced in model and function metadata.
 
@@ -147,10 +147,10 @@ class UnusedTestChecker:
 
     def _check_unused_model_tests(
         self,
-        discovered_tests: Dict[str, Any],
-        referenced_test_names: Set[str],
-        used_test_names: Set[str],
-    ) -> List[str]:
+        discovered_tests: dict[str, Any],
+        referenced_test_names: set[str],
+        used_test_names: set[str],
+    ) -> list[str]:
         """
         Check for unused model SQL tests.
 
@@ -185,10 +185,10 @@ class UnusedTestChecker:
 
     def _check_unused_function_tests(
         self,
-        discovered_function_tests: Dict[str, Any],
-        referenced_test_names: Set[str],
-        used_test_names: Set[str],
-    ) -> List[str]:
+        discovered_function_tests: dict[str, Any],
+        referenced_test_names: set[str],
+        used_test_names: set[str],
+    ) -> list[str]:
         """
         Check for unused function SQL tests.
 

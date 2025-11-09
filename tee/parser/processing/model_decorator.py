@@ -4,7 +4,7 @@ Inspired by dlt's resource decorator pattern.
 """
 
 import logging
-from typing import Dict, Any, Optional, Callable, List
+from typing import Any, Callable
 
 from tee.parser.shared.exceptions import ParserError
 
@@ -19,9 +19,9 @@ class ModelDecoratorError(ParserError):
 
 
 def model(
-    table_name: Optional[str] = None,
-    description: Optional[str] = None,
-    variables: Optional[List[str]] = None,
+    table_name: str | None = None,
+    description: str | None = None,
+    variables: list[str] | None = None,
     **metadata: Any,
 ) -> Callable:
     """
@@ -74,6 +74,6 @@ def model(
         except Exception as e:
             if isinstance(e, ModelDecoratorError):
                 raise
-            raise ModelDecoratorError(f"Failed to create model decorator: {str(e)}")
+            raise ModelDecoratorError(f"Failed to create model decorator: {str(e)}") from e
 
     return decorator

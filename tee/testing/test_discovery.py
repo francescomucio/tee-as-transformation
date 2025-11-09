@@ -4,10 +4,9 @@ Test discovery for finding SQL test files in project's tests/ folder.
 
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional
 
+from .base import TestRegistry, TestSeverity
 from .sql_test import SqlTest
-from .base import TestSeverity, TestRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -27,10 +26,10 @@ class TestDiscovery:
         self.project_folder = Path(project_folder)
         self.tests_folder = self.project_folder / "tests"
         self.functions_tests_folder = self.project_folder / "tests" / "functions"
-        self._discovered_tests: Dict[str, SqlTest] = {}
-        self._discovered_function_tests: Dict[str, SqlTest] = {}
+        self._discovered_tests: dict[str, SqlTest] = {}
+        self._discovered_function_tests: dict[str, SqlTest] = {}
 
-    def discover_tests(self) -> Dict[str, SqlTest]:
+    def discover_tests(self) -> dict[str, SqlTest]:
         """
         Discover all SQL test files in the tests/ folder (excluding tests/functions/).
 
@@ -90,7 +89,7 @@ class TestDiscovery:
         self._discovered_tests = discovered
         return discovered
 
-    def discover_function_tests(self) -> Dict[str, SqlTest]:
+    def discover_function_tests(self) -> dict[str, SqlTest]:
         """
         Discover all SQL test files in the tests/functions/ folder.
 

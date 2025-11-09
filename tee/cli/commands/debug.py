@@ -2,15 +2,16 @@
 Debug command implementation.
 """
 
+
 import typer
-from typing import Optional
+
 from tee.cli.context import CommandContext
 from tee.engine.connection_manager import ConnectionManager
 
 
 def cmd_debug(
     project_folder: str,
-    vars: Optional[str] = None,
+    vars: str | None = None,
     verbose: bool = False,
 ) -> None:
     """Execute the debug command to test database connectivity."""

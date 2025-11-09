@@ -10,21 +10,21 @@ This package provides pluggable database adapters that handle:
 Each adapter is organized in its own subpackage for better maintainability.
 """
 
-from .base import DatabaseAdapter, AdapterConfig, MaterializationType
-from .registry import (
-    AdapterRegistry,
-    get_adapter,
-    register_adapter,
-    list_available_adapters,
-    is_adapter_supported,
-)
-from .testing import AdapterTester, test_adapter, benchmark_adapter
+from .base import AdapterConfig, DatabaseAdapter, MaterializationType
+from .bigquery import BigQueryAdapter
 
 # Import adapters to register them
 from .duckdb import DuckDBAdapter
-from .snowflake import SnowflakeAdapter
 from .postgresql import PostgreSQLAdapter
-from .bigquery import BigQueryAdapter
+from .registry import (
+    AdapterRegistry,
+    get_adapter,
+    is_adapter_supported,
+    list_available_adapters,
+    register_adapter,
+)
+from .snowflake import SnowflakeAdapter
+from .testing import AdapterTester, benchmark_adapter, test_adapter
 
 __all__ = [
     # Base classes and configuration

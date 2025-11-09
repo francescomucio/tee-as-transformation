@@ -3,12 +3,19 @@ Dependency graph building and analysis functionality.
 """
 
 import logging
-from pathlib import Path
-from typing import Dict, Any, List, Optional
 from graphlib import TopologicalSorter
+from pathlib import Path
+from typing import Any
 
-from tee.parser.shared.types import ParsedModel, ParsedFunction, DependencyGraph, DependencyInfo, ExecutionOrder, GraphCycles
 from tee.parser.shared.exceptions import DependencyError
+from tee.parser.shared.types import (
+    DependencyGraph,
+    DependencyInfo,
+    ExecutionOrder,
+    GraphCycles,
+    ParsedFunction,
+    ParsedModel,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -18,10 +25,10 @@ class DependencyGraphBuilder:
 
     def build_graph(
         self,
-        parsed_models: Dict[str, ParsedModel],
+        parsed_models: dict[str, ParsedModel],
         table_resolver,
-        project_folder: Optional[Path] = None,
-        parsed_functions: Optional[Dict[str, ParsedFunction]] = None,
+        project_folder: Path | None = None,
+        parsed_functions: dict[str, ParsedFunction] | None = None,
     ) -> DependencyGraph:
         """
         Build a dependency graph from the parsed SQL models, functions, and tests.
@@ -141,14 +148,14 @@ class DependencyGraphBuilder:
                 "cycles": cycles,
             }
         except Exception as e:
-            raise DependencyError(f"Failed to build dependency graph: {e}")
+            raise DependencyError(f"Failed to build dependency graph: {e}") from e
 
     def _parse_test_dependencies(
         self,
-        parsed_models: Dict[str, ParsedModel],
+        parsed_models: dict[str, ParsedModel],
         project_folder: Path,
         table_resolver,
-    ) -> Dict[str, List[str]]:
+    ) -> dict[str, list[str]]:
         """
         Parse test SQL files to extract table dependencies using sqlglot.
         Creates separate nodes for each test instance.
@@ -167,8 +174,8 @@ class DependencyGraphBuilder:
 
         try:
             # Import here to avoid circular dependencies
-            from ...testing.test_discovery import TestDiscovery
             from ...parser.parsers.sql_parser import SQLParser
+            from ...testing.test_discovery import TestDiscovery
 
             # Discover SQL tests
             test_discovery = TestDiscovery(project_folder)
@@ -250,12 +257,12 @@ class DependencyGraphBuilder:
         self,
         test_name: str,
         table_name: str,
-        column_name: Optional[str],
-        discovered_tests: Dict[str, Any],
+        column_name: str | None,
+        discovered_tests: dict[str, Any],
         sql_parser,
         table_resolver,
-        parsed_models: Dict[str, ParsedModel],
-    ) -> List[str]:
+        parsed_models: dict[str, ParsedModel],
+    ) -> list[str]:
         """
         Parse dependencies for a single test instance.
 
@@ -326,7 +333,7 @@ class DependencyGraphBuilder:
 
         return list(test_deps)
 
-    def _extract_metadata(self, model_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _extract_metadata(self, model_data: dict[str, Any]) -> dict[str, Any] | None:
         """Extract metadata from model data."""
         try:
             # First, try to get metadata from model_metadata
@@ -417,7 +424,7 @@ class DependencyGraphBuilder:
 
 
     def _topological_sort_with_graphlib(
-        self, dependencies: DependencyInfo, parsed_functions: Optional[Dict[str, ParsedFunction]] = None
+        self, dependencies: DependencyInfo, parsed_functions: dict[str, ParsedFunction] | None = None
     ) -> ExecutionOrder:
         """
         Perform topological sort using graphlib.TopologicalSorter.

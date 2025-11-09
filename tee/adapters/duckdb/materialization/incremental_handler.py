@@ -1,7 +1,7 @@
 """Incremental materialization strategies for DuckDB."""
 
 import logging
-from typing import Dict, Any, List
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class IncrementalHandler:
             raise
 
     def execute_merge(
-        self, table_name: str, source_sql: str, config: Dict[str, Any]
+        self, table_name: str, source_sql: str, config: dict[str, Any]
     ) -> None:
         """Execute incremental merge operation."""
         if not self.adapter.connection:
@@ -95,7 +95,7 @@ class IncrementalHandler:
             raise
 
     def _generate_merge_sql(
-        self, table_name: str, source_sql: str, unique_key: List[str], columns: List[str]
+        self, table_name: str, source_sql: str, unique_key: list[str], columns: list[str]
     ) -> str:
         """Generate DuckDB-specific MERGE SQL statement."""
         key_conditions = []

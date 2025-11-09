@@ -3,19 +3,20 @@ Build command implementation.
 
 Builds models with interleaved test execution, stopping on test failures.
 """
+
 import typer
-from typing import Optional, List
+
 from tee.cli.context import CommandContext
 from tee.engine.connection_manager import ConnectionManager
-from tee import build_models
+from tee.executor import build_models
 
 
 def cmd_build(
     project_folder: str,
-    vars: Optional[str] = None,
+    vars: str | None = None,
     verbose: bool = False,
-    select: Optional[List[str]] = None,
-    exclude: Optional[List[str]] = None,
+    select: list[str] | None = None,
+    exclude: list[str] | None = None,
 ) -> None:
     """Execute the build command."""
     ctx = CommandContext(
@@ -78,7 +79,7 @@ def cmd_build(
 
     except KeyboardInterrupt:
         typer.echo("\n\n⚠️  Build interrupted by user")
-        raise typer.Exit(130)
+        raise typer.Exit(130) from None
     except Exception as e:
         ctx.handle_error(e)
     finally:

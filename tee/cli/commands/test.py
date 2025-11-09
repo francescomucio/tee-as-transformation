@@ -2,23 +2,23 @@
 Test command implementation.
 """
 
-import typer
 from pathlib import Path
-from typing import Optional, List
+
+import typer
 
 from tee.cli.context import CommandContext
 from tee.cli.selection import ModelSelector
-from tee.parser import ProjectParser
 from tee.engine.execution_engine import ExecutionEngine
+from tee.parser import ProjectParser
 from tee.testing import TestExecutor
 
 
 def cmd_test(
     project_folder: str,
-    vars: Optional[str] = None,
+    vars: str | None = None,
     verbose: bool = False,
-    select: Optional[List[str]] = None,
-    exclude: Optional[List[str]] = None,
+    select: list[str] | None = None,
+    exclude: list[str] | None = None,
 ) -> None:
     """Execute the test command."""
     ctx = CommandContext(

@@ -8,12 +8,12 @@ This module provides utilities for testing database adapters including:
 - Performance benchmarking
 """
 
-import time
 import logging
-from typing import Dict, Any, List, Optional, Callable
+import time
 from contextlib import contextmanager
+from typing import Any, Callable
 
-from .base import DatabaseAdapter, AdapterConfig, MaterializationType
+from .base import DatabaseAdapter
 
 
 class AdapterTester:
@@ -24,7 +24,7 @@ class AdapterTester:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.test_results = {}
 
-    def run_all_tests(self) -> Dict[str, Any]:
+    def run_all_tests(self) -> dict[str, Any]:
         """Run all available tests."""
         self.logger.info(f"Running tests for {self.adapter.__class__.__name__}")
 
@@ -52,7 +52,7 @@ class AdapterTester:
         self.test_results = results
         return results
 
-    def test_connection(self) -> Dict[str, Any]:
+    def test_connection(self) -> dict[str, Any]:
         """Test database connection."""
         try:
             self.adapter.connect()
@@ -63,7 +63,7 @@ class AdapterTester:
         except Exception as e:
             return {"success": False, "error": str(e), "message": "Connection failed"}
 
-    def test_dialect_conversion(self) -> Dict[str, Any]:
+    def test_dialect_conversion(self) -> dict[str, Any]:
         """Test SQL dialect conversion."""
         if not self.adapter.config.source_dialect:
             return {
@@ -92,7 +92,7 @@ class AdapterTester:
             "message": f"Converted {success_count}/{len(test_queries)} queries successfully",
         }
 
-    def test_materializations(self) -> Dict[str, Any]:
+    def test_materializations(self) -> dict[str, Any]:
         """Test supported materialization types."""
         try:
             supported = self.adapter.get_supported_materializations()
@@ -108,7 +108,7 @@ class AdapterTester:
                 "message": "Failed to get supported materializations",
             }
 
-    def test_table_operations(self) -> Dict[str, Any]:
+    def test_table_operations(self) -> dict[str, Any]:
         """Test basic table operations."""
         test_table = "test_table_operations"
         test_query = "SELECT 1 as id, 'test' as name"
@@ -144,10 +144,10 @@ class AdapterTester:
         finally:
             try:
                 self.adapter.disconnect()
-            except:
+            except Exception:
                 pass
 
-    def test_performance(self) -> Dict[str, Any]:
+    def test_performance(self) -> dict[str, Any]:
         """Test basic performance metrics."""
         test_table = "test_performance"
         test_query = "SELECT 1 as id, 'test' as name"
@@ -167,7 +167,7 @@ class AdapterTester:
 
             # Test query execution time
             start_time = time.time()
-            result = self.adapter.execute_query(f"SELECT * FROM {test_table}")
+            self.adapter.execute_query(f"SELECT * FROM {test_table}")
             query_time = time.time() - start_time
 
             # Cleanup
@@ -185,7 +185,7 @@ class AdapterTester:
         finally:
             try:
                 self.adapter.disconnect()
-            except:
+            except Exception:
                 pass
 
     @contextmanager
@@ -197,11 +197,11 @@ class AdapterTester:
         finally:
             try:
                 self.adapter.disconnect()
-            except:
+            except Exception:
                 pass
 
 
-def test_adapter(adapter: DatabaseAdapter) -> Dict[str, Any]:
+def test_adapter(adapter: DatabaseAdapter) -> dict[str, Any]:
     """
     Convenience function to test an adapter.
 
@@ -216,8 +216,8 @@ def test_adapter(adapter: DatabaseAdapter) -> Dict[str, Any]:
 
 
 def benchmark_adapter(
-    adapter: DatabaseAdapter, operations: List[Callable], iterations: int = 10
-) -> Dict[str, Any]:
+    adapter: DatabaseAdapter, operations: list[Callable], iterations: int = 10
+) -> dict[str, Any]:
     """
     Benchmark an adapter with custom operations.
 
@@ -238,7 +238,7 @@ def benchmark_adapter(
             try:
                 operation(adapter)
                 times.append(time.time() - start_time)
-            except Exception as e:
+            except Exception:
                 times.append(float("inf"))
 
         results[f"operation_{i}"] = {

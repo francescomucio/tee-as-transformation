@@ -5,13 +5,13 @@ Handles execution of tests for multiple models and functions in batch.
 """
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Any
 
+from tee.adapters.base import DatabaseAdapter
 from tee.testing.base import TestResult, TestSeverity
 from tee.testing.executors.function_test_executor import FunctionTestExecutor
 from tee.testing.executors.model_test_executor import ModelTestExecutor
 from tee.testing.utils import MetadataExtractor, ResultCategorizer
-from tee.adapters.base import DatabaseAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -40,11 +40,11 @@ class BatchTestExecutor:
 
     def execute_all_tests(
         self,
-        parsed_models: Dict[str, Any],
-        parsed_functions: Dict[str, Any],
-        execution_order: List[str],
-        severity_overrides: Optional[Dict[str, TestSeverity]] = None,
-    ) -> Dict[str, Any]:
+        parsed_models: dict[str, Any],
+        parsed_functions: dict[str, Any],
+        execution_order: list[str],
+        severity_overrides: dict[str, TestSeverity] | None = None,
+    ) -> dict[str, Any]:
         """
         Execute all tests for all models and functions in execution order.
 
@@ -59,7 +59,7 @@ class BatchTestExecutor:
         Returns:
             Dictionary with test execution results
         """
-        all_results: List[TestResult] = []
+        all_results: list[TestResult] = []
         severity_overrides = severity_overrides or {}
         parsed_functions = parsed_functions or {}
 
@@ -103,10 +103,10 @@ class BatchTestExecutor:
 
     def _separate_models_and_functions(
         self,
-        execution_order: List[str],
-        parsed_models: Dict[str, Any],
-        parsed_functions: Dict[str, Any],
-    ) -> tuple[List[str], List[str]]:
+        execution_order: list[str],
+        parsed_models: dict[str, Any],
+        parsed_functions: dict[str, Any],
+    ) -> tuple[list[str], list[str]]:
         """
         Separate function names and model names from execution order.
 
@@ -124,10 +124,10 @@ class BatchTestExecutor:
 
     def _execute_function_tests_batch(
         self,
-        function_names: List[str],
-        parsed_functions: Dict[str, Any],
-        severity_overrides: Dict[str, TestSeverity],
-    ) -> List[TestResult]:
+        function_names: list[str],
+        parsed_functions: dict[str, Any],
+        severity_overrides: dict[str, TestSeverity],
+    ) -> list[TestResult]:
         """
         Execute tests for a batch of functions.
 
@@ -139,7 +139,7 @@ class BatchTestExecutor:
         Returns:
             List of TestResult objects
         """
-        all_results: List[TestResult] = []
+        all_results: list[TestResult] = []
 
         for function_name in function_names:
             if function_name not in parsed_functions:
@@ -164,10 +164,10 @@ class BatchTestExecutor:
 
     def _execute_model_tests_batch(
         self,
-        model_names: List[str],
-        parsed_models: Dict[str, Any],
-        severity_overrides: Dict[str, TestSeverity],
-    ) -> List[TestResult]:
+        model_names: list[str],
+        parsed_models: dict[str, Any],
+        severity_overrides: dict[str, TestSeverity],
+    ) -> list[TestResult]:
         """
         Execute tests for a batch of models.
 
@@ -179,7 +179,7 @@ class BatchTestExecutor:
         Returns:
             List of TestResult objects
         """
-        all_results: List[TestResult] = []
+        all_results: list[TestResult] = []
 
         for table_name in model_names:
             if table_name not in parsed_models:

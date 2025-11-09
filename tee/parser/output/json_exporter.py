@@ -5,15 +5,16 @@ JSON export functionality for parsed models and dependency graphs.
 import json
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional, Literal
+from typing import Any, Literal
+
 import yaml
 
-from tee.parser.shared.types import ParsedModel, ParsedFunction, DependencyGraph
-from tee.parser.shared.exceptions import OutputGenerationError
 from tee.parser.shared.constants import OUTPUT_FILES
+from tee.parser.shared.exceptions import OutputGenerationError
+from tee.parser.shared.types import DependencyGraph, ParsedFunction, ParsedModel
+
 from .ots.transformer import OTSTransformer
 from .test_library_exporter import TestLibraryExporter
-from tee.typing.metadata import OTSModule
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 class JSONExporter:
     """Handles JSON export of parsed models and dependency graphs."""
 
-    def __init__(self, output_folder: Path, project_config: Optional[Dict[str, Any]] = None, project_folder: Optional[Path] = None):
+    def __init__(self, output_folder: Path, project_config: dict[str, Any] | None = None, project_folder: Path | None = None):
         """
         Initialize the JSON exporter.
 
@@ -38,7 +39,7 @@ class JSONExporter:
         self.transformer = OTSTransformer(self.project_config) if self.project_config else None
 
     def export_parsed_models(
-        self, parsed_models: Dict[str, ParsedModel], output_file: Optional[str] = None
+        self, parsed_models: dict[str, ParsedModel], output_file: str | None = None
     ) -> Path:
         """
         Export parsed models to JSON file.
@@ -71,10 +72,10 @@ class JSONExporter:
             return output_file
 
         except Exception as e:
-            raise OutputGenerationError(f"Failed to export parsed models: {e}")
+            raise OutputGenerationError(f"Failed to export parsed models: {e}") from e
 
     def export_dependency_graph(
-        self, graph: DependencyGraph, output_file: Optional[str] = None
+        self, graph: DependencyGraph, output_file: str | None = None
     ) -> Path:
         """
         Export dependency graph to JSON file.
@@ -112,11 +113,11 @@ class JSONExporter:
             return output_file
 
         except Exception as e:
-            raise OutputGenerationError(f"Failed to export dependency graph: {e}")
+            raise OutputGenerationError(f"Failed to export dependency graph: {e}") from e
 
     def export_all(
-        self, parsed_models: Dict[str, ParsedModel], graph: DependencyGraph
-    ) -> Dict[str, Path]:
+        self, parsed_models: dict[str, ParsedModel], graph: DependencyGraph
+    ) -> dict[str, Path]:
         """
         Export both parsed models and dependency graph.
 
@@ -142,15 +143,15 @@ class JSONExporter:
             return results
 
         except Exception as e:
-            raise OutputGenerationError(f"Failed to export all data: {e}")
+            raise OutputGenerationError(f"Failed to export all data: {e}") from e
 
     def export_ots_modules(
         self, 
-        parsed_models: Dict[str, ParsedModel], 
-        parsed_functions: Optional[Dict[str, ParsedFunction]] = None,
-        test_library_path: Optional[Path] = None,
+        parsed_models: dict[str, ParsedModel], 
+        parsed_functions: dict[str, ParsedFunction] | None = None,
+        test_library_path: Path | None = None,
         format: Literal["json", "yaml"] = "json"
-    ) -> Dict[str, Path]:
+    ) -> dict[str, Path]:
         """
         Export parsed models and functions as OTS Modules.
 
@@ -215,9 +216,9 @@ class JSONExporter:
             return results
 
         except Exception as e:
-            raise OutputGenerationError(f"Failed to export OTS modules: {e}")
+            raise OutputGenerationError(f"Failed to export OTS modules: {e}") from e
 
-    def export_test_library(self, project_name: str) -> Optional[Path]:
+    def export_test_library(self, project_name: str) -> Path | None:
         """
         Export discovered SQL tests to OTS test library format.
 

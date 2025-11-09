@@ -6,7 +6,7 @@ Extracts test definition parsing logic from TestExecutor to eliminate duplicatio
 
 import logging
 from dataclasses import dataclass
-from typing import Dict, Any, Optional
+from typing import Any
 
 from tee.testing.base import TestSeverity
 from tee.typing.metadata import TestDefinition
@@ -19,9 +19,9 @@ class ParsedTestDefinition:
     """Parsed test definition with extracted components."""
 
     test_name: str
-    params: Optional[Dict[str, Any]] = None
-    expected: Optional[Any] = None
-    severity_override: Optional[TestSeverity] = None
+    params: dict[str, Any] | None = None
+    expected: Any | None = None
+    severity_override: TestSeverity | None = None
 
 
 class TestDefinitionParser:
@@ -30,9 +30,9 @@ class TestDefinitionParser:
     @staticmethod
     def parse(
         test_def: TestDefinition,
-        severity_overrides: Dict[str, TestSeverity],
+        severity_overrides: dict[str, TestSeverity],
         context: str,
-    ) -> Optional[ParsedTestDefinition]:
+    ) -> ParsedTestDefinition | None:
         """
         Parse a test definition into its components.
 
@@ -87,11 +87,11 @@ class TestDefinitionParser:
 
     @staticmethod
     def _extract_severity_override(
-        test_def: Dict[str, Any],
-        severity_overrides: Dict[str, TestSeverity],
+        test_def: dict[str, Any],
+        severity_overrides: dict[str, TestSeverity],
         context: str,
         test_name: str,
-    ) -> Optional[TestSeverity]:
+    ) -> TestSeverity | None:
         """
         Extract severity override from test definition or overrides dict.
 

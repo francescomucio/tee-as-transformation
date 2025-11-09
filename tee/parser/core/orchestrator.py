@@ -4,15 +4,21 @@ High-level orchestration for parsing and analysis workflows.
 
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any
 
-from tee.parser.parsers import ParserFactory, FunctionSQLParser, FunctionPythonParser
 from tee.parser.analysis import DependencyGraphBuilder, TableResolver
-from tee.parser.processing import FileDiscovery, substitute_sql_variables, validate_sql_variables
 from tee.parser.output import JSONExporter, ReportGenerator
-from tee.parser.shared.types import ParsedModel, ParsedFunction, DependencyGraph, ConnectionConfig, Variables
+from tee.parser.parsers import FunctionPythonParser, FunctionSQLParser, ParserFactory
+from tee.parser.processing import FileDiscovery, substitute_sql_variables, validate_sql_variables
 from tee.parser.shared.exceptions import ParserError
 from tee.parser.shared.function_utils import standardize_parsed_function
+from tee.parser.shared.types import (
+    ConnectionConfig,
+    DependencyGraph,
+    ParsedFunction,
+    ParsedModel,
+    Variables,
+)
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -25,8 +31,8 @@ class ParserOrchestrator:
         self,
         project_folder: str,
         connection: ConnectionConfig,
-        variables: Optional[Variables] = None,
-        project_config: Optional[Dict[str, Any]] = None,
+        variables: Variables | None = None,
+        project_config: dict[str, Any] | None = None,
     ):
         """
         Initialize the orchestrator.
@@ -57,11 +63,11 @@ class ParserOrchestrator:
         self.transformer = project_config is not None  # Flag to enable OTS export
 
         # Cached results
-        self._parsed_models: Optional[Dict[str, ParsedModel]] = None
-        self._parsed_functions: Optional[Dict[str, ParsedFunction]] = None
-        self._dependency_graph: Optional[DependencyGraph] = None
+        self._parsed_models: dict[str, ParsedModel] | None = None
+        self._parsed_functions: dict[str, ParsedFunction] | None = None
+        self._dependency_graph: DependencyGraph | None = None
 
-    def discover_and_parse_models(self) -> Dict[str, ParsedModel]:
+    def discover_and_parse_models(self) -> dict[str, ParsedModel]:
         """
         Discover and parse all model files in the project.
 
@@ -99,7 +105,7 @@ class ParserOrchestrator:
                     logger.debug(f"Processing SQL file: {sql_file}")
 
                     # Read SQL content
-                    with open(sql_file, "r", encoding="utf-8") as f:
+                    with open(sql_file, encoding="utf-8") as f:
                         sql_content = f.read()
 
                     # Apply variable substitution if variables are provided
@@ -136,7 +142,7 @@ class ParserOrchestrator:
                     logger.debug(f"Processing Python file: {python_file}")
 
                     # Read Python content
-                    with open(python_file, "r", encoding="utf-8") as f:
+                    with open(python_file, encoding="utf-8") as f:
                         python_content = f.read()
 
                     # Parse with Python parser
@@ -175,9 +181,9 @@ class ParserOrchestrator:
             return parsed_models
 
         except Exception as e:
-            raise ParserError(f"Failed to discover and parse models: {e}")
+            raise ParserError(f"Failed to discover and parse models: {e}") from e
 
-    def discover_and_parse_functions(self) -> Dict[str, ParsedFunction]:
+    def discover_and_parse_functions(self) -> dict[str, ParsedFunction]:
         """
         Discover and parse all function files in the project.
 
@@ -240,7 +246,7 @@ class ParserOrchestrator:
                     file_to_parse = override_file if override_file else sql_file
 
                     # Read SQL content
-                    with open(file_to_parse, "r", encoding="utf-8") as f:
+                    with open(file_to_parse, encoding="utf-8") as f:
                         sql_content = f.read()
 
                     # Parse SQL function
@@ -278,7 +284,7 @@ class ParserOrchestrator:
                         logger.debug(f"Processing standalone database override: {override_file}")
 
                         # Read SQL content
-                        with open(override_file, "r", encoding="utf-8") as f:
+                        with open(override_file, encoding="utf-8") as f:
                             sql_content = f.read()
 
                         # Parse SQL function
@@ -315,7 +321,7 @@ class ParserOrchestrator:
                     logger.debug(f"Processing Python function file: {python_file}")
 
                     # Read Python content
-                    with open(python_file, "r", encoding="utf-8") as f:
+                    with open(python_file, encoding="utf-8") as f:
                         python_content = f.read()
 
                     # Parse Python functions
@@ -366,7 +372,7 @@ class ParserOrchestrator:
             return parsed_functions
 
         except Exception as e:
-            raise ParserError(f"Failed to discover and parse functions: {e}")
+            raise ParserError(f"Failed to discover and parse functions: {e}") from e
 
     def build_dependency_graph(self) -> DependencyGraph:
         """
@@ -416,9 +422,9 @@ class ParserOrchestrator:
             return self._dependency_graph
 
         except Exception as e:
-            raise ParserError(f"Failed to build dependency graph: {e}")
+            raise ParserError(f"Failed to build dependency graph: {e}") from e
 
-    def export_all(self) -> Dict[str, Path]:
+    def export_all(self) -> dict[str, Path]:
         """
         Export all parsed models, dependency graph, and OTS modules.
 
@@ -467,11 +473,11 @@ class ParserOrchestrator:
             return all_results
 
         except Exception as e:
-            raise ParserError(f"Failed to export all data: {e}")
+            raise ParserError(f"Failed to export all data: {e}") from e
 
     def evaluate_python_models(
-        self, parsed_models: Dict[str, Any], variables: Optional[Variables] = None
-    ) -> Dict[str, Any]:
+        self, parsed_models: dict[str, Any], variables: Variables | None = None
+    ) -> dict[str, Any]:
         """
         Evaluate all Python models that need evaluation.
 
@@ -489,7 +495,7 @@ class ParserOrchestrator:
             logger.error(f"Error evaluating Python models: {e}")
             return parsed_models
 
-    def update_python_models_with_resolved_sql(self, updated_models: Dict[str, Any]) -> None:
+    def update_python_models_with_resolved_sql(self, updated_models: dict[str, Any]) -> None:
         """
         Update Python parser's cached models with resolved SQL from execution.
 

@@ -1,7 +1,7 @@
 """Table creation and management for Snowflake."""
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class TableHandler:
         self.tag_manager = adapter.tag_manager
 
     def create(
-        self, table_name: str, query: str, metadata: Optional[Dict[str, Any]] = None
+        self, table_name: str, query: str, metadata: dict[str, Any] | None = None
     ) -> None:
         """Create a table from a qualified SQL query with optional column metadata."""
         if not self.adapter.connection:

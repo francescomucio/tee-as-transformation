@@ -8,8 +8,9 @@ This module provides PostgreSQL-specific functionality including:
 - Materialization support
 """
 
-from typing import Any, Optional, Dict
-from tee.adapters.base import DatabaseAdapter, AdapterConfig, MaterializationType
+from typing import Any
+
+from tee.adapters.base import AdapterConfig, DatabaseAdapter, MaterializationType
 from tee.adapters.registry import register_adapter
 
 
@@ -20,7 +21,7 @@ class PostgreSQLAdapter(DatabaseAdapter):
         try:
             import psycopg2
         except ImportError:
-            raise ImportError("psycopg2 is not installed. Install it with: uv add psycopg2-binary")
+            raise ImportError("psycopg2 is not installed. Install it with: uv add psycopg2-binary") from None
 
         super().__init__(config)
 
@@ -86,7 +87,7 @@ class PostgreSQLAdapter(DatabaseAdapter):
             raise
 
     def create_table(
-        self, table_name: str, query: str, metadata: Optional[Dict[str, Any]] = None
+        self, table_name: str, query: str, metadata: dict[str, Any] | None = None
     ) -> None:
         """Create a table from a qualified SQL query."""
         if not self.connection:
@@ -126,7 +127,7 @@ class PostgreSQLAdapter(DatabaseAdapter):
             raise
 
     def create_view(
-        self, view_name: str, query: str, metadata: Optional[Dict[str, Any]] = None
+        self, view_name: str, query: str, metadata: dict[str, Any] | None = None
     ) -> None:
         """Create a view from a qualified SQL query."""
         if not self.connection:
@@ -286,7 +287,7 @@ class PostgreSQLAdapter(DatabaseAdapter):
         self,
         function_name: str,
         function_sql: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Create or replace a user-defined function in the database."""
         if not self.connection:
@@ -327,7 +328,7 @@ class PostgreSQLAdapter(DatabaseAdapter):
             from tee.parser.shared.exceptions import FunctionExecutionError
             raise FunctionExecutionError(f"Failed to create function {function_name}: {e}") from e
 
-    def function_exists(self, function_name: str, signature: Optional[str] = None) -> bool:
+    def function_exists(self, function_name: str, signature: str | None = None) -> bool:
         """Check if a function exists in the database."""
         if not self.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")

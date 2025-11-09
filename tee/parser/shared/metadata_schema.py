@@ -2,25 +2,19 @@
 Metadata schema definitions and validation for SQL models.
 """
 
-from typing import Dict, Any, List, Optional, Union
-from dataclasses import dataclass
-import logging
 import ast
+import logging
 import os
+from dataclasses import dataclass
+from typing import Any
 
 from tee.typing.metadata import (
-    ColumnDefinition,
-    ModelMetadataDict,
-    ParsedModelMetadata,
-    MaterializationType,
-    DataType,
     ColumnTestName,
-    ModelTestName,
-    IncrementalStrategy,
+    DataType,
     IncrementalConfig,
-    IncrementalAppendConfig,
-    IncrementalMergeConfig,
-    IncrementalDeleteInsertConfig,
+    MaterializationType,
+    ModelMetadataDict,
+    ModelTestName,
 )
 
 logger = logging.getLogger(__name__)
@@ -32,8 +26,8 @@ class ColumnSchema:
 
     name: str
     datatype: DataType
-    description: Optional[str] = None
-    tests: Optional[List[ColumnTestName]] = None
+    description: str | None = None
+    tests: list[ColumnTestName] | None = None
 
     def __post_init__(self):
         """Validate required fields after initialization."""
@@ -49,12 +43,12 @@ class ColumnSchema:
 class ModelMetadata:
     """Metadata definition for a SQL model."""
 
-    description: Optional[str] = None
-    schema: Optional[List[ColumnSchema]] = None
-    partitions: Optional[List[str]] = None
-    materialization: Optional[MaterializationType] = None
-    tests: Optional[List[ModelTestName]] = None
-    incremental: Optional[IncrementalConfig] = None
+    description: str | None = None
+    schema: list[ColumnSchema] | None = None
+    partitions: list[str] | None = None
+    materialization: MaterializationType | None = None
+    tests: list[ModelTestName] | None = None
+    incremental: IncrementalConfig | None = None
 
     def __post_init__(self):
         """Validate metadata after initialization."""
@@ -184,10 +178,10 @@ def validate_metadata_dict(metadata_dict: ModelMetadataDict) -> ModelMetadata:
         )
 
     except Exception as e:
-        raise ValueError(f"Invalid metadata format: {str(e)}")
+        raise ValueError(f"Invalid metadata format: {str(e)}") from e
 
 
-def parse_metadata_from_python_file(file_path: str) -> Optional[ModelMetadataDict]:
+def parse_metadata_from_python_file(file_path: str) -> ModelMetadataDict | None:
     """
     Parse metadata from a Python file containing a metadata object.
     Supports both typed imports and AST parsing approaches.
@@ -205,7 +199,7 @@ def parse_metadata_from_python_file(file_path: str) -> Optional[ModelMetadataDic
         if not os.path.exists(file_path):
             return None
 
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
 
         # First, try to execute the file to get typed metadata
@@ -215,18 +209,18 @@ def parse_metadata_from_python_file(file_path: str) -> Optional[ModelMetadataDic
             namespace = {}
             # Add the typing classes to the namespace
             from tee.typing.metadata import (
-                ModelMetadataDict,
                 ColumnDefinition,
-                ParsedModelMetadata,
-                DataType,
-                MaterializationType,
                 ColumnTestName,
-                ModelTestName,
-                IncrementalStrategy,
-                IncrementalConfig,
+                DataType,
                 IncrementalAppendConfig,
-                IncrementalMergeConfig,
+                IncrementalConfig,
                 IncrementalDeleteInsertConfig,
+                IncrementalMergeConfig,
+                IncrementalStrategy,
+                MaterializationType,
+                ModelMetadataDict,
+                ModelTestName,
+                ParsedModelMetadata,
             )
 
             namespace.update(

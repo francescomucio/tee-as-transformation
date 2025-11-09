@@ -2,13 +2,13 @@
 Core database adapter base class.
 """
 
-from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional
 import logging
+from abc import ABC, abstractmethod
+from typing import Any
 
 from .config import AdapterConfig, MaterializationType
-from .sql import SQLProcessor
 from .metadata import MetadataHandler
+from .sql import SQLProcessor
 from .testing import TestQueryGenerator
 
 
@@ -23,7 +23,7 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
     # Override in subclasses to define required fields
     REQUIRED_FIELDS = ["type"]
 
-    def __init__(self, config_dict: Dict[str, Any]):
+    def __init__(self, config_dict: dict[str, Any]):
         self.connection = None
         self.logger = logging.getLogger(self.__class__.__name__)
 
@@ -40,15 +40,13 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
 
     def _init_dialects(self) -> None:
         """Initialize SQLglot dialect objects."""
-        from sqlglot.dialects import Dialect
-        import sqlglot
 
         self.source_dialect = self._get_dialect(self.config.source_dialect)
         self.target_dialect = self._get_dialect(
             self.config.target_dialect or self.get_default_dialect()
         )
 
-    def _validate_config(self, config_dict: Dict[str, Any]) -> None:
+    def _validate_config(self, config_dict: dict[str, Any]) -> None:
         """Validate configuration against adapter requirements."""
         # Check required fields
         missing = set(self.REQUIRED_FIELDS) - set(config_dict.keys())
@@ -61,7 +59,7 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
         # Validate field values
         self._validate_field_values(config_dict)
 
-    def _validate_field_types(self, config_dict: Dict[str, Any]) -> None:
+    def _validate_field_types(self, config_dict: dict[str, Any]) -> None:
         """Validate field types."""
         if "port" in config_dict and config_dict["port"] is not None:
             if not isinstance(config_dict["port"], int):
@@ -75,7 +73,7 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
             if not isinstance(config_dict["query_timeout"], int):
                 raise ValueError("Query timeout must be an integer")
 
-    def _validate_field_values(self, config_dict: Dict[str, Any]) -> None:
+    def _validate_field_values(self, config_dict: dict[str, Any]) -> None:
         """Validate field values."""
         if "port" in config_dict and config_dict["port"] is not None:
             if not (1 <= config_dict["port"] <= 65535):
@@ -89,7 +87,7 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
             if config_dict["query_timeout"] <= 0:
                 raise ValueError("Query timeout must be positive")
 
-    def _create_adapter_config(self, config_dict: Dict[str, Any]) -> AdapterConfig:
+    def _create_adapter_config(self, config_dict: dict[str, Any]) -> AdapterConfig:
         """Create AdapterConfig from validated dictionary."""
         return AdapterConfig(
             type=config_dict["type"],
@@ -116,7 +114,7 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
         pass
 
     @abstractmethod
-    def get_supported_materializations(self) -> List[MaterializationType]:
+    def get_supported_materializations(self) -> list[MaterializationType]:
         """Get list of supported materialization types for this database."""
         pass
 
@@ -137,7 +135,7 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
 
     @abstractmethod
     def create_table(
-        self, table_name: str, query: str, metadata: Optional[Dict[str, Any]] = None
+        self, table_name: str, query: str, metadata: dict[str, Any] | None = None
     ) -> None:
         """Create a table from a qualified SQL query with optional column metadata.
 
@@ -150,7 +148,7 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
 
     @abstractmethod
     def create_view(
-        self, view_name: str, query: str, metadata: Optional[Dict[str, Any]] = None
+        self, view_name: str, query: str, metadata: dict[str, Any] | None = None
     ) -> None:
         """Create a view from a qualified SQL query."""
         pass
@@ -166,7 +164,7 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
         pass
 
     @abstractmethod
-    def get_table_info(self, table_name: str) -> Dict[str, Any]:
+    def get_table_info(self, table_name: str) -> dict[str, Any]:
         """Get information about a table."""
         pass
 
@@ -176,7 +174,7 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
         self,
         function_name: str,
         function_sql: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Create or replace a user-defined function in the database.
 
@@ -194,7 +192,7 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
         pass
 
     @abstractmethod
-    def function_exists(self, function_name: str, signature: Optional[str] = None) -> bool:
+    def function_exists(self, function_name: str, signature: str | None = None) -> bool:
         """
         Check if a function exists in the database.
         
@@ -220,7 +218,7 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
         """
         pass
 
-    def get_function_info(self, function_name: str) -> Dict[str, Any]:
+    def get_function_info(self, function_name: str) -> dict[str, Any]:
         """Get information about a function.
 
         This is an optional method that adapters can override if they support
@@ -254,7 +252,7 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
         self.create_table(table_name, source_sql)
 
     def execute_incremental_merge(
-        self, table_name: str, source_sql: str, config: Dict[str, Any]
+        self, table_name: str, source_sql: str, config: dict[str, Any]
     ) -> None:
         """Execute incremental merge operation.
 
@@ -280,7 +278,7 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
         self.execute_query(delete_sql)
         self.execute_query(insert_sql)
 
-    def get_database_info(self) -> Dict[str, Any]:
+    def get_database_info(self) -> dict[str, Any]:
         """Get information about the current database connection."""
         return {
             "adapter_type": self.__class__.__name__,
@@ -292,7 +290,7 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
         }
 
     def attach_tags(
-        self, object_type: str, object_name: str, tags: List[str]
+        self, object_type: str, object_name: str, tags: list[str]
     ) -> None:
         """
         Attach tags (dbt-style, list of strings) to a database object.
@@ -311,7 +309,7 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
         )
 
     def attach_object_tags(
-        self, object_type: str, object_name: str, object_tags: Dict[str, str]
+        self, object_type: str, object_name: str, object_tags: dict[str, str]
     ) -> None:
         """
         Attach object tags (database-style, key-value pairs) to a database object.
@@ -329,9 +327,8 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
             f"Object tags would be attached to {object_type} {object_name}: {object_tags}"
         )
 
-    def _get_dialect(self, dialect_name: Optional[str]):
+    def _get_dialect(self, dialect_name: str | None):
         """Get SQLglot dialect object from name."""
-        from sqlglot.dialects import Dialect
         import sqlglot
 
         if not dialect_name:

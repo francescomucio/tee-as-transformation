@@ -6,13 +6,14 @@ Refactored to use feature-based split with dedicated executors, parsers, and che
 
 import logging
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any
+
+from tee.adapters.base import DatabaseAdapter
 
 from .base import TestSeverity
-from .test_discovery import TestDiscovery
-from .executors import FunctionTestExecutor, ModelTestExecutor, BatchTestExecutor
 from .checkers import UnusedTestChecker
-from tee.adapters.base import DatabaseAdapter
+from .executors import BatchTestExecutor, FunctionTestExecutor, ModelTestExecutor
+from .test_discovery import TestDiscovery
 
 
 class TestExecutor:
@@ -20,7 +21,7 @@ class TestExecutor:
 
     __test__ = False  # Tell pytest this is not a test class
 
-    def __init__(self, adapter: DatabaseAdapter, project_folder: Optional[str] = None):
+    def __init__(self, adapter: DatabaseAdapter, project_folder: str | None = None):
         """
         Initialize test executor.
 
@@ -31,7 +32,7 @@ class TestExecutor:
         self.adapter = adapter
         self.project_folder = Path(project_folder) if project_folder else None
         self.logger = logging.getLogger(self.__class__.__name__)
-        self._test_discovery: Optional[TestDiscovery] = None
+        self._test_discovery: TestDiscovery | None = None
 
         # Initialize executors
         self.function_executor = FunctionTestExecutor(adapter)
@@ -45,9 +46,9 @@ class TestExecutor:
     def execute_tests_for_model(
         self,
         table_name: str,
-        metadata: Optional[Dict[str, Any]] = None,
-        severity_overrides: Optional[Dict[str, TestSeverity]] = None,
-    ) -> List[Any]:
+        metadata: dict[str, Any] | None = None,
+        severity_overrides: dict[str, TestSeverity] | None = None,
+    ) -> list[Any]:
         """
         Execute all tests for a given model based on its metadata.
 
@@ -71,9 +72,9 @@ class TestExecutor:
     def execute_tests_for_function(
         self,
         function_name: str,
-        metadata: Optional[Dict[str, Any]] = None,
-        severity_overrides: Optional[Dict[str, TestSeverity]] = None,
-    ) -> List[Any]:
+        metadata: dict[str, Any] | None = None,
+        severity_overrides: dict[str, TestSeverity] | None = None,
+    ) -> list[Any]:
         """
         Execute all tests for a given function based on its metadata.
 
@@ -96,11 +97,11 @@ class TestExecutor:
 
     def execute_all_tests(
         self,
-        parsed_models: Dict[str, Any],
-        execution_order: Optional[List[str]] = None,
-        parsed_functions: Optional[Dict[str, Any]] = None,
-        severity_overrides: Optional[Dict[str, TestSeverity]] = None,
-    ) -> Dict[str, Any]:
+        parsed_models: dict[str, Any],
+        execution_order: list[str] | None = None,
+        parsed_functions: dict[str, Any] | None = None,
+        severity_overrides: dict[str, TestSeverity] | None = None,
+    ) -> dict[str, Any]:
         """
         Execute all tests for all models and functions in execution order.
 
@@ -156,8 +157,8 @@ class TestExecutor:
         return results
 
     def _check_unused_generic_tests(
-        self, parsed_models: Dict[str, Any], parsed_functions: Dict[str, Any]
-    ) -> List[str]:
+        self, parsed_models: dict[str, Any], parsed_functions: dict[str, Any]
+    ) -> list[str]:
         """
         Check for unused generic SQL tests and return warning messages.
 
@@ -186,7 +187,7 @@ class TestExecutor:
             used_test_names=used_test_names,
         )
 
-    def _extract_metadata(self, model_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _extract_metadata(self, model_data: dict[str, Any]) -> dict[str, Any] | None:
         """
         Extract metadata from model data.
 
@@ -202,7 +203,7 @@ class TestExecutor:
 
         return MetadataExtractor.extract_model_metadata(model_data)
 
-    def _extract_function_metadata(self, function_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _extract_function_metadata(self, function_data: dict[str, Any]) -> dict[str, Any] | None:
         """
         Extract metadata from function data.
 

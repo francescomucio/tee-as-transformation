@@ -3,10 +3,10 @@ Table name resolution and generation functionality.
 """
 
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any
 
-from tee.parser.shared.types import ParsedModel, ParsedFunction, ConnectionConfig
 from tee.parser.shared.exceptions import TableResolutionError
+from tee.parser.shared.types import ConnectionConfig, ParsedFunction, ParsedModel
 
 
 class TableResolver:
@@ -65,11 +65,11 @@ class TableResolver:
                     table_name = table_name.rsplit(".", 1)[0]
                 return table_name
         except Exception as e:
-            raise TableResolutionError(f"Failed to generate table name for {sql_file}: {e}")
+            raise TableResolutionError(f"Failed to generate table name for {sql_file}: {e}") from e
 
     def resolve_table_reference(
-        self, table_ref: str, parsed_models: Dict[str, ParsedModel]
-    ) -> Optional[str]:
+        self, table_ref: str, parsed_models: dict[str, ParsedModel]
+    ) -> str | None:
         """
         Resolve a table reference to its full table name.
 
@@ -93,7 +93,7 @@ class TableResolver:
         return None
 
     def generate_full_function_name(
-        self, function_file: Path, functions_folder: Path, function_metadata: Dict[str, Any]
+        self, function_file: Path, functions_folder: Path, function_metadata: dict[str, Any]
     ) -> str:
         """
         Generate the full function name based on the connection type, file path, and metadata.
@@ -155,11 +155,11 @@ class TableResolver:
                     return function_name
 
         except Exception as e:
-            raise TableResolutionError(f"Failed to generate function name for {function_file}: {e}")
+            raise TableResolutionError(f"Failed to generate function name for {function_file}: {e}") from e
 
     def resolve_function_reference(
-        self, function_ref: str, parsed_functions: Dict[str, ParsedFunction]
-    ) -> Optional[str]:
+        self, function_ref: str, parsed_functions: dict[str, ParsedFunction]
+    ) -> str | None:
         """
         Resolve a function reference to its full function name.
 

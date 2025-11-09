@@ -6,10 +6,11 @@ to keep the main executor.py focused on the public API.
 """
 
 from pathlib import Path
-from typing import Dict, Any, Optional, Union, List, TYPE_CHECKING
-from tee.parser import ProjectParser
+from typing import TYPE_CHECKING, Any
+
 from tee.engine import ModelExecutor
 from tee.engine.seeds import SeedDiscovery, SeedLoader
+from tee.parser import ProjectParser
 from tee.testing import TestExecutor, TestSeverity
 
 if TYPE_CHECKING:
@@ -18,15 +19,15 @@ if TYPE_CHECKING:
 
 def setup_build_context_from_compile(
     project_folder: str,
-    connection_config: Union[Dict[str, Any], AdapterConfig],
-    variables: Optional[Dict[str, Any]],
-    select_patterns: Optional[List[str]],
-    exclude_patterns: Optional[List[str]],
-    project_config: Optional[Dict[str, Any]],
-    parsed_models: Dict[str, Any],
-    graph: Dict[str, Any],
-    execution_order: List[str],
-) -> tuple[ProjectParser, Dict[str, Any], Dict[str, Any], List[str]]:
+    connection_config: dict[str, Any] | AdapterConfig,
+    variables: dict[str, Any] | None,
+    select_patterns: list[str] | None,
+    exclude_patterns: list[str] | None,
+    project_config: dict[str, Any] | None,
+    parsed_models: dict[str, Any],
+    graph: dict[str, Any],
+    execution_order: list[str],
+) -> tuple[ProjectParser, dict[str, Any], dict[str, Any], list[str]]:
     """
     Set up build context using compile results (graph and models).
     
@@ -53,8 +54,8 @@ def setup_build_context_from_compile(
 
 def initialize_build_executors(
     project_folder: str,
-    connection_config: Union[Dict[str, Any], AdapterConfig],
-    variables: Optional[Dict[str, Any]],
+    connection_config: dict[str, Any] | AdapterConfig,
+    variables: dict[str, Any] | None,
 ) -> tuple[ModelExecutor, TestExecutor]:
     """
     Initialize model and test executors and connect to database.
@@ -115,7 +116,7 @@ def should_skip_model(
     node_name: str,
     skipped_models: set[str],
     failed_models: set[str],
-    graph: Dict[str, Any],
+    graph: dict[str, Any],
 ) -> bool:
     """Check if a model should be skipped."""
     if node_name.startswith("test:"):
@@ -148,9 +149,9 @@ def mark_dependents_as_skipped(
 
 def execute_single_model(
     node_name: str,
-    parsed_models: Dict[str, Any],
+    parsed_models: dict[str, Any],
     model_executor: ModelExecutor,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Execute a single model and return results."""
     print(f"\n📦 Executing: {node_name}")
     
@@ -163,7 +164,7 @@ def execute_single_model(
 
 def handle_model_execution_result(
     node_name: str,
-    model_results: Dict[str, Any],
+    model_results: dict[str, Any],
     failed_models: set[str],
     parser: ProjectParser,
     skipped_models: set[str],
@@ -198,10 +199,10 @@ def handle_model_execution_result(
 
 def execute_tests_for_model(
     node_name: str,
-    parsed_models: Dict[str, Any],
+    parsed_models: dict[str, Any],
     model_executor: ModelExecutor,
     test_executor: TestExecutor,
-) -> List[Any]:
+) -> list[Any]:
     """Execute tests for a model and return test results."""
     from tee.engine.metadata import MetadataExtractor
     
@@ -222,10 +223,10 @@ def execute_tests_for_model(
 
 def execute_tests_for_function(
     function_name: str,
-    parsed_functions: Dict[str, Any],
+    parsed_functions: dict[str, Any],
     model_executor: ModelExecutor,
     test_executor: TestExecutor,
-) -> List[Any]:
+) -> list[Any]:
     """Execute tests for a function and return test results."""
     from tee.engine.metadata import MetadataExtractor
     
@@ -246,7 +247,7 @@ def execute_tests_for_function(
 
 def handle_test_results(
     node_name: str,
-    test_results: List[Any],
+    test_results: list[Any],
     failed_models: set[str],
     parser: ProjectParser,
     skipped_models: set[str],
@@ -290,13 +291,13 @@ def handle_test_results(
 
 
 def compile_build_results(
-    execution_order: List[str],
+    execution_order: list[str],
     failed_models: set[str],
     skipped_models: set[str],
-    all_test_results: List[Any],
-    parsed_models: Dict[str, Any],
-    graph: Dict[str, Any],
-) -> Dict[str, Any]:
+    all_test_results: list[Any],
+    parsed_models: dict[str, Any],
+    graph: dict[str, Any],
+) -> dict[str, Any]:
     """Compile final build results."""
     executed_tables = [
         name
@@ -344,7 +345,7 @@ def compile_build_results(
     }
 
 
-def print_build_summary(results: Dict[str, Any], failed_models: set[str], skipped_models: set[str]) -> None:
+def print_build_summary(results: dict[str, Any], failed_models: set[str], skipped_models: set[str]) -> None:
     """Print build summary."""
     executed_tables = results["executed_tables"]
     test_results = results["test_results"]

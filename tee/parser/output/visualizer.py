@@ -2,17 +2,17 @@
 Visualization functionality for dependency graphs.
 """
 
-from typing import Dict, Any, Optional
 from pathlib import Path
+from typing import Any
 
-from tee.parser.shared.types import DependencyGraph
 from tee.parser.shared.exceptions import OutputGenerationError
+from tee.parser.shared.types import DependencyGraph
 
 
 class DependencyVisualizer:
     """Handles visualization of dependency graphs."""
 
-    def generate_mermaid_diagram(self, graph: DependencyGraph, parsed_functions: Optional[Dict[str, Any]] = None) -> str:
+    def generate_mermaid_diagram(self, graph: DependencyGraph, parsed_functions: dict[str, Any] | None = None) -> str:
         """
         Generate a Mermaid diagram representation of the dependency graph.
 
@@ -75,7 +75,7 @@ class DependencyVisualizer:
         return "\n".join(mermaid_lines)
 
     def save_mermaid_diagram(
-        self, graph: DependencyGraph, output_file: str = "output/dependency_graph.mmd", parsed_functions: Optional[Dict[str, Any]] = None
+        self, graph: DependencyGraph, output_file: str = "output/dependency_graph.mmd", parsed_functions: dict[str, Any] | None = None
     ) -> None:
         """
         Save the dependency graph as a Mermaid diagram file.
@@ -101,7 +101,7 @@ class DependencyVisualizer:
             if graph["cycles"]:
                 print(f"⚠️  Warning: {len(graph['cycles'])} circular dependencies detected!")
         except Exception as e:
-            raise OutputGenerationError(f"Failed to save Mermaid diagram: {e}")
+            raise OutputGenerationError(f"Failed to save Mermaid diagram: {e}") from e
 
     def _escape_mermaid_node(self, node_name: str) -> str:
         """

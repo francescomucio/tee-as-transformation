@@ -1,7 +1,7 @@
 """Metadata extraction from model and function data."""
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 class MetadataExtractor:
     """Extracts and transforms metadata from model and function data."""
 
-    def extract_model_metadata(self, model_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def extract_model_metadata(self, model_data: dict[str, Any]) -> dict[str, Any] | None:
         """
         Extract metadata from model data, prioritizing nested metadata over file metadata.
 
@@ -72,7 +72,7 @@ class MetadataExtractor:
             logger.warning(f"Error extracting metadata: {e}")
             return None
 
-    def extract_function_metadata(self, function_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def extract_function_metadata(self, function_data: dict[str, Any]) -> dict[str, Any] | None:
         """
         Extract metadata from function data.
 
@@ -102,7 +102,7 @@ class MetadataExtractor:
             logger.warning(f"Error extracting function metadata: {e}")
             return None
 
-    def load_schema_metadata(self, schema_name: str, project_folder: str) -> Optional[Dict[str, Any]]:
+    def load_schema_metadata(self, schema_name: str, project_folder: str) -> dict[str, Any] | None:
         """
         Load schema-level metadata (tags, object_tags) from project config.
 
@@ -119,9 +119,8 @@ class MetadataExtractor:
             Dictionary with tags and object_tags, or None if no schema metadata found
         """
         try:
-            from ..config import load_database_config
-            from pathlib import Path
             import tomllib
+            from pathlib import Path
 
             project_toml = Path(project_folder) / "project.toml"
             if not project_toml.exists():
@@ -166,7 +165,7 @@ class MetadataExtractor:
             return None
 
     def _extract_tags_to_metadata(
-        self, metadata: Dict[str, Any], model_metadata: Dict[str, Any]
+        self, metadata: dict[str, Any], model_metadata: dict[str, Any]
     ) -> None:
         """
         Extract tags and object_tags from model metadata and ensure they're in the metadata dict.

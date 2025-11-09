@@ -1,7 +1,7 @@
 """View creation and management for Snowflake."""
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class ViewHandler:
         self.tag_manager = adapter.tag_manager
 
     def create(
-        self, view_name: str, query: str, metadata: Optional[Dict[str, Any]] = None
+        self, view_name: str, query: str, metadata: dict[str, Any] | None = None
     ) -> None:
         """Create a view from a qualified SQL query."""
         if not self.adapter.connection:
@@ -83,7 +83,7 @@ class ViewHandler:
             raise
 
     def _build_view_with_column_comments(
-        self, qualified_view_name: str, query: str, metadata: Dict[str, Any]
+        self, qualified_view_name: str, query: str, metadata: dict[str, Any]
     ) -> str:
         """
         Build a CREATE VIEW statement with inline column comments and view comment for Snowflake.

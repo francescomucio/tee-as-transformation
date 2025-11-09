@@ -2,11 +2,11 @@
 Metadata merging utilities for function SQL parsing.
 """
 
-from typing import Dict, Any
+from typing import Any
 
-from tee.typing.metadata import ParsedFunctionMetadata
 from tee.parser.shared.exceptions import FunctionMetadataError
 from tee.parser.shared.function_utils import validate_function_metadata_consistency
+from tee.typing.metadata import ParsedFunctionMetadata
 
 
 class MetadataMerger:
@@ -14,7 +14,7 @@ class MetadataMerger:
 
     @staticmethod
     def merge(
-        sql_metadata: Dict[str, Any], python_metadata: Dict[str, Any]
+        sql_metadata: dict[str, Any], python_metadata: dict[str, Any]
     ) -> ParsedFunctionMetadata:
         """
         Merge SQL-extracted metadata with Python metadata file.
@@ -35,7 +35,7 @@ class MetadataMerger:
         except FunctionMetadataError as e:
             raise FunctionMetadataError(
                 f"Metadata validation failed for function '{sql_metadata.get('function_name', 'unknown')}': {e}"
-            )
+            ) from e
 
         # Start with SQL metadata
         merged = sql_metadata.copy()

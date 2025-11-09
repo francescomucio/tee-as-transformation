@@ -4,14 +4,14 @@ Model selection utilities for filtering models by name and tags.
 Supports --select and --exclude flags similar to dbt's selection syntax.
 """
 
-from typing import Dict, Any, List, Optional, Tuple
 from fnmatch import fnmatch
+from typing import Any
 
 
 class ModelSelector:
     """Selects models based on name patterns and tags."""
 
-    def __init__(self, select_patterns: Optional[List[str]] = None, exclude_patterns: Optional[List[str]] = None):
+    def __init__(self, select_patterns: list[str] | None = None, exclude_patterns: list[str] | None = None):
         """
         Initialize model selector.
 
@@ -23,10 +23,10 @@ class ModelSelector:
         self.exclude_patterns = exclude_patterns or []
         
         # Parse patterns into name patterns and tag patterns
-        self.select_names: List[str] = []
-        self.select_tags: List[str] = []
-        self.exclude_names: List[str] = []
-        self.exclude_tags: List[str] = []
+        self.select_names: list[str] = []
+        self.select_tags: list[str] = []
+        self.exclude_names: list[str] = []
+        self.exclude_tags: list[str] = []
         
         self._parse_patterns()
 
@@ -48,7 +48,7 @@ class ModelSelector:
             else:
                 self.exclude_names.append(pattern)
 
-    def _matches_name(self, model_name: str, patterns: List[str]) -> bool:
+    def _matches_name(self, model_name: str, patterns: list[str]) -> bool:
         """
         Check if model name matches any of the patterns.
         
@@ -80,7 +80,7 @@ class ModelSelector:
         
         return False
 
-    def _has_tag(self, model_data: Dict[str, Any], tag: str) -> bool:
+    def _has_tag(self, model_data: dict[str, Any], tag: str) -> bool:
         """
         Check if model has the specified tag.
         
@@ -105,7 +105,7 @@ class ModelSelector:
         except (AttributeError, TypeError):
             return False
 
-    def _matches_tags(self, model_data: Dict[str, Any], tags: List[str]) -> bool:
+    def _matches_tags(self, model_data: dict[str, Any], tags: list[str]) -> bool:
         """
         Check if model matches any of the specified tags.
         
@@ -125,7 +125,7 @@ class ModelSelector:
         
         return False
 
-    def is_selected(self, model_name: str, model_data: Dict[str, Any]) -> bool:
+    def is_selected(self, model_name: str, model_data: dict[str, Any]) -> bool:
         """
         Determine if a model should be selected based on selection and exclusion criteria.
         
@@ -168,7 +168,7 @@ class ModelSelector:
         
         return True
 
-    def _is_excluded(self, model_name: str, model_data: Dict[str, Any]) -> bool:
+    def _is_excluded(self, model_name: str, model_data: dict[str, Any]) -> bool:
         """
         Check if model matches exclusion criteria.
         
@@ -192,8 +192,8 @@ class ModelSelector:
         return False
 
     def filter_models(
-        self, parsed_models: Dict[str, Any], execution_order: Optional[List[str]] = None
-    ) -> Tuple[Dict[str, Any], List[str]]:
+        self, parsed_models: dict[str, Any], execution_order: list[str] | None = None
+    ) -> tuple[dict[str, Any], list[str]]:
         """
         Filter parsed models and execution order based on selection criteria.
         

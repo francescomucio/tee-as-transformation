@@ -4,16 +4,15 @@ Tee Module
 A SQL model execution framework with parsing and execution capabilities.
 """
 
-from .parser import ProjectParser
-from .engine import ModelExecutor, ExecutionEngine
-from .executor import execute_models, build_models
-from .compiler import compile_project
+# Import new adapter system
+from .adapters import BigQueryAdapter, DuckDBAdapter, PostgreSQLAdapter, SnowflakeAdapter
 
 # Import CLI
 from .cli import main as cli_main
-
-# Import new adapter system
-from .adapters import DuckDBAdapter, SnowflakeAdapter, PostgreSQLAdapter, BigQueryAdapter
+from .compiler import compile_project
+from .engine import ExecutionEngine, ModelExecutor
+from .executor import build_models, execute_models
+from .parser import ProjectParser
 
 __all__ = [
     "ProjectParser",

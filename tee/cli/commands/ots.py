@@ -2,24 +2,22 @@
 OTS command implementations.
 """
 
-import typer
 from pathlib import Path
-from typing import Optional, List
+
+import typer
+
 from tee.cli.context import CommandContext
-from tee.parser.input import OTSModuleReader, OTSModuleReaderError, load_ots_modules
 from tee.parser import ProjectParser
-from tee.engine import ModelExecutor
-from tee.testing import TestExecutor
-from tee import execute_models
+from tee.parser.input import OTSModuleReader, OTSModuleReaderError, load_ots_modules
 
 
 def cmd_ots_run(
     ots_path: str,
-    project_folder: Optional[str] = None,
-    vars: Optional[str] = None,
+    project_folder: str | None = None,
+    vars: str | None = None,
     verbose: bool = False,
-    select: Optional[List[str]] = None,
-    exclude: Optional[List[str]] = None,
+    select: list[str] | None = None,
+    exclude: list[str] | None = None,
 ) -> None:
     """
     Execute OTS modules.
@@ -94,7 +92,7 @@ def cmd_ots_run(
 
             # Build dependency graph with merged models
             typer.echo("\nBuilding dependency graph with merged models...")
-            graph = parser.build_dependency_graph()
+            parser.build_dependency_graph()
             execution_order = parser.get_execution_order()
             typer.echo(f"Execution order: {' -> '.join(execution_order)}")
 
@@ -169,7 +167,7 @@ def cmd_ots_run(
 
             # Build dependency graph
             typer.echo("\nBuilding dependency graph...")
-            graph = parser.build_dependency_graph()
+            parser.build_dependency_graph()
             execution_order = parser.get_execution_order()
             typer.echo(f"Execution order: {' -> '.join(execution_order)}")
 
@@ -200,13 +198,13 @@ def cmd_ots_run(
 
     except OTSModuleReaderError as e:
         typer.echo(f"❌ Error reading OTS modules: {e}", err=True)
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     except Exception as e:
         typer.echo(f"❌ Error executing OTS modules: {e}", err=True)
         if verbose:
             import traceback
             traceback.print_exc()
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
 
 def cmd_ots_validate(
@@ -270,11 +268,11 @@ def cmd_ots_validate(
         if verbose:
             import traceback
             traceback.print_exc()
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     except Exception as e:
         typer.echo(f"❌ Error: {e}", err=True)
         if verbose:
             import traceback
             traceback.print_exc()
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 

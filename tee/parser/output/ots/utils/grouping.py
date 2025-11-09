@@ -1,16 +1,15 @@
 """Grouping utilities for models and functions by schema."""
 
 import logging
-from typing import Dict, List, Tuple
 
-from tee.parser.shared.types import ParsedModel, ParsedFunction
+from tee.parser.shared.types import ParsedFunction, ParsedModel
 
 logger = logging.getLogger(__name__)
 
 
 def group_models_by_schema(
-    parsed_models: Dict[str, ParsedModel]
-) -> Dict[str, List[Tuple[str, ParsedModel]]]:
+    parsed_models: dict[str, ParsedModel]
+) -> dict[str, list[tuple[str, ParsedModel]]]:
     """
     Group models by their schema (first part of transformation_id).
 
@@ -37,8 +36,8 @@ def group_models_by_schema(
 
 
 def group_functions_by_schema(
-    parsed_functions: Dict[str, ParsedFunction]
-) -> Dict[str, List[Tuple[str, ParsedFunction]]]:
+    parsed_functions: dict[str, ParsedFunction]
+) -> dict[str, list[tuple[str, ParsedFunction]]]:
     """
     Group functions by their schema (first part of function_id).
 

@@ -5,12 +5,12 @@ Handles execution of tests for models (tables/views).
 """
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Any
 
+from tee.adapters.base import DatabaseAdapter
 from tee.testing.base import TestRegistry, TestResult, TestSeverity
 from tee.testing.parsers import TestDefinitionParser
 from tee.typing.metadata import TestDefinition
-from tee.adapters.base import DatabaseAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +32,9 @@ class ModelTestExecutor:
     def execute_tests_for_model(
         self,
         table_name: str,
-        metadata: Dict[str, Any],
-        severity_overrides: Optional[Dict[str, TestSeverity]] = None,
-    ) -> List[TestResult]:
+        metadata: dict[str, Any],
+        severity_overrides: dict[str, TestSeverity] | None = None,
+    ) -> list[TestResult]:
         """
         Execute all tests for a given model based on its metadata.
 
@@ -70,9 +70,9 @@ class ModelTestExecutor:
     def _execute_column_tests(
         self,
         table_name: str,
-        schema: List[Dict[str, Any]],
-        severity_overrides: Dict[str, TestSeverity],
-    ) -> List[TestResult]:
+        schema: list[dict[str, Any]],
+        severity_overrides: dict[str, TestSeverity],
+    ) -> list[TestResult]:
         """
         Execute column-level tests.
 
@@ -112,9 +112,9 @@ class ModelTestExecutor:
     def _execute_model_level_tests(
         self,
         table_name: str,
-        tests: List[TestDefinition],
-        severity_overrides: Dict[str, TestSeverity],
-    ) -> List[TestResult]:
+        tests: list[TestDefinition],
+        severity_overrides: dict[str, TestSeverity],
+    ) -> list[TestResult]:
         """
         Execute model-level tests.
 
@@ -143,10 +143,10 @@ class ModelTestExecutor:
     def _execute_single_test(
         self,
         table_name: str,
-        column_name: Optional[str],
+        column_name: str | None,
         test_def: TestDefinition,
-        severity_overrides: Dict[str, TestSeverity],
-    ) -> Optional[TestResult]:
+        severity_overrides: dict[str, TestSeverity],
+    ) -> TestResult | None:
         """
         Execute a single test definition.
 
@@ -200,10 +200,10 @@ class ModelTestExecutor:
         self,
         test: Any,
         table_name: str,
-        column_name: Optional[str],
+        column_name: str | None,
         test_name: str,
-        params: Optional[Dict[str, Any]],
-        severity_override: Optional[TestSeverity],
+        params: dict[str, Any] | None,
+        severity_override: TestSeverity | None,
     ) -> TestResult:
         """
         Run a model test.

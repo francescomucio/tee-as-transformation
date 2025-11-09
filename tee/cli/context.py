@@ -2,11 +2,11 @@
 Command context for shared setup across CLI commands.
 """
 
-import typer
 from pathlib import Path
-from typing import Dict, Any, Optional, List
 
-from .utils import parse_vars, load_project_config, setup_logging
+import typer
+
+from .utils import load_project_config, parse_vars, setup_logging
 
 
 class CommandContext:
@@ -20,10 +20,10 @@ class CommandContext:
     def __init__(
         self,
         project_folder: str,
-        vars: Optional[str] = None,
+        vars: str | None = None,
         verbose: bool = False,
-        select: Optional[List[str]] = None,
-        exclude: Optional[List[str]] = None,
+        select: list[str] | None = None,
+        exclude: list[str] | None = None,
     ):
         """
         Initialize command context from parameters.

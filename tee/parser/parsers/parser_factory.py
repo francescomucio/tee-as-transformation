@@ -3,20 +3,20 @@ Factory for creating parsers based on file type.
 """
 
 from pathlib import Path
-from typing import Dict, Type
+
+from tee.parser.shared.constants import SUPPORTED_PYTHON_EXTENSIONS, SUPPORTED_SQL_EXTENSIONS
+from tee.parser.shared.exceptions import ParserError
 
 from .base import BaseParser
-from .sql_parser import SQLParser
 from .python_parser import PythonParser
-from tee.parser.shared.constants import SUPPORTED_SQL_EXTENSIONS, SUPPORTED_PYTHON_EXTENSIONS
-from tee.parser.shared.exceptions import ParserError
+from .sql_parser import SQLParser
 
 
 class ParserFactory:
     """Factory for creating appropriate parsers based on file type."""
 
     # Registry of parsers by file extension
-    _parsers: Dict[str, Type[BaseParser]] = {ext: SQLParser for ext in SUPPORTED_SQL_EXTENSIONS}
+    _parsers: dict[str, type[BaseParser]] = {ext: SQLParser for ext in SUPPORTED_SQL_EXTENSIONS}
 
     # Python parser for .py files
     _python_parser = PythonParser

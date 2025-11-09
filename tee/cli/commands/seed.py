@@ -2,17 +2,17 @@
 Seed command implementation.
 """
 
+
 import typer
-from typing import Optional
-from pathlib import Path
+
 from tee.cli.context import CommandContext
-from tee.engine.seeds import SeedDiscovery, SeedLoader
 from tee.engine.execution_engine import ExecutionEngine
+from tee.engine.seeds import SeedDiscovery, SeedLoader
 
 
 def cmd_seed(
     project_folder: str,
-    vars: Optional[str] = None,
+    vars: str | None = None,
     verbose: bool = False,
 ) -> None:
     """Execute the seed command to load seed files into the database."""

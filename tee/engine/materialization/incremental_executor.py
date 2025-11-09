@@ -10,18 +10,20 @@ This module handles the execution of incremental materializations including:
 """
 
 import logging
-from datetime import datetime, timedelta, UTC
-from typing import Dict, Any, Optional, Union
+from datetime import UTC, datetime, timedelta
+from typing import Any
+
 import sqlglot
 from sqlglot import expressions as exp
 
-from ..model_state import ModelStateManager
 from tee.typing.metadata import (
-    IncrementalConfig,
     IncrementalAppendConfig,
-    IncrementalMergeConfig,
+    IncrementalConfig,
     IncrementalDeleteInsertConfig,
+    IncrementalMergeConfig,
 )
+
+from ..model_state import ModelStateManager
 
 logger = logging.getLogger(__name__)
 
@@ -90,12 +92,10 @@ class IncrementalExecutor:
 
     def get_time_filter_condition(
         self,
-        config: Union[
-            IncrementalAppendConfig, IncrementalMergeConfig, IncrementalDeleteInsertConfig
-        ],
-        last_processed_value: Optional[str] = None,
-        variables: Optional[Dict[str, Any]] = None,
-        table_name: Optional[str] = None,
+        config: IncrementalAppendConfig | IncrementalMergeConfig | IncrementalDeleteInsertConfig,
+        last_processed_value: str | None = None,
+        variables: dict[str, Any] | None = None,
+        table_name: str | None = None,
     ) -> str:
         """Generate time-based filter condition for incremental loading."""
         time_column = config["time_column"]
@@ -145,9 +145,7 @@ class IncrementalExecutor:
     def _apply_lookback_to_time_filter(
         self,
         time_filter: str,
-        config: Union[
-            IncrementalAppendConfig, IncrementalMergeConfig, IncrementalDeleteInsertConfig
-        ],
+        config: IncrementalAppendConfig | IncrementalMergeConfig | IncrementalDeleteInsertConfig,
     ) -> str:
         """Apply lookback to the time filter to handle late-arriving data."""
         lookback = config.get("lookback")
@@ -174,7 +172,7 @@ class IncrementalExecutor:
         # Apply lookback to the start_date
         return f"{time_column} {operator} (CAST('{start_date}' AS DATE) - INTERVAL {lookback_interval})"
 
-    def _parse_lookback(self, lookback: str) -> Optional[str]:
+    def _parse_lookback(self, lookback: str) -> str | None:
         """Parse lookback string to SQL interval format."""
         lookback = lookback.lower().strip()
 
@@ -200,8 +198,8 @@ class IncrementalExecutor:
         return None
 
     def _resolve_variable(
-        self, variable_ref: str, variables: Optional[Dict[str, Any]] = None
-    ) -> Optional[str]:
+        self, variable_ref: str, variables: dict[str, Any] | None = None
+    ) -> str | None:
         """Resolve a variable reference to its value."""
         if not variables:
             return None
@@ -218,7 +216,7 @@ class IncrementalExecutor:
 
         return None
 
-    def _resolve_variables_in_string(self, text: str, variables: Dict[str, Any]) -> str:
+    def _resolve_variables_in_string(self, text: str, variables: dict[str, Any]) -> str:
         """Resolve all variable references in a string."""
         import re
 
@@ -249,7 +247,7 @@ class IncrementalExecutor:
         def replace_date_comparison(match):
             column = match.group(1)
             operator = match.group(2)
-            quote = match.group(3)
+            match.group(3)
             date_value = match.group(4)
             return f"{column} {operator} CAST('{date_value}' AS DATE)"
 
@@ -262,7 +260,7 @@ class IncrementalExecutor:
         config: IncrementalAppendConfig,
         adapter,
         table_name: str,
-        variables: Optional[Dict[str, Any]] = None,
+        variables: dict[str, Any] | None = None,
     ) -> None:
         """Execute append-only incremental strategy."""
         # Executing append strategy
@@ -302,7 +300,7 @@ class IncrementalExecutor:
         config: IncrementalMergeConfig,
         adapter,
         table_name: str,
-        variables: Optional[Dict[str, Any]] = None,
+        variables: dict[str, Any] | None = None,
     ) -> None:
         """Execute merge incremental strategy."""
         # Executing merge strategy
@@ -340,7 +338,7 @@ class IncrementalExecutor:
         config: IncrementalDeleteInsertConfig,
         adapter,
         table_name: str,
-        variables: Optional[Dict[str, Any]] = None,
+        variables: dict[str, Any] | None = None,
     ) -> None:
         """Execute delete+insert incremental strategy."""
         # Executing delete+insert strategy

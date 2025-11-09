@@ -7,10 +7,10 @@ Pure, stateless utility functions used across CLI commands.
 import json
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any
 
 
-def parse_vars(vars_string: Optional[str]) -> Dict[str, Any]:
+def parse_vars(vars_string: str | None) -> dict[str, Any]:
     """
     Parse variables string into a dictionary.
 
@@ -29,12 +29,12 @@ def parse_vars(vars_string: Optional[str]) -> Dict[str, Any]:
     try:
         return json.loads(vars_string)
     except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid variables format (must be valid JSON): {e}")
+        raise ValueError(f"Invalid variables format (must be valid JSON): {e}") from e
 
 
 def load_project_config(
-    project_folder: str, vars_dict: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+    project_folder: str, vars_dict: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """
     Load project configuration from project.toml file and merge with variables.
 

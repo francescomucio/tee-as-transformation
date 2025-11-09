@@ -1,7 +1,6 @@
 """Tag management for Snowflake database objects."""
 
 import logging
-from typing import List, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +25,7 @@ class TagManager:
         return self.adapter.connection
 
     def attach_tags(
-        self, object_type: str, object_name: str, tags: List[str]
+        self, object_type: str, object_name: str, tags: list[str]
     ) -> None:
         """
         Attach tags to a Snowflake database object.
@@ -113,7 +112,7 @@ class TagManager:
             cursor.close()
 
     def attach_object_tags(
-        self, object_type: str, object_name: str, object_tags: Dict[str, str]
+        self, object_type: str, object_name: str, object_tags: dict[str, str]
     ) -> None:
         """
         Attach object tags (key-value pairs) to a Snowflake database object.

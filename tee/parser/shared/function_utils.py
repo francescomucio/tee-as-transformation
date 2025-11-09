@@ -3,23 +3,22 @@ Utility functions for function metadata standardization.
 """
 
 import hashlib
-from typing import Dict, Any, Optional
-from pathlib import Path
+from typing import Any
 
-from tee.typing.metadata import ParsedFunctionMetadata, FunctionType
+from tee.typing.metadata import FunctionType, ParsedFunctionMetadata
 
 
 def create_function_metadata(
     function_name: str,
-    schema: Optional[str] = None,
-    file_path: Optional[str] = None,
-    description: Optional[str] = None,
+    schema: str | None = None,
+    file_path: str | None = None,
+    description: str | None = None,
     function_type: FunctionType = "scalar",
-    language: Optional[str] = None,
-    parameters: Optional[list] = None,
-    return_type: Optional[str] = None,
-    metadata: Optional[ParsedFunctionMetadata] = None,
-) -> Dict[str, Any]:
+    language: str | None = None,
+    parameters: list | None = None,
+    return_type: str | None = None,
+    metadata: ParsedFunctionMetadata | None = None,
+) -> dict[str, Any]:
     """
     Create standardized function metadata.
 
@@ -42,7 +41,7 @@ def create_function_metadata(
     if metadata and metadata.get("description"):
         final_description = metadata.get("description")
 
-    result: Dict[str, Any] = {
+    result: dict[str, Any] = {
         "function_name": function_name,
         "schema": schema,
         "description": final_description,
@@ -61,11 +60,11 @@ def create_function_metadata(
 
 
 def standardize_parsed_function(
-    function_data: Dict[str, Any],
+    function_data: dict[str, Any],
     function_name: str,
-    file_path: Optional[str] = None,
+    file_path: str | None = None,
     is_python_function: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Standardize a parsed function to have consistent structure.
 
@@ -126,7 +125,7 @@ def standardize_parsed_function(
 
 
 def validate_function_metadata_consistency(
-    sql_metadata: Dict[str, Any], python_metadata: Dict[str, Any]
+    sql_metadata: dict[str, Any], python_metadata: dict[str, Any]
 ) -> None:
     """
     Validate that SQL and Python metadata are consistent.

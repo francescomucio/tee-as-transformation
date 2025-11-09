@@ -1,7 +1,7 @@
 """Incremental materialization strategies for Snowflake."""
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class IncrementalHandler:
             cursor.close()
 
     def execute_merge(
-        self, table_name: str, source_sql: str, config: Dict[str, Any]
+        self, table_name: str, source_sql: str, config: dict[str, Any]
     ) -> None:
         """Execute incremental merge (upsert) with dedup and tuple ON for composite keys."""
         if not self.adapter.connection:
@@ -110,9 +110,9 @@ class IncrementalHandler:
         self,
         table_name: str,
         source_sql: str,
-        unique_key: List[str],
-        all_columns: List[str],
-        time_column: Optional[str],
+        unique_key: list[str],
+        all_columns: list[str],
+        time_column: str | None,
     ) -> str:
         """Generate Snowflake MERGE SQL with tuple ON and optional dedup by latest time_column."""
         qualified_table = self.adapter.utils.qualify_object_name(table_name)

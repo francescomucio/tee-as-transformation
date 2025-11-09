@@ -3,7 +3,7 @@ Dialect inference logic for function SQL parsing.
 """
 
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any
 
 from tee.parser.shared.constants import KNOWN_DATABASE_NAMES
 
@@ -12,7 +12,7 @@ class DialectInferencer:
     """Handles SQL dialect inference from various sources."""
 
     @staticmethod
-    def infer_from_connection(connection: Optional[Dict[str, Any]] = None) -> str:
+    def infer_from_connection(connection: dict[str, Any] | None = None) -> str:
         """
         Infer SQL dialect from connection type.
 
@@ -38,7 +38,7 @@ class DialectInferencer:
         return dialect_map.get(conn_type.lower(), "postgres")
 
     @staticmethod
-    def infer_from_filename(file_path: Path) -> Optional[str]:
+    def infer_from_filename(file_path: Path) -> str | None:
         """
         Infer dialect from database-specific override filename.
 

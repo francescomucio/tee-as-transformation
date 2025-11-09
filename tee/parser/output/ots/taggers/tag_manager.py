@@ -1,7 +1,7 @@
 """Unified tag management for models and functions."""
 
 import logging
-from typing import Dict, Any, List
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 class TagManager:
     """Manages tag merging and extraction for models and functions."""
 
-    def __init__(self, project_config: Dict[str, Any]):
+    def __init__(self, project_config: dict[str, Any]):
         """
         Initialize the tag manager.
 
@@ -19,7 +19,7 @@ class TagManager:
         self.project_config = project_config
         self._module_tags = self._extract_module_tags()
 
-    def _extract_module_tags(self) -> List[str]:
+    def _extract_module_tags(self) -> list[str]:
         """
         Extract module-level tags from project configuration.
 
@@ -42,7 +42,7 @@ class TagManager:
 
         return module_tags
 
-    def merge_tags(self, entity_tags: List[str]) -> List[str]:
+    def merge_tags(self, entity_tags: list[str]) -> list[str]:
         """
         Merge module tags with entity-specific tags.
 
@@ -68,7 +68,7 @@ class TagManager:
 
         return merged_tags
 
-    def extract_object_tags(self, metadata: Dict[str, Any]) -> Dict[str, str]:
+    def extract_object_tags(self, metadata: dict[str, Any]) -> dict[str, str]:
         """
         Extract and validate object_tags (database-style key-value pairs) from metadata.
 

@@ -4,13 +4,13 @@ Metadata handling methods for database adapters.
 These methods are mixed into DatabaseAdapter via multiple inheritance.
 """
 
-from typing import Dict, Any, Optional
+from typing import Any
 
 
 class MetadataHandler:
     """Mixin class for handling table and column metadata."""
 
-    def _validate_column_metadata(self, metadata: Optional[Dict[str, Any]]) -> Dict[str, str]:
+    def _validate_column_metadata(self, metadata: dict[str, Any] | None) -> dict[str, str]:
         """
         Validate and extract column descriptions from metadata.
 
@@ -57,7 +57,7 @@ class MetadataHandler:
 
         return column_descriptions
 
-    def _add_column_comments(self, table_name: str, column_descriptions: Dict[str, str]) -> None:
+    def _add_column_comments(self, table_name: str, column_descriptions: dict[str, str]) -> None:
         """
         Add column comments to a table.
 

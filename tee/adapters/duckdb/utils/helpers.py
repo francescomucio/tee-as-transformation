@@ -1,7 +1,6 @@
 """Utility methods for DuckDB operations."""
 
 import logging
-from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +65,7 @@ class DuckDBUtils:
             self.logger.warning(f"Could not add comment to table {table_name}: {e}")
             # Don't raise here - table creation succeeded, comments are optional
 
-    def add_column_comments(self, table_name: str, column_descriptions: Dict[str, str]) -> None:
+    def add_column_comments(self, table_name: str, column_descriptions: dict[str, str]) -> None:
         """
         Add column comments to a table using DuckDB's COMMENT ON COLUMN syntax.
 

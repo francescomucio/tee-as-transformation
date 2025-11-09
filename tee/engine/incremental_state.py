@@ -10,10 +10,10 @@ This module provides functionality to track incremental model state including:
 import hashlib
 import json
 import logging
-from datetime import datetime, UTC
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Union
-from dataclasses import dataclass, asdict
+from typing import Any
 
 import duckdb
 
@@ -26,18 +26,18 @@ class IncrementalState:
 
     model_name: str
     strategy: str
-    last_processed_value: Optional[str] = None
-    last_run_timestamp: Optional[str] = None
-    sqlglot_hash: Optional[str] = None
-    config_hash: Optional[str] = None
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+    last_processed_value: str | None = None
+    last_run_timestamp: str | None = None
+    sqlglot_hash: str | None = None
+    config_hash: str | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
 
 
 class IncrementalStateManager:
     """Manages incremental model state using DuckDB."""
 
-    def __init__(self, state_database_path: Optional[str] = None):
+    def __init__(self, state_database_path: str | None = None):
         """
         Initialize the state manager.
 
@@ -78,7 +78,7 @@ class IncrementalStateManager:
         conn.execute(create_table_sql)
         logger.debug("Ensured incremental state table exists")
 
-    def get_state(self, model_name: str) -> Optional[IncrementalState]:
+    def get_state(self, model_name: str) -> IncrementalState | None:
         """
         Get the current state for a model.
 
@@ -269,7 +269,7 @@ class IncrementalStateManager:
         """
         return hashlib.sha256(sql_query.encode("utf-8")).hexdigest()
 
-    def compute_config_hash(self, config: Dict[str, Any]) -> str:
+    def compute_config_hash(self, config: dict[str, Any]) -> str:
         """
         Compute hash for configuration.
 
@@ -283,7 +283,7 @@ class IncrementalStateManager:
         sorted_config = json.dumps(config, sort_keys=True, default=str)
         return hashlib.sha256(sorted_config.encode("utf-8")).hexdigest()
 
-    def list_models(self) -> List[str]:
+    def list_models(self) -> list[str]:
         """
         List all models with state.
 

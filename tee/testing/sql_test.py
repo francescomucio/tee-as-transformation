@@ -4,12 +4,13 @@ SQL-based custom tests.
 Supports custom tests defined in SQL files in the tests/ folder, similar to dbt.
 """
 
-from pathlib import Path
-from typing import Dict, Any, Optional
 import logging
+from pathlib import Path
+from typing import Any
 
-from .base import StandardTest, TestSeverity, TestResult
 from tee.parser.processing.variable_substitution import substitute_sql_variables
+
+from .base import StandardTest, TestResult, TestSeverity
 
 
 class SqlTest(StandardTest):
@@ -47,20 +48,20 @@ class SqlTest(StandardTest):
         self.sql_file_path = sql_file_path
         self.project_folder = project_folder
         self.logger = logging.getLogger(self.__class__.__name__)
-        self._sql_content: Optional[str] = None
+        self._sql_content: str | None = None
 
     def _load_sql_content(self) -> str:
         """Load SQL content from file."""
         if self._sql_content is None:
             try:
-                with open(self.sql_file_path, "r", encoding="utf-8") as f:
+                with open(self.sql_file_path, encoding="utf-8") as f:
                     self._sql_content = f.read()
             except Exception as e:
-                raise ValueError(f"Failed to load SQL test file {self.sql_file_path}: {e}")
+                raise ValueError(f"Failed to load SQL test file {self.sql_file_path}: {e}") from e
         return self._sql_content
 
     def validate_params(
-        self, params: Optional[Dict[str, Any]] = None, column_name: Optional[str] = None
+        self, params: dict[str, Any] | None = None, column_name: str | None = None
     ) -> None:
         """
         Validate SQL test parameters.
@@ -78,10 +79,10 @@ class SqlTest(StandardTest):
     def get_test_query(
         self,
         adapter,
-        table_name: Optional[str] = None,
-        column_name: Optional[str] = None,
-        function_name: Optional[str] = None,
-        params: Optional[Dict[str, Any]] = None,
+        table_name: str | None = None,
+        column_name: str | None = None,
+        function_name: str | None = None,
+        params: dict[str, Any] | None = None,
     ) -> str:
         """
         Generate SQL query by loading from file and applying variable substitution.
@@ -152,12 +153,12 @@ class SqlTest(StandardTest):
     def execute(
         self,
         adapter,
-        table_name: Optional[str] = None,
-        column_name: Optional[str] = None,
-        function_name: Optional[str] = None,
-        params: Optional[Dict[str, Any]] = None,
-        expected: Optional[Any] = None,
-        severity: Optional[TestSeverity] = None,
+        table_name: str | None = None,
+        column_name: str | None = None,
+        function_name: str | None = None,
+        params: dict[str, Any] | None = None,
+        expected: Any | None = None,
+        severity: TestSeverity | None = None,
     ) -> TestResult:
         """
         Execute the SQL test.
@@ -258,7 +259,7 @@ class SqlTest(StandardTest):
                 error=str(e),
             )
 
-    def _evaluate_function_test_result(self, results: Any, expected: Optional[Any] = None) -> bool:
+    def _evaluate_function_test_result(self, results: Any, expected: Any | None = None) -> bool:
         """
         Evaluate function test result based on pattern.
 

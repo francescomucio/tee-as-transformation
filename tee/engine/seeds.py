@@ -5,12 +5,11 @@ This module handles discovering and loading seed files (CSV, JSON, TSV) from the
 into database tables. Seeds are loaded before models are executed.
 """
 
-import logging
 import csv
 import json
+import logging
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
-from abc import ABC, abstractmethod
+from typing import Any
 
 from tee.adapters.base import DatabaseAdapter
 
@@ -32,9 +31,9 @@ class SeedDiscovery:
             seeds_folder: Path to the seeds folder
         """
         self.seeds_folder = seeds_folder
-        self._file_cache: List[Tuple[Path, Optional[str]]] = []
+        self._file_cache: list[tuple[Path, str | None]] = []
 
-    def discover_seed_files(self) -> List[Tuple[Path, Optional[str]]]:
+    def discover_seed_files(self) -> list[tuple[Path, str | None]]:
         """
         Discover all seed files in the seeds folder.
 
@@ -94,7 +93,7 @@ class SeedLoader:
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def load_seed_file(
-        self, file_path: Path, table_name: str, schema_name: Optional[str] = None
+        self, file_path: Path, table_name: str, schema_name: str | None = None
     ) -> None:
         """
         Load a seed file into a database table.
@@ -133,7 +132,7 @@ class SeedLoader:
         self._create_schema_if_needed(table_name)
 
         # Read CSV and determine column types
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             # Try to detect delimiter
             sample = f.read(1024)
             f.seek(0)
@@ -171,7 +170,7 @@ class SeedLoader:
         self._create_schema_if_needed(table_name)
 
         # Read TSV
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             reader = csv.DictReader(f, delimiter="\t")
             
             if not reader.fieldnames:
@@ -195,7 +194,7 @@ class SeedLoader:
         self._create_schema_if_needed(table_name)
 
         # Read JSON
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             data = json.load(f)
 
         # Handle empty data
@@ -221,7 +220,7 @@ class SeedLoader:
         else:
             self._load_json_generic(table_name, columns, rows)
 
-    def _load_csv_duckdb(self, file_path: Path, table_name: str, columns: List[str]) -> None:
+    def _load_csv_duckdb(self, file_path: Path, table_name: str, columns: list[str]) -> None:
         """Load CSV using DuckDB's read_csv_auto function."""
         # Use DuckDB's read_csv_auto for efficient loading
         # Escape single quotes in path and convert backslashes to forward slashes
@@ -234,7 +233,7 @@ class SeedLoader:
             self.logger.error(f"Error loading CSV with DuckDB: {e}")
             raise
 
-    def _load_tsv_duckdb(self, file_path: Path, table_name: str, columns: List[str]) -> None:
+    def _load_tsv_duckdb(self, file_path: Path, table_name: str, columns: list[str]) -> None:
         """Load TSV using DuckDB's read_csv_auto function with delimiter option."""
         # Escape single quotes in path and convert backslashes to forward slashes
         file_path_str = str(file_path.absolute()).replace("\\", "/").replace("'", "''")
@@ -246,7 +245,7 @@ class SeedLoader:
             self.logger.error(f"Error loading TSV with DuckDB: {e}")
             raise
 
-    def _load_json_duckdb(self, file_path: Path, table_name: str, columns: List[str]) -> None:
+    def _load_json_duckdb(self, file_path: Path, table_name: str, columns: list[str]) -> None:
         """Load JSON using DuckDB's read_json_auto function."""
         # Escape single quotes in path and convert backslashes to forward slashes
         file_path_str = str(file_path.absolute()).replace("\\", "/").replace("'", "''")
@@ -259,7 +258,7 @@ class SeedLoader:
             raise
 
     def _load_csv_generic(
-        self, file_path: Path, table_name: str, columns: List[str], rows: List[Dict[str, Any]]
+        self, file_path: Path, table_name: str, columns: list[str], rows: list[dict[str, Any]]
     ) -> None:
         """Load CSV using generic INSERT statements."""
         # Create table first
@@ -281,13 +280,13 @@ class SeedLoader:
             raise
 
     def _load_tsv_generic(
-        self, file_path: Path, table_name: str, columns: List[str], rows: List[Dict[str, Any]]
+        self, file_path: Path, table_name: str, columns: list[str], rows: list[dict[str, Any]]
     ) -> None:
         """Load TSV using generic INSERT statements."""
         self._load_csv_generic(file_path, table_name, columns, rows)
 
     def _load_json_generic(
-        self, table_name: str, columns: List[str], rows: List[Dict[str, Any]]
+        self, table_name: str, columns: list[str], rows: list[dict[str, Any]]
     ) -> None:
         """Load JSON using generic INSERT statements."""
         # Create table first
@@ -308,7 +307,7 @@ class SeedLoader:
             self.logger.error(f"Error loading JSON generically: {e}")
             raise
 
-    def _create_empty_table(self, table_name: str, columns: List[str]) -> None:
+    def _create_empty_table(self, table_name: str, columns: list[str]) -> None:
         """Create an empty table with the specified columns."""
         column_defs = ", ".join([f"{col} VARCHAR" for col in columns])
         create_query = f"CREATE TABLE IF NOT EXISTS {table_name} ({column_defs})"
@@ -347,8 +346,8 @@ class SeedLoader:
         return f"'{escaped}'"
 
     def load_all_seeds(
-        self, seed_files: List[Tuple[Path, Optional[str]]]
-    ) -> Dict[str, Any]:
+        self, seed_files: list[tuple[Path, str | None]]
+    ) -> dict[str, Any]:
         """
         Load all seed files into database tables.
 

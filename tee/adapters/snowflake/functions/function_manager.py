@@ -2,7 +2,7 @@
 
 import logging
 import re
-from typing import Dict, Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ class FunctionManager:
         self,
         function_name: str,
         function_sql: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Create or replace a user-defined function in the database."""
         if not self.adapter.connection:
@@ -75,7 +75,7 @@ class FunctionManager:
                 f"Failed to create function {qualified_function_name}: {e}"
             ) from e
 
-    def exists(self, function_name: str, signature: Optional[str] = None) -> bool:
+    def exists(self, function_name: str, signature: str | None = None) -> bool:
         """
         Check if a function exists in the database.
 

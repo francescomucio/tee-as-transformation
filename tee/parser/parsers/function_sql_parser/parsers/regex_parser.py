@@ -18,17 +18,17 @@ parses CREATE FUNCTION correctly. This parser handles both syntaxes using regex
 patterns to extract the same metadata that SQLglot would extract for CREATE FUNCTION.
 """
 
-import re
 import logging
-from typing import Dict, Any, Optional
+import re
+from typing import Any
 
 from tee.typing.metadata import FunctionType
+
 from ..extractors import (
+    DependencyExtractor,
+    FunctionBodyExtractor,
     FunctionNameExtractor,
     ParameterExtractor,
-    ReturnTypeExtractor,
-    FunctionBodyExtractor,
-    DependencyExtractor,
 )
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ class RegexParser:
     """Parses CREATE FUNCTION/MACRO statements using regex patterns."""
 
     @staticmethod
-    def parse(content: str, file_path_str: str) -> Optional[Dict[str, Any]]:
+    def parse(content: str, file_path_str: str) -> dict[str, Any] | None:
         """
         Parse a CREATE FUNCTION/MACRO statement and extract function metadata.
 

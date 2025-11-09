@@ -6,13 +6,13 @@ to t4t's internal ParsedModel format for execution.
 """
 
 import logging
-from typing import Dict, Any, List, Optional
 from pathlib import Path
+from typing import Any
 
-from tee.parser.shared.types import ParsedModel, ParsedFunction
-from tee.typing.metadata import OTSModule, OTSTransformation, OTSTarget, OTSFunction
-from tee.parser.shared.model_utils import create_model_metadata
 from tee.parser.shared.function_utils import create_function_metadata
+from tee.parser.shared.model_utils import create_model_metadata
+from tee.parser.shared.types import ParsedFunction, ParsedModel
+from tee.typing.metadata import OTSFunction, OTSModule, OTSTransformation
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ class OTSConverterError(Exception):
 class OTSConverter:
     """Converts OTS modules to ParsedModel format."""
 
-    def __init__(self, module_path: Optional[Path] = None):
+    def __init__(self, module_path: Path | None = None):
         """
         Initialize the OTS converter.
 
@@ -36,7 +36,7 @@ class OTSConverter:
 
     def convert_module(
         self, module: OTSModule
-    ) -> tuple[Dict[str, ParsedModel], Dict[str, ParsedFunction]]:
+    ) -> tuple[dict[str, ParsedModel], dict[str, ParsedFunction]]:
         """
         Convert an OTS module to dictionaries of ParsedModels and ParsedFunctions.
 
@@ -64,7 +64,7 @@ class OTSConverter:
                     parsed_models[transformation_id] = parsed_model
                 except Exception as e:
                     logger.error(f"Failed to convert transformation {transformation_id}: {e}")
-                    raise OTSConverterError(f"Failed to convert transformation {transformation_id}: {e}")
+                    raise OTSConverterError(f"Failed to convert transformation {transformation_id}: {e}") from e
 
             # Convert functions (OTS 0.2.0+)
             parsed_functions = {}
@@ -84,7 +84,7 @@ class OTSConverter:
                         parsed_functions[function_id] = parsed_function
                     except Exception as e:
                         logger.error(f"Failed to convert function {function_id}: {e}")
-                        raise OTSConverterError(f"Failed to convert function {function_id}: {e}")
+                        raise OTSConverterError(f"Failed to convert function {function_id}: {e}") from e
 
             logger.info(
                 f"Converted {len(parsed_models)} transformations and {len(parsed_functions)} functions from OTS module"
@@ -92,7 +92,7 @@ class OTSConverter:
             return parsed_models, parsed_functions
 
         except Exception as e:
-            raise OTSConverterError(f"Failed to convert OTS module: {e}")
+            raise OTSConverterError(f"Failed to convert OTS module: {e}") from e
 
     def _convert_transformation(
         self, transformation: OTSTransformation, module: OTSModule
@@ -107,7 +107,7 @@ class OTSConverter:
         Returns:
             ParsedModel dictionary
         """
-        transformation_id = transformation.get("transformation_id", "")
+        transformation.get("transformation_id", "")
         transformation_type = transformation.get("transformation_type", "sql")
 
         # Extract code structure
@@ -125,7 +125,7 @@ class OTSConverter:
 
         return parsed_model
 
-    def _convert_code(self, code: Dict[str, Any], transformation_type: str) -> Dict[str, Any]:
+    def _convert_code(self, code: dict[str, Any], transformation_type: str) -> dict[str, Any]:
         """
         Convert OTS code structure to ParsedModel code structure.
 
@@ -162,7 +162,7 @@ class OTSConverter:
 
     def _convert_metadata(
         self, transformation: OTSTransformation, module: OTSModule
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Convert OTS metadata to ParsedModel metadata structure.
 
@@ -178,10 +178,10 @@ class OTSConverter:
         # Extract schema.table from transformation_id
         if "." in transformation_id:
             table_name = transformation_id
-            schema = transformation_id.split(".")[0]
+            transformation_id.split(".")[0]
         else:
             table_name = transformation_id
-            schema = module.get("target", {}).get("schema", "default")
+            module.get("target", {}).get("schema", "default")
 
         # Extract description
         description = transformation.get("description")
@@ -205,7 +205,7 @@ class OTSConverter:
         all_tags = list(set(module_tags + transformation_tags))  # Deduplicate
 
         # Build nested metadata structure
-        nested_metadata: Dict[str, Any] = {}
+        nested_metadata: dict[str, Any] = {}
 
         if schema_data:
             nested_metadata["schema"] = schema_data
@@ -249,7 +249,7 @@ class OTSConverter:
 
         return model_metadata
 
-    def _convert_schema(self, schema: Optional[Dict[str, Any]]) -> Optional[List[Dict[str, Any]]]:
+    def _convert_schema(self, schema: dict[str, Any] | None) -> list[dict[str, Any]] | None:
         """
         Convert OTS schema to ParsedModel schema format.
 
@@ -281,8 +281,8 @@ class OTSConverter:
         return column_definitions
 
     def _convert_materialization(
-        self, materialization: Optional[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+        self, materialization: dict[str, Any] | None
+    ) -> dict[str, Any]:
         """
         Convert OTS materialization to ParsedModel format.
 
@@ -307,8 +307,8 @@ class OTSConverter:
         return result
 
     def _convert_incremental_details(
-        self, incremental_details: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, incremental_details: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Convert OTS incremental_details to ParsedModel incremental config.
 
@@ -323,7 +323,7 @@ class OTSConverter:
 
         strategy = incremental_details.get("strategy", "append")
 
-        result: Dict[str, Any] = {"strategy": strategy}
+        result: dict[str, Any] = {"strategy": strategy}
 
         if strategy == "delete_insert":
             delete_condition = incremental_details.get("delete_condition", "")
@@ -333,7 +333,7 @@ class OTSConverter:
                 "start_date": "auto",
             }
         elif strategy == "append":
-            filter_condition = incremental_details.get("filter_condition", "")
+            incremental_details.get("filter_condition", "")
             # Try to extract time_column from filter_condition
             # This is a heuristic - OTS format doesn't explicitly separate these
             result["append"] = {
@@ -354,8 +354,8 @@ class OTSConverter:
         return result
 
     def _convert_tests(
-        self, tests: Optional[Dict[str, Any]], schema_data: Optional[List[Dict[str, Any]]]
-    ) -> Optional[Dict[str, Any]]:
+        self, tests: dict[str, Any] | None, schema_data: list[dict[str, Any]] | None
+    ) -> dict[str, Any] | None:
         """
         Convert OTS tests to ParsedModel format.
 
@@ -369,7 +369,7 @@ class OTSConverter:
         if not tests:
             return None
 
-        result: Dict[str, Any] = {}
+        result: dict[str, Any] = {}
 
         # Convert table tests
         table_tests = tests.get("table", [])
@@ -441,7 +441,7 @@ class OTSConverter:
         object_tags = metadata.get("object_tags", {})
 
         # Build nested metadata structure
-        nested_metadata: Dict[str, Any] = {
+        nested_metadata: dict[str, Any] = {
             "tags": all_tags if all_tags else [],
             "object_tags": object_tags if object_tags else {},
             "tests": [],  # Functions can have tests, but we'll handle that separately if needed
@@ -473,8 +473,8 @@ class OTSConverter:
         return parsed_function
 
     def _convert_function_code(
-        self, code: Dict[str, Any], language: str, dependencies: Dict[str, List[str]]
-    ) -> Dict[str, Any]:
+        self, code: dict[str, Any], language: str, dependencies: dict[str, list[str]]
+    ) -> dict[str, Any]:
         """
         Convert OTS function code structure to ParsedFunction code structure.
 
@@ -489,7 +489,7 @@ class OTSConverter:
         if language == "sql":
             # OTS format: {"generic_sql": "...", "database_specific": {"duckdb": "...", ...}}
             generic_sql = code.get("generic_sql", "")
-            database_specific = code.get("database_specific", {})
+            code.get("database_specific", {})
 
             # For now, use generic_sql as original_sql
             # In the future, we might want to select database-specific SQL based on target

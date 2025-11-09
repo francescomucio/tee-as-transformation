@@ -4,7 +4,6 @@ Result categorization utilities.
 Extracts result categorization logic from TestExecutor.
 """
 
-from typing import List, Dict
 
 from tee.testing.base import TestResult, TestSeverity
 
@@ -13,7 +12,7 @@ class ResultCategorizer:
     """Categorizes test results into errors and warnings."""
 
     @staticmethod
-    def categorize_results(results: List[TestResult]) -> Dict[str, List[str]]:
+    def categorize_results(results: list[TestResult]) -> dict[str, list[str]]:
         """
         Categorize test results into errors and warnings.
 
@@ -23,8 +22,8 @@ class ResultCategorizer:
         Returns:
             Dictionary with 'errors' and 'warnings' lists
         """
-        errors: List[str] = []
-        warnings: List[str] = []
+        errors: list[str] = []
+        warnings: list[str] = []
 
         for result in results:
             if result.severity == TestSeverity.WARNING:

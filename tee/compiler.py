@@ -12,20 +12,19 @@ This module handles the compilation workflow:
 
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Set
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 from tee.parser import ProjectParser
 from tee.parser.input import (
-    OTSModuleReader,
     OTSConverter,
-    OTSModuleReaderError,
     OTSConverterError,
-    validate_ots_module_location,
+    OTSModuleReader,
+    OTSModuleReaderError,
     OTSValidationError,
+    validate_ots_module_location,
 )
-from tee.parser.shared.types import ParsedModel
 from tee.parser.shared.exceptions import ParserError
 
 logger = logging.getLogger(__name__)
@@ -38,11 +37,11 @@ class CompilationError(Exception):
 
 def compile_project(
     project_folder: str,
-    connection_config: Dict[str, Any],
-    variables: Optional[Dict[str, Any]] = None,
-    project_config: Optional[Dict[str, Any]] = None,
+    connection_config: dict[str, Any],
+    variables: dict[str, Any] | None = None,
+    project_config: dict[str, Any] | None = None,
     format: str = "json",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Compile a t4t project to OTS modules.
 
@@ -141,9 +140,9 @@ def compile_project(
                     else:
                         print()
                 except (OTSValidationError, OTSModuleReaderError, OTSConverterError) as e:
-                    raise CompilationError(f"Failed to load imported OTS module {ots_file}: {e}")
+                    raise CompilationError(f"Failed to load imported OTS module {ots_file}: {e}") from e
                 except Exception as e:
-                    raise CompilationError(f"Unexpected error loading OTS module {ots_file}: {e}")
+                    raise CompilationError(f"Unexpected error loading OTS module {ots_file}: {e}") from e
         else:
             print("No imported OTS modules found")
 
@@ -244,12 +243,12 @@ def compile_project(
                     tmp_path = Path(tmp.name)
                 
                 reader = OTSModuleReader()
-                validated_module = reader.read_module(tmp_path)
+                reader.read_module(tmp_path)
                 tmp_path.unlink()  # Clean up
                 
                 print(f"  ✅ Validated {module_name}")
             except Exception as e:
-                raise CompilationError(f"Validation failed for module {module_name}: {e}")
+                raise CompilationError(f"Validation failed for module {module_name}: {e}") from e
         
         print("✅ All modules validated")
 
@@ -283,20 +282,20 @@ def compile_project(
             "parsed_models": all_models,
         }
 
-    except (CompilationError, ParserError) as e:
+    except (CompilationError, ParserError):
         raise
     except Exception as e:
-        raise CompilationError(f"Compilation failed: {e}")
+        raise CompilationError(f"Compilation failed: {e}") from e
 
 
 def _merge_test_libraries(
     project_path: Path,
     tests_folder: Path,
     output_folder: Path,
-    project_config: Optional[Dict[str, Any]],
-    imported_ots_modules: List[tuple],
+    project_config: dict[str, Any] | None,
+    imported_ots_modules: list[tuple],
     format: str = "json",
-) -> Optional[Path]:
+) -> Path | None:
     """
     Merge test libraries from project and imported OTS modules.
 
@@ -311,8 +310,8 @@ def _merge_test_libraries(
         Path to merged test library file, or None if no tests found
     """
     import json
+
     from tee.parser.output import TestLibraryExporter
-    from tee.parser.input import OTSModuleReader
     
     # Get project name from config or folder name
     # project.toml has "project_folder" not "name", so use that or fall back to folder name
@@ -331,7 +330,7 @@ def _merge_test_libraries(
     project_test_library = {}
     if project_test_library_path and project_test_library_path.exists():
         try:
-            with open(project_test_library_path, "r", encoding="utf-8") as f:
+            with open(project_test_library_path, encoding="utf-8") as f:
                 # Try JSON first, then YAML
                 try:
                     project_test_library = json.load(f)
@@ -376,7 +375,7 @@ def _merge_test_libraries(
         
         if test_lib_path.exists():
             try:
-                with open(test_lib_path, "r", encoding="utf-8") as f:
+                with open(test_lib_path, encoding="utf-8") as f:
                     # Try JSON first, then YAML
                     try:
                         imported_lib = json.load(f)
