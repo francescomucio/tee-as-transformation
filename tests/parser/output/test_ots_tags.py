@@ -4,7 +4,9 @@ Test cases for OTS transformer tag extraction and merging functionality.
 
 import pytest
 from typing import Dict, Any, List
-from tee.parser.output.ots_transformer import OTSTransformer
+from tee.parser.output.ots.transformer import OTSTransformer
+from tee.parser.output.ots.taggers import TagManager
+from tee.parser.output.ots.transformers import ModelTransformer
 from tee.parser.shared.types import ParsedModel
 
 
@@ -19,13 +21,8 @@ class TestOTSTagExtraction:
             "module": {"tags": ["analytics", "production", "fct"]},
         }
 
-        transformer = OTSTransformer(project_config)
-        model_data: ParsedModel = {
-            "model_metadata": {"metadata": {}},
-            "code": {},
-        }
-
-        tags = transformer._merge_tags(model_data)
+        tag_manager = TagManager(project_config)
+        tags = tag_manager.merge_tags([])
         assert tags == ["analytics", "production", "fct"]
 
     def test_extract_module_tags_from_root_level(self):
@@ -36,13 +33,8 @@ class TestOTSTagExtraction:
             "tags": ["analytics", "production"],
         }
 
-        transformer = OTSTransformer(project_config)
-        model_data: ParsedModel = {
-            "model_metadata": {"metadata": {}},
-            "code": {},
-        }
-
-        tags = transformer._merge_tags(model_data)
+        tag_manager = TagManager(project_config)
+        tags = tag_manager.merge_tags([])
         assert tags == ["analytics", "production"]
 
     def test_merge_module_and_transformation_tags(self):
@@ -53,15 +45,9 @@ class TestOTSTagExtraction:
             "module": {"tags": ["analytics", "production"]},
         }
 
-        transformer = OTSTransformer(project_config)
-        model_data: ParsedModel = {
-            "model_metadata": {
-                "metadata": {"tags": ["fct", "daily"]}
-            },
-            "code": {},
-        }
-
-        tags = transformer._merge_tags(model_data)
+        tag_manager = TagManager(project_config)
+        transformation_tags = ["fct", "daily"]
+        tags = tag_manager.merge_tags(transformation_tags)
         # Should merge and preserve order: module tags first, then transformation tags
         assert tags == ["analytics", "production", "fct", "daily"]
 
@@ -73,15 +59,9 @@ class TestOTSTagExtraction:
             "module": {"tags": ["analytics", "production"]},
         }
 
-        transformer = OTSTransformer(project_config)
-        model_data: ParsedModel = {
-            "model_metadata": {
-                "metadata": {"tags": ["analytics", "fct"]}  # "analytics" is duplicate
-            },
-            "code": {},
-        }
-
-        tags = transformer._merge_tags(model_data)
+        tag_manager = TagManager(project_config)
+        transformation_tags = ["analytics", "fct"]  # "analytics" is duplicate
+        tags = tag_manager.merge_tags(transformation_tags)
         # Should deduplicate (case-insensitive) and preserve order
         assert tags == ["analytics", "production", "fct"]
 
@@ -93,15 +73,9 @@ class TestOTSTagExtraction:
             "module": {"tags": ["Analytics", "PRODUCTION"]},
         }
 
-        transformer = OTSTransformer(project_config)
-        model_data: ParsedModel = {
-            "model_metadata": {
-                "metadata": {"tags": ["analytics", "production"]}  # Lowercase duplicates
-            },
-            "code": {},
-        }
-
-        tags = transformer._merge_tags(model_data)
+        tag_manager = TagManager(project_config)
+        transformation_tags = ["analytics", "production"]  # Lowercase duplicates
+        tags = tag_manager.merge_tags(transformation_tags)
         # Should deduplicate case-insensitively, keeping first occurrence
         assert len(tags) == 2
         assert "Analytics" in tags or "analytics" in tags
@@ -114,15 +88,9 @@ class TestOTSTagExtraction:
             "connection": {"type": "duckdb", "path": ":memory:"},
         }
 
-        transformer = OTSTransformer(project_config)
-        model_data: ParsedModel = {
-            "model_metadata": {
-                "metadata": {"tags": ["fct", "daily"]}
-            },
-            "code": {},
-        }
-
-        tags = transformer._merge_tags(model_data)
+        tag_manager = TagManager(project_config)
+        transformation_tags = ["fct", "daily"]
+        tags = tag_manager.merge_tags(transformation_tags)
         assert tags == ["fct", "daily"]
 
     def test_no_tags_returns_empty_list(self):
@@ -132,13 +100,8 @@ class TestOTSTagExtraction:
             "connection": {"type": "duckdb", "path": ":memory:"},
         }
 
-        transformer = OTSTransformer(project_config)
-        model_data: ParsedModel = {
-            "model_metadata": {"metadata": {}},
-            "code": {},
-        }
-
-        tags = transformer._merge_tags(model_data)
+        tag_manager = TagManager(project_config)
+        tags = tag_manager.merge_tags([])
         assert tags == []
 
     def test_module_tags_in_ots_module(self):
@@ -235,15 +198,9 @@ class TestOTSTagExtraction:
             "module": {"tags": "not-a-list"},  # Invalid: should be a list
         }
 
-        transformer = OTSTransformer(project_config)
-        model_data: ParsedModel = {
-            "model_metadata": {
-                "metadata": {"tags": ["valid", "tags"]}
-            },
-            "code": {},
-        }
-
-        tags = transformer._merge_tags(model_data)
+        tag_manager = TagManager(project_config)
+        transformation_tags = ["valid", "tags"]
+        tags = tag_manager.merge_tags(transformation_tags)
         # Should handle gracefully and only use valid tags
         assert tags == ["valid", "tags"]
 
@@ -255,13 +212,8 @@ class TestOTSTagExtraction:
             "module": {"tags": ["valid", "", "  ", None, "also-valid"]},
         }
 
-        transformer = OTSTransformer(project_config)
-        model_data: ParsedModel = {
-            "model_metadata": {"metadata": {}},
-            "code": {},
-        }
-
-        tags = transformer._merge_tags(model_data)
+        tag_manager = TagManager(project_config)
+        tags = tag_manager.merge_tags([])
         # Should filter out empty/None values
         assert "valid" in tags
         assert "also-valid" in tags
@@ -275,21 +227,15 @@ class TestOTSTagExtraction:
             "connection": {"type": "duckdb", "path": ":memory:"},
         }
 
-        transformer = OTSTransformer(project_config)
-        model_data: ParsedModel = {
-            "model_metadata": {
-                "metadata": {
-                    "object_tags": {
-                        "sensitivity_tag": "pii",
-                        "classification": "public",
-                        "data_owner": "analytics-team"
-                    }
-                }
-            },
-            "code": {},
+        tag_manager = TagManager(project_config)
+        metadata = {
+            "object_tags": {
+                "sensitivity_tag": "pii",
+                "classification": "public",
+                "data_owner": "analytics-team"
+            }
         }
-
-        object_tags = transformer._extract_object_tags(model_data)
+        object_tags = tag_manager.extract_object_tags(metadata)
         assert isinstance(object_tags, dict)
         assert object_tags["sensitivity_tag"] == "pii"
         assert object_tags["classification"] == "public"
@@ -302,17 +248,11 @@ class TestOTSTagExtraction:
             "connection": {"type": "duckdb", "path": ":memory:"},
         }
 
-        transformer = OTSTransformer(project_config)
-        model_data: ParsedModel = {
-            "model_metadata": {
-                "metadata": {
-                    "object_tags": ["not", "a", "dict"]  # Invalid format
-                }
-            },
-            "code": {},
+        tag_manager = TagManager(project_config)
+        metadata = {
+            "object_tags": ["not", "a", "dict"]  # Invalid format
         }
-
-        object_tags = transformer._extract_object_tags(model_data)
+        object_tags = tag_manager.extract_object_tags(metadata)
         assert object_tags == {}
 
     def test_extract_object_tags_converts_values_to_strings(self):
@@ -322,21 +262,15 @@ class TestOTSTagExtraction:
             "connection": {"type": "duckdb", "path": ":memory:"},
         }
 
-        transformer = OTSTransformer(project_config)
-        model_data: ParsedModel = {
-            "model_metadata": {
-                "metadata": {
-                    "object_tags": {
-                        "numeric_value": 123,
-                        "boolean_value": True,
-                        "string_value": "text"
-                    }
-                }
-            },
-            "code": {},
+        tag_manager = TagManager(project_config)
+        metadata = {
+            "object_tags": {
+                "numeric_value": 123,
+                "boolean_value": True,
+                "string_value": "text"
+            }
         }
-
-        object_tags = transformer._extract_object_tags(model_data)
+        object_tags = tag_manager.extract_object_tags(metadata)
         assert object_tags["numeric_value"] == "123"
         assert object_tags["boolean_value"] == "True"
         assert object_tags["string_value"] == "text"

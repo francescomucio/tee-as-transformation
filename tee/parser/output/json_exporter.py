@@ -11,7 +11,7 @@ import yaml
 from tee.parser.shared.types import ParsedModel, ParsedFunction, DependencyGraph
 from tee.parser.shared.exceptions import OutputGenerationError
 from tee.parser.shared.constants import OUTPUT_FILES
-from .ots_transformer import OTSTransformer
+from .ots.transformer import OTSTransformer
 from .test_library_exporter import TestLibraryExporter
 from tee.typing.metadata import OTSModule
 

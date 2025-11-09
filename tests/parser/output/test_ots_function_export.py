@@ -4,7 +4,7 @@ Unit tests for OTS function export functionality.
 
 import pytest
 from typing import Dict, Any
-from tee.parser.output.ots_transformer import OTSTransformer
+from tee.parser.output.ots.transformer import OTSTransformer
 from tee.parser.shared.types import ParsedModel, ParsedFunction
 
 

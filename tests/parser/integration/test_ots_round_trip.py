@@ -9,7 +9,7 @@ import json
 import tempfile
 from pathlib import Path
 from tee.parser.core.orchestrator import ParserOrchestrator
-from tee.parser.output.ots_transformer import OTSTransformer
+from tee.parser.output.ots.transformer import OTSTransformer
 from tee.parser.input.ots_converter import OTSConverter
 from tee.parser.input.ots_reader import OTSModuleReader
 from tee.parser.shared.types import ParsedModel, ParsedFunction
