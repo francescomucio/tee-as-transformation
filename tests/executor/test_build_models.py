@@ -33,7 +33,13 @@ class TestBuildModels:
         """Helper to set up parser mock."""
         mock_parser = Mock()
         mock_parser.collect_models.return_value = parsed_models
-        mock_parser.parsed_functions = {}  # Add parsed_functions to avoid len() error
+        # Set parsed_functions as a dict (not Mock) to support len() calls
+        mock_parser.parsed_functions = {}
+        # Make sure parsed_functions can be checked with isinstance
+        if hasattr(mock_parser, 'parsed_functions'):
+            # Ensure it's a real dict, not a Mock
+            if not isinstance(mock_parser.parsed_functions, dict):
+                mock_parser.parsed_functions = {}
         if graph is None:
             graph = {
                 "nodes": list(parsed_models.keys()),
@@ -44,13 +50,14 @@ class TestBuildModels:
         mock_parser.get_table_dependents.return_value = []
         mock_parser.orchestrator = Mock()
         mock_parser.orchestrator.evaluate_python_models.return_value = parsed_models
+        mock_parser.orchestrator.discover_and_parse_functions.return_value = {}  # Return empty dict, not Mock
         return mock_parser
 
     def _setup_execution_engine_mock(self, execute_models_return):
         """Helper to set up execution engine mock."""
         mock_execution_engine = Mock()
         mock_execution_engine.execute_models.return_value = execute_models_return
-        mock_execution_engine._extract_metadata.return_value = None
+        mock_execution_engine.execute_functions.return_value = {"executed_functions": [], "failed_functions": []}
         mock_execution_engine.adapter = Mock()
         return mock_execution_engine
 
@@ -202,7 +209,7 @@ class TestBuildModels:
         mock_execution_engine_instance = Mock()
         mock_execution_engine_instance.connect = Mock()
         mock_execution_engine_instance.execute_models = mock_execution_engine.execute_models
-        mock_execution_engine_instance._extract_metadata = mock_execution_engine._extract_metadata
+        mock_execution_engine_instance.execute_functions = mock_execution_engine.execute_functions
         mock_execution_engine_instance.adapter = mock_execution_engine.adapter
         mock_execution_engine_class.return_value = mock_execution_engine_instance
 
@@ -274,7 +281,7 @@ class TestBuildModels:
             },
         }
         mock_execution_engine = self._setup_execution_engine_mock(execute_models_return)
-        mock_execution_engine._extract_metadata.return_value = {"tests": ["check_minimum_rows"]}
+        # Metadata extraction is now handled by MetadataExtractor, not ExecutionEngine
         mock_model_executor.execution_engine = mock_execution_engine
         mock_model_executor_class.return_value = mock_model_executor
 
@@ -282,7 +289,7 @@ class TestBuildModels:
         mock_execution_engine_instance = Mock()
         mock_execution_engine_instance.connect = Mock()
         mock_execution_engine_instance.execute_models = mock_execution_engine.execute_models
-        mock_execution_engine_instance._extract_metadata = mock_execution_engine._extract_metadata
+        mock_execution_engine_instance.execute_functions = mock_execution_engine.execute_functions
         mock_execution_engine_instance.adapter = mock_execution_engine.adapter
         mock_execution_engine_class.return_value = mock_execution_engine_instance
 
@@ -423,7 +430,7 @@ class TestBuildModels:
         mock_execution_engine_instance = Mock()
         mock_execution_engine_instance.connect = Mock()
         mock_execution_engine_instance.execute_models = mock_execution_engine.execute_models
-        mock_execution_engine_instance._extract_metadata = mock_execution_engine._extract_metadata
+        mock_execution_engine_instance.execute_functions = mock_execution_engine.execute_functions
         mock_execution_engine_instance.adapter = mock_execution_engine.adapter
         mock_execution_engine_class.return_value = mock_execution_engine_instance
 
@@ -481,10 +488,7 @@ class TestBuildModels:
             },
         }
         mock_execution_engine = self._setup_execution_engine_mock(execute_models_return)
-        mock_execution_engine._extract_metadata.side_effect = [
-            {"tests": ["not_null"]},
-            {"tests": ["unique"]},
-        ]
+        # Metadata extraction is now handled by MetadataExtractor, not ExecutionEngine
         mock_model_executor.execution_engine = mock_execution_engine
         mock_model_executor_class.return_value = mock_model_executor
 
@@ -492,12 +496,7 @@ class TestBuildModels:
         mock_execution_engine_instance = Mock()
         mock_execution_engine_instance.connect = Mock()
         mock_execution_engine_instance.execute_models = mock_execution_engine.execute_models
-        # Set up _extract_metadata to return metadata for each model
-        metadata_side_effect = [
-            {"tests": ["not_null"]},
-            {"tests": ["unique"]},
-        ]
-        mock_execution_engine_instance._extract_metadata = Mock(side_effect=metadata_side_effect)
+        mock_execution_engine_instance.execute_functions = mock_execution_engine.execute_functions
         mock_execution_engine_instance.adapter = mock_execution_engine.adapter
         mock_execution_engine_class.return_value = mock_execution_engine_instance
 
@@ -591,7 +590,7 @@ class TestBuildModels:
         mock_execution_engine_instance = Mock()
         mock_execution_engine_instance.connect = Mock()
         mock_execution_engine_instance.execute_models = mock_execution_engine.execute_models
-        mock_execution_engine_instance._extract_metadata = mock_execution_engine._extract_metadata
+        mock_execution_engine_instance.execute_functions = mock_execution_engine.execute_functions
         mock_execution_engine_instance.adapter = mock_execution_engine.adapter
         mock_execution_engine_class.return_value = mock_execution_engine_instance
 
