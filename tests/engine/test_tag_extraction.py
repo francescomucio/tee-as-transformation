@@ -4,6 +4,7 @@ Test cases for tag extraction in execution engine.
 
 import pytest
 from tee.engine.execution_engine import ExecutionEngine
+from tee.engine.metadata import MetadataExtractor
 
 
 class TestTagExtraction:
@@ -26,7 +27,8 @@ class TestTagExtraction:
             "code": {"sql": {"original_sql": "SELECT 1 as id", "resolved_sql": "SELECT 1 as id", "source_tables": []}},
         }
 
-        metadata = engine._extract_metadata(model_data)
+        metadata_extractor = MetadataExtractor()
+        metadata = metadata_extractor.extract_model_metadata(model_data)
         assert metadata is not None
         assert "tags" in metadata
         assert metadata["tags"] == ["fct", "daily"]
@@ -50,7 +52,8 @@ class TestTagExtraction:
             "code": {"sql": {"original_sql": "SELECT 1 as id", "resolved_sql": "SELECT 1 as id", "source_tables": []}},
         }
 
-        metadata = engine._extract_metadata(model_data)
+        metadata_extractor = MetadataExtractor()
+        metadata = metadata_extractor.extract_model_metadata(model_data)
         assert metadata is not None
         assert "tags" in metadata
         assert metadata["tags"] == ["analytics", "production"]
@@ -73,7 +76,8 @@ class TestTagExtraction:
             "code": {"sql": {"original_sql": "SELECT 1 as id", "resolved_sql": "SELECT 1 as id", "source_tables": []}},
         }
 
-        metadata = engine._extract_metadata(model_data)
+        metadata_extractor = MetadataExtractor()
+        metadata = metadata_extractor.extract_model_metadata(model_data)
         assert metadata is not None
         assert "tags" in metadata
         assert metadata["tags"] == ["staging", "test"]
@@ -94,7 +98,8 @@ class TestTagExtraction:
             "code": {"sql": {"original_sql": "SELECT 1 as id", "resolved_sql": "SELECT 1 as id", "source_tables": []}},
         }
 
-        metadata = engine._extract_metadata(model_data)
+        metadata_extractor = MetadataExtractor()
+        metadata = metadata_extractor.extract_model_metadata(model_data)
         assert metadata is not None
         assert "tags" not in metadata or metadata.get("tags") == []
 
@@ -110,7 +115,8 @@ class TestTagExtraction:
             "metadata": {"tags": ["test", "tags"]}
         }
 
-        engine._extract_tags_to_metadata(metadata, model_metadata)
+        metadata_extractor = MetadataExtractor()
+        metadata_extractor._extract_tags_to_metadata(metadata, model_metadata)
         assert "tags" in metadata
         assert metadata["tags"] == ["test", "tags"]
 
@@ -126,7 +132,8 @@ class TestTagExtraction:
             "metadata": {"tags": ["new", "tags"]}
         }
 
-        engine._extract_tags_to_metadata(metadata, model_metadata)
+        metadata_extractor = MetadataExtractor()
+        metadata_extractor._extract_tags_to_metadata(metadata, model_metadata)
         # Should preserve existing tags (not overwrite)
         assert metadata["tags"] == ["existing"]
 
@@ -151,7 +158,8 @@ class TestTagExtraction:
             "code": {"sql": {"original_sql": "SELECT 1 as id", "resolved_sql": "SELECT 1 as id", "source_tables": []}},
         }
 
-        metadata = engine._extract_metadata(model_data)
+        metadata_extractor = MetadataExtractor()
+        metadata = metadata_extractor.extract_model_metadata(model_data)
         assert metadata is not None
         assert "tags" in metadata
         assert metadata["tags"] == ["incremental", "daily"]
@@ -177,7 +185,8 @@ class TestTagExtraction:
             "code": {"sql": {"original_sql": "SELECT 1 as id", "resolved_sql": "SELECT 1 as id", "source_tables": []}},
         }
 
-        metadata = engine._extract_metadata(model_data)
+        metadata_extractor = MetadataExtractor()
+        metadata = metadata_extractor.extract_model_metadata(model_data)
         assert metadata is not None
         assert "object_tags" in metadata
         assert metadata["object_tags"]["sensitivity_tag"] == "pii"
@@ -204,7 +213,8 @@ class TestTagExtraction:
             "code": {"sql": {"original_sql": "SELECT 1 as id", "resolved_sql": "SELECT 1 as id", "source_tables": []}},
         }
 
-        metadata = engine._extract_metadata(model_data)
+        metadata_extractor = MetadataExtractor()
+        metadata = metadata_extractor.extract_model_metadata(model_data)
         assert metadata is not None
         assert "tags" in metadata
         assert "object_tags" in metadata

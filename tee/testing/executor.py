@@ -598,7 +598,7 @@ class TestExecutor:
             return True
 
     def _extract_metadata(self, model_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Extract metadata from model data (similar to ExecutionEngine._extract_metadata)."""
+        """Extract metadata from model data (similar to MetadataExtractor.extract_model_metadata)."""
         try:
             # First, try to get metadata from model_metadata
             model_metadata = model_data.get("model_metadata", {})
@@ -619,7 +619,7 @@ class TestExecutor:
             return None
 
     def _extract_function_metadata(self, function_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Extract metadata from function data (similar to ExecutionEngine._extract_function_metadata)."""
+        """Extract metadata from function data (similar to MetadataExtractor.extract_function_metadata)."""
         try:
             # First, try to get metadata from function_metadata
             function_metadata = function_data.get("function_metadata", {})

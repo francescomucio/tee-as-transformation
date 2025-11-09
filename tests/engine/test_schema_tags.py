@@ -4,6 +4,7 @@ Test cases for schema-level tag functionality in execution engine.
 
 import pytest
 from tee.engine.execution_engine import ExecutionEngine
+from tee.engine.metadata import MetadataExtractor
 
 
 class TestSchemaTagExtraction:
@@ -25,12 +26,8 @@ tags = ["analytics", "production"]
 object_tags = {"sensitivity_tag" = "pii", "classification" = "public"}
 """)
 
-        engine = ExecutionEngine(
-            config={"type": "duckdb", "path": ":memory:"},
-            project_folder=str(temp_project_dir),
-        )
-
-        schema_metadata = engine._load_schema_metadata("my_schema")
+        metadata_extractor = MetadataExtractor()
+        schema_metadata = metadata_extractor.load_schema_metadata("my_schema", str(temp_project_dir))
         assert schema_metadata is not None
         assert "tags" in schema_metadata
         assert schema_metadata["tags"] == ["analytics", "production"]
@@ -53,12 +50,8 @@ tags = ["analytics", "production"]
 object_tags = {"sensitivity_tag" = "pii"}
 """)
 
-        engine = ExecutionEngine(
-            config={"type": "duckdb", "path": ":memory:"},
-            project_folder=str(temp_project_dir),
-        )
-
-        schema_metadata = engine._load_schema_metadata("my_schema")
+        metadata_extractor = MetadataExtractor()
+        schema_metadata = metadata_extractor.load_schema_metadata("my_schema", str(temp_project_dir))
         assert schema_metadata is not None
         assert "tags" in schema_metadata
         assert schema_metadata["tags"] == ["analytics", "production"]
@@ -77,12 +70,8 @@ type = "duckdb"
 path = ":memory:"
 """)
 
-        engine = ExecutionEngine(
-            config={"type": "duckdb", "path": ":memory:"},
-            project_folder=str(temp_project_dir),
-        )
-
-        schema_metadata = engine._load_schema_metadata("my_schema")
+        metadata_extractor = MetadataExtractor()
+        schema_metadata = metadata_extractor.load_schema_metadata("my_schema", str(temp_project_dir))
         assert schema_metadata is not None
         assert "tags" in schema_metadata
         assert schema_metadata["tags"] == ["analytics", "production"]
@@ -104,12 +93,8 @@ tags = ["module_tag"]
 tags = ["schema_tag"]
 """)
 
-        engine = ExecutionEngine(
-            config={"type": "duckdb", "path": ":memory:"},
-            project_folder=str(temp_project_dir),
-        )
-
-        schema_metadata = engine._load_schema_metadata("my_schema")
+        metadata_extractor = MetadataExtractor()
+        schema_metadata = metadata_extractor.load_schema_metadata("my_schema", str(temp_project_dir))
         assert schema_metadata is not None
         assert schema_metadata["tags"] == ["schema_tag"]  # Per-schema overrides
 
@@ -120,9 +105,15 @@ tags = ["schema_tag"]
             project_folder=str(temp_project_dir),
         )
 
-        assert engine._extract_schema_name("my_schema.table_name") == "my_schema"
-        assert engine._extract_schema_name("schema.table") == "schema"
-        assert engine._extract_schema_name("table_without_schema") is None
+        # Schema name extraction is now in executors, test via model executor
+        from tee.engine.executors.model_executor import ModelExecutor
+        model_executor = ModelExecutor(
+            engine.adapter, str(temp_project_dir), {}, 
+            engine.materialization_handler, engine.metadata_extractor, engine.state_checker
+        )
+        assert model_executor._extract_schema_name("my_schema.table_name") == "my_schema"
+        assert model_executor._extract_schema_name("schema.table") == "schema"
+        assert model_executor._extract_schema_name("table_without_schema") is None
 
     def test_schema_tags_not_processed_twice(self, temp_project_dir):
         """Test that schema tags are only processed once per schema."""
@@ -143,14 +134,20 @@ tags = ["analytics"]
             project_folder=str(temp_project_dir),
         )
 
+        # Schema tag attachment is now in executors, test via model executor
+        from tee.engine.executors.model_executor import ModelExecutor
+        model_executor = ModelExecutor(
+            engine.adapter, str(temp_project_dir), {}, 
+            engine.materialization_handler, engine.metadata_extractor, engine.state_checker
+        )
         # First call should process
-        engine._attach_schema_tags_if_needed("my_schema")
-        assert "my_schema" in engine._processed_schemas
+        model_executor._attach_schema_tags_if_needed("my_schema")
+        assert "my_schema" in model_executor._processed_schemas
 
         # Second call should be skipped
-        initial_count = len(engine._processed_schemas)
-        engine._attach_schema_tags_if_needed("my_schema")
-        assert len(engine._processed_schemas) == initial_count
+        initial_count = len(model_executor._processed_schemas)
+        model_executor._attach_schema_tags_if_needed("my_schema")
+        assert len(model_executor._processed_schemas) == initial_count
 
     def test_no_schema_tags_returns_none(self, temp_project_dir):
         """Test that None is returned when no schema tags are configured."""
@@ -163,12 +160,8 @@ type = "duckdb"
 path = ":memory:"
 """)
 
-        engine = ExecutionEngine(
-            config={"type": "duckdb", "path": ":memory:"},
-            project_folder=str(temp_project_dir),
-        )
-
-        schema_metadata = engine._load_schema_metadata("my_schema")
+        metadata_extractor = MetadataExtractor()
+        schema_metadata = metadata_extractor.load_schema_metadata("my_schema", str(temp_project_dir))
         assert schema_metadata is None
 
     def test_multiple_schemas_with_different_tags(self, temp_project_dir):
@@ -189,13 +182,9 @@ tags = ["staging", "test"]
 object_tags = {"classification" = "internal"}
 """)
 
-        engine = ExecutionEngine(
-            config={"type": "duckdb", "path": ":memory:"},
-            project_folder=str(temp_project_dir),
-        )
-
-        schema1_metadata = engine._load_schema_metadata("schema1")
-        schema2_metadata = engine._load_schema_metadata("schema2")
+        metadata_extractor = MetadataExtractor()
+        schema1_metadata = metadata_extractor.load_schema_metadata("schema1", str(temp_project_dir))
+        schema2_metadata = metadata_extractor.load_schema_metadata("schema2", str(temp_project_dir))
 
         assert schema1_metadata["tags"] == ["analytics", "production"]
         assert schema2_metadata["tags"] == ["staging", "test"]

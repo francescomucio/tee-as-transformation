@@ -33,6 +33,7 @@ class TestBuildModels:
         """Helper to set up parser mock."""
         mock_parser = Mock()
         mock_parser.collect_models.return_value = parsed_models
+        mock_parser.parsed_functions = {}  # Add parsed_functions to avoid len() error
         if graph is None:
             graph = {
                 "nodes": list(parsed_models.keys()),
@@ -193,7 +194,7 @@ class TestBuildModels:
             "table_info": {"schema1.table1": {"row_count": 10}},
         }
         mock_execution_engine = self._setup_execution_engine_mock(execute_models_return)
-        mock_execution_engine._extract_metadata.return_value = {"tests": ["not_null"]}
+        # Metadata extraction is now handled by MetadataExtractor, not ExecutionEngine
         mock_model_executor.execution_engine = mock_execution_engine
         mock_model_executor_class.return_value = mock_model_executor
 

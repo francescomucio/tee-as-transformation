@@ -203,8 +203,11 @@ def execute_tests_for_model(
     test_executor: TestExecutor,
 ) -> List[Any]:
     """Execute tests for a model and return test results."""
+    from tee.engine.metadata import MetadataExtractor
+    
     model_data = parsed_models[node_name]
-    metadata = model_executor.execution_engine._extract_metadata(model_data)
+    metadata_extractor = MetadataExtractor()
+    metadata = metadata_extractor.extract_model_metadata(model_data)
     
     if not metadata:
         return []
@@ -224,8 +227,11 @@ def execute_tests_for_function(
     test_executor: TestExecutor,
 ) -> List[Any]:
     """Execute tests for a function and return test results."""
+    from tee.engine.metadata import MetadataExtractor
+    
     function_data = parsed_functions[function_name]
-    metadata = model_executor.execution_engine._extract_function_metadata(function_data)
+    metadata_extractor = MetadataExtractor()
+    metadata = metadata_extractor.extract_function_metadata(function_data)
     
     if not metadata:
         return []
