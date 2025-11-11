@@ -160,8 +160,11 @@ t4t import ./my_dbt_project ./imported_project \
 #### Models
 - SQL models → t4t SQL models
 - Jinja templates → Converted or Python models
-- Model metadata → Python metadata files
+- Model metadata → Python metadata files (always created, even without metadata)
+  - Always includes `table_name` field
+  - Includes `TODO: Add model description` if no description found
 - Schema resolution → Folder structure (`models/{schema}/{table}.sql`)
+- Aliases → Handled from `{{ config(alias='...') }}` or `schema.yml` (highest priority)
 
 #### Tests
 - Standard tests → t4t standard tests
@@ -193,6 +196,12 @@ The importer follows dbt's schema resolution priority:
 4. Profile schema (from `profiles.yml`)
 5. Default schema (`dev` if no profile, or `--default-schema`)
 
+**Alias Resolution:**
+- Aliases are resolved with the same priority as schemas
+- `{{ config(alias='custom_name') }}` (highest priority)
+- `schema.yml` alias field
+- Model file name (default)
+
 Models are organized into folders matching their resolved schema:
 ```
 models/
@@ -220,6 +229,50 @@ The importer handles Jinja templates as follows:
 **With `--keep-jinja`:**
 - Only `ref()` and `source()` are converted
 - Other Jinja is preserved (requires Jinja2 support in t4t)
+
+### Metadata Files
+
+Every SQL model gets a corresponding Python metadata file (`.py`) created automatically:
+
+**Structure:**
+```python
+# Model metadata converted from dbt
+from tee.typing.metadata import ModelMetadataDict
+
+metadata: ModelMetadataDict = {
+    "table_name": "schema.table_name",  # Always included
+    "description": "Model description or TODO: Add model description",
+    "schema": [...],  # Column definitions (if available)
+    # ... other metadata fields
+}
+```
+
+**Key Points:**
+- Metadata files are **always created**, even if no metadata exists in dbt
+- `table_name` is **always included** (required for validation)
+- If no description is found, `"TODO: Add model description"` is added
+- All `.py` files end with a newline (POSIX standard)
+- Aliases from dbt are reflected in the `table_name` field
+
+**Example - Model with metadata:**
+```python
+metadata: ModelMetadataDict = {
+    "table_name": "marts.customers",
+    "description": "Customer overview data mart",
+    "schema": [
+        {"name": "customer_id", "datatype": "string", "description": "Unique ID"},
+        # ...
+    ],
+}
+```
+
+**Example - Model without metadata:**
+```python
+metadata: ModelMetadataDict = {
+    "table_name": "marts.locations",
+    "description": "TODO: Add model description",
+}
+```
 
 ## Troubleshooting
 
@@ -278,6 +331,11 @@ Common validation issues:
 - SQL syntax errors (check SQL files)
 - Missing dependencies (check model references)
 - Missing metadata (check metadata files)
+
+**Note:** All models get metadata files (`.py`) created automatically, even if no metadata was found in dbt. These files include:
+- `table_name`: The final resolved table name (schema.table format)
+- `description`: Either the description from dbt, or `"TODO: Add model description"` if missing
+- All `.py` files end with a newline (POSIX standard)
 
 #### 5. "OTS compilation failed"
 

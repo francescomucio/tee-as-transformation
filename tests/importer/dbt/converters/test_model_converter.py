@@ -263,7 +263,7 @@ class TestModelConverter:
             # Check that metadata file was created
             metadata_file = target_path / "models" / "public" / "customers.py"
             assert metadata_file.exists()
-            
+
             # Check that table_name is included in metadata
             metadata_content = metadata_file.read_text()
             assert '"table_name": "public.customers"' in metadata_content

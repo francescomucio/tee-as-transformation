@@ -36,6 +36,8 @@ t4t import ./my_dbt_project ./imported_project --dry-run
 - **Reporting**: Comprehensive `IMPORT_REPORT.md` and `CONVERSION_LOG.json`
 - **OTS Format**: Direct import to OTS modules
 - **Model Selection**: `--select` and `--exclude` with name patterns and tags
+- **Metadata Files**: Always created for all models with `table_name` and TODO description if missing
+- **Alias Handling**: Supports aliases from config blocks and `schema.yml` with proper priority
 
 ### ⚠️ Partially Implemented
 

@@ -301,7 +301,7 @@ $$;
             # Parse as PostgreSQL (source dialect for dbt macros)
             # SQLGlot uses "postgres" not "postgresql"
             parsed = sqlglot.parse_one(base_sql, read="postgres")
-
+            
             # Convert to target dialect
             if self.target_dialect != "postgres":
                 converted_sql = parsed.sql(dialect=self.target_dialect)
@@ -340,7 +340,7 @@ $$;
 
         # Try to extract description from macro comments
         description = self._extract_description_from_macro(macro_def)
-
+        
         metadata = f"""# Function metadata converted from dbt macro: {function_name}
 from tee.typing.metadata import FunctionMetadataDict
 
@@ -372,7 +372,7 @@ metadata: FunctionMetadataDict = {{
             Description string, or generic fallback
         """
         file_path = macro_def.get("file", "")
-
+        
         # Try to read the original file to get comments
         try:
             if file_path:
@@ -402,6 +402,6 @@ metadata: FunctionMetadataDict = {{
             if self.verbose:
                 logger.debug(f"Could not extract description from macro: {e}")
             pass
-
+        
         # Fallback to generic description
         return "Function converted from dbt macro"
