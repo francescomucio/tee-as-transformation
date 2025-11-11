@@ -45,6 +45,7 @@ coverage.json
 # Test credentials (not committed to git)
 tests/.snowflake_config.json
 tests/.snowflake_config.toml
+tests/.motherduck_config.json
 
 # MkDocs build output
 site/

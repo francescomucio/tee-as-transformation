@@ -392,6 +392,76 @@ def test_with_logging(duckdb_adapter):
     assert result == expected_value
 ```
 
+## MotherDuck Testing
+
+Tests for MotherDuck (cloud DuckDB) are available in `tests/adapters/duckdb/test_motherduck.py`.
+
+### Setup
+
+To run MotherDuck tests, you need:
+
+1. **Install the MotherDuck extension** for DuckDB:
+   ```bash
+   duckdb -c "INSTALL motherduck;"
+   ```
+   Or in Python:
+   ```python
+   import duckdb
+   conn = duckdb.connect()
+   conn.execute("INSTALL motherduck;")
+   ```
+
+2. **Provide credentials** using one of these methods:
+
+   **Option A: Config file (recommended for local development)**
+   ```bash
+   # Copy the example file
+   cp tests/.motherduck_config.json.example tests/.motherduck_config.json
+   # Edit tests/.motherduck_config.json and add your token
+   ```
+
+   **Option B: Environment variables**
+   ```bash
+   export MOTHERDUCK_TOKEN='your_access_token_here'
+   export MOTHERDUCK_DB_NAME='test_db'  # optional, defaults to 'test_db'
+   export MOTHERDUCK_SCHEMA='test_schema'  # optional, defaults to 'test_schema'
+   ```
+
+3. **Database creation**:
+   - The database will be created automatically by the adapter if it doesn't exist
+   - Or you can create it manually at https://app.motherduck.com/
+   - Or set `MOTHERDUCK_DB_NAME` to an existing database name
+
+### Running MotherDuck Tests
+
+```bash
+# Run all MotherDuck tests
+uv run pytest tests/adapters/duckdb/test_motherduck.py -v
+
+# Run specific test
+uv run pytest tests/adapters/duckdb/test_motherduck.py::TestMotherDuckConnection::test_motherduck_connection -v
+```
+
+### Security Note
+
+**Never commit your MotherDuck token to git!** Always use environment variables or a secure secret management system. The tests will skip if the token is not set, so it's safe to run the test suite without it.
+
+### Troubleshooting
+
+If you see errors about the MotherDuck extension not being available:
+- Ensure the extension is installed (see Setup above)
+- The tests will automatically skip if the extension is not properly installed
+- Check that your DuckDB version supports the MotherDuck extension
+
+### Test Coverage
+
+The MotherDuck tests cover:
+- Basic connection functionality
+- Table creation and management
+- Token authentication via environment variable
+- Token authentication via config extra
+- Connection string variants (`md:` and `motherduck:`)
+
 ## Contributing
 
 When adding new tests:

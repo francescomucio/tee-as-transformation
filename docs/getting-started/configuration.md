@@ -46,9 +46,51 @@ config = AdapterConfig(
 ```toml
 [tool.tee.database]
 type = "duckdb"
-path = "data/my_project.db"  # or ":memory:" for in-memory
+path = "data/my_project.db"  # or ":memory:" for in-memory, or "md:database_name" for MotherDuck
 source_dialect = "postgresql"
 ```
+
+**Note**: For cloud-hosted DuckDB, use MotherDuck by setting `path = "md:database_name"`. See [MotherDuck](#motherduck) section below.
+
+### MotherDuck
+
+MotherDuck is a cloud-hosted DuckDB service. Configure it using the `md:` or `motherduck:` connection string prefix:
+
+```toml
+[tool.tee.database]
+type = "duckdb"
+path = "md:my_database"  # or "motherduck:my_database"
+source_dialect = "postgresql"
+```
+
+**Authentication**: Set your MotherDuck access token via environment variable (recommended):
+
+```bash
+export MOTHERDUCK_TOKEN='your_access_token_here'
+```
+
+Alternatively, you can provide the token in the connection string or via the `extra` config:
+
+```toml
+[tool.tee.database]
+type = "duckdb"
+path = "md:my_database?motherduck_token=your_token"  # Not recommended for production
+source_dialect = "postgresql"
+```
+
+Or using the `extra` field:
+
+```toml
+[tool.tee.database]
+type = "duckdb"
+path = "md:my_database"
+source_dialect = "postgresql"
+
+[tool.tee.database.extra]
+motherduck_token = "your_token"  # Prefer environment variable instead
+```
+
+**Note**: For security, always use the `MOTHERDUCK_TOKEN` environment variable in production. Never commit tokens to version control.
 
 ### Snowflake
 

@@ -1,0 +1,6 @@
+{
+  "token": "your_motherduck_access_token_here",
+  "database": "test_db",
+  "schema": "test_schema"
+}
+

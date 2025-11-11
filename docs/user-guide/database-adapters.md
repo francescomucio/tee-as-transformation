@@ -54,8 +54,22 @@ export TEE_DB_SOURCE_DIALECT=postgresql
 - **Configuration**:
   ```toml
   type = "duckdb"
-  path = "database.db"  # or ":memory:"
+  path = "database.db"  # or ":memory:" for in-memory
   ```
+
+### MotherDuck
+- **Dialect**: `duckdb` (same as DuckDB)
+- **Features**: Tables, Views, Materialized Views (as tables) - same as DuckDB
+- **Configuration**:
+  ```toml
+  type = "duckdb"
+  path = "md:my_database"  # or "motherduck:my_database"
+  ```
+- **Authentication**: Set `MOTHERDUCK_TOKEN` environment variable:
+  ```bash
+  export MOTHERDUCK_TOKEN='your_access_token'
+  ```
+- **Note**: The adapter automatically detects MotherDuck connections when the path starts with `md:` or `motherduck:`. See [Configuration Guide](../getting-started/configuration.md) for more details.
 
 ### Snowflake
 - **Dialect**: `snowflake`

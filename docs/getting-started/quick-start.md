@@ -44,7 +44,7 @@ Edit `project.toml` to configure your database connection. For DuckDB, the defau
 ```toml
 [connection]
 type = "duckdb"
-path = "data/my_tee_project.duckdb"
+path = "data/my_tee_project.duckdb"  # or "md:my_database" for MotherDuck
 ```
 
 **Snowflake:**
