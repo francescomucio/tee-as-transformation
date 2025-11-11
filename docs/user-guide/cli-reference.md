@@ -93,6 +93,113 @@ materialization_change_behavior = "warn"  # Options: "warn", "error", "ignore"
 
 ---
 
+### `import` - Import Projects from Other Formats
+
+Import projects from other transformation tools (currently supports dbt) into t4t format.
+
+**Usage:**
+```bash
+t4t import <source_project_folder> <target_project_folder> [options]
+```
+
+**Arguments:**
+- `source_project_folder` (required) - Path to the source project folder (e.g., dbt project)
+- `target_project_folder` (required) - Path where the imported t4t project will be created
+
+**Options:**
+- `--format <format>` - Output format: `t4t` (default) or `ots`
+- `--preserve-filenames` - Keep original file names instead of using final table names
+- `--validate-execution` - Run execution validation (requires database connection)
+- `-v, --verbose` - Enable verbose output
+- `--dry-run` - Show what would be imported without actually importing
+- `--keep-jinja` - Keep Jinja2 templates in models (converts `ref()` and `source()` only). Note: Requires Jinja2 support in t4t (coming soon)
+- `--default-schema <schema>` - Default schema name for models and functions (default: `public`)
+- `--target-dialect <dialect>` - Target database dialect for SQL conversion (e.g., `postgresql`, `snowflake`, `duckdb`). Defaults to PostgreSQL if not specified. Used for macro-to-UDF conversion.
+- `-s, --select <pattern>` - Select models to import. Can be used multiple times. Supports name patterns and tags (e.g., `my_model`, `tag:nightly`)
+- `-e, --exclude <pattern>` - Exclude models from import. Can be used multiple times. Supports name patterns and tags (e.g., `deprecated`, `tag:test`)
+
+**Examples:**
+```bash
+# Import dbt project to t4t format
+t4t import ./my_dbt_project ./imported_project
+
+# Import to OTS format
+t4t import ./my_dbt_project ./imported_project --format ots
+
+# Import with preserved filenames
+t4t import ./my_dbt_project ./imported_project --preserve-filenames
+
+# Dry run to validate before importing
+t4t import ./my_dbt_project ./imported_project --dry-run
+
+# Import specific models only
+t4t import ./my_dbt_project ./imported_project --select customers --select orders
+
+# Import models by tag
+t4t import ./my_dbt_project ./imported_project --select tag:production
+
+# Exclude test models
+t4t import ./my_dbt_project ./imported_project --exclude tag:test
+
+# Import with custom schema and dialect
+t4t import ./my_dbt_project ./imported_project --default-schema analytics --target-dialect snowflake
+
+# Keep Jinja templates (for gradual migration)
+t4t import ./my_dbt_project ./imported_project --keep-jinja
+
+# Verbose output
+t4t import ./my_dbt_project ./imported_project -v
+```
+
+**What it does:**
+1. Detects project type (currently supports dbt)
+2. Parses source project configuration (`dbt_project.yml`, `profiles.yml`, etc.)
+3. Converts models, tests, macros, and seeds to t4t format
+4. Generates `project.toml` with connection configuration
+5. Creates import reports (`IMPORT_REPORT.md` and `CONVERSION_LOG.json`)
+6. Validates imported project (syntax, dependencies, metadata)
+7. If `--format ots`, compiles to OTS modules
+
+**Output:**
+- Imported project structure:
+  - `models/` - Converted SQL/Python models
+  - `tests/` - Converted data quality tests
+  - `functions/` - Converted macros as UDFs
+  - `seeds/` - Copied seed files
+  - `project.toml` - Project configuration
+  - `IMPORT_REPORT.md` - Comprehensive import report
+  - `CONVERSION_LOG.json` - Detailed conversion log
+  - `output/ots_modules/` - OTS modules (if `--format ots`)
+
+**Import Report:**
+The import process generates a comprehensive report (`IMPORT_REPORT.md`) that includes:
+- Summary statistics (models, tests, macros converted)
+- Validation results
+- OTS compilation results (if applicable)
+- Model conversion details
+- Variables documentation
+- Test conversion details
+- Macro conversion details
+- Warnings and unsupported features
+- Package dependencies
+
+**Selection Patterns:**
+- Model names: `--select customers` or `--select my_model`
+- Wildcards: `--select staging_*` or `--select *users*`
+- Tags: `--select tag:production` or `--select tag:nightly`
+- Multiple patterns: `--select customers --select tag:analytics`
+- Exclusion: `--exclude deprecated --exclude tag:test`
+
+**Notes:**
+- The target folder must not exist (unless using `--dry-run`)
+- dbt `profiles.yml` is automatically detected from standard locations (`~/.dbt/` or `DBT_PROFILES_DIR`)
+- Connection configuration is extracted from `profiles.yml` and added to `project.toml`
+- Source freshness tests are skipped with warnings (not yet supported in t4t)
+- Complex Jinja templates are converted to Python models when automatic conversion fails
+- See [dbt Import Guide](dbt-import.md) for detailed migration instructions
+
+---
+
 ### `run` - Execute SQL Models
 
 Parse and execute SQL models in dependency order.
@@ -481,6 +588,7 @@ t4t ots run --help
 | `test` | ✅ | ❌ | ✅ | ❌ | ✅ (ERROR only) |
 | `seed` | ❌ | ❌ | ❌ | ✅ | N/A |
 | `debug` | ❌ | ❌ | ❌ | ❌ | N/A |
+| `import` | ❌ | ❌ | ❌ | ❌ | N/A |
 | `ots run` | ❌ | ✅ | ❌ | ❌ | ❌ |
 | `ots validate` | ❌ | ❌ | ❌ | ❌ | N/A |
 

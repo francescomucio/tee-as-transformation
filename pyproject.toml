@@ -67,10 +67,11 @@ norecursedirs = ["examples", "test_project", ".venv", "venv", "__pycache__", ".g
 filterwarnings = [
     # Suppress DuckDB deprecation warnings about _UnionGenericAlias (Python 3.14 beta issue)
     # These are internal DuckDB library warnings, not issues with our code
-    # Match by module path
+    # Match all DeprecationWarnings from duckdb module and submodules
     "ignore::DeprecationWarning:duckdb",
-    # Match by message content
-    "ignore:_UnionGenericAlias is deprecated.*:DeprecationWarning",
+    "ignore::DeprecationWarning:duckdb.*",
+    # Match by message content (regex pattern)
+    "ignore:.*_UnionGenericAlias.*:DeprecationWarning",
 ]
 
 [tool.ruff]

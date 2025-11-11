@@ -26,12 +26,16 @@ site/
 # Note: examples/ is committed - it contains example projects for users
 # Only ignore generated output directories within examples
 examples/*/output/
+# Ignore imported/generated projects (output of t4t import)
+examples/*-t4t/
+examples/*-imported/
 test_project/
 test_execution.duckdb
 
 # Coverage reports
 htmlcov/
 .coverage
+coverage.json
 
 # Pytest cache
 .pytest_cache/
@@ -42,3 +46,6 @@ tests/.snowflake_config.toml
 
 # MkDocs build output
 site/
+
+# Development drafts (not committed)
+docs/development/drafts/

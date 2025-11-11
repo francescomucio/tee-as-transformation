@@ -20,6 +20,8 @@ Welcome to the Tee for Transform (t4t) documentation. t4t is a powerful Python f
 - [Database Adapters](user-guide/database-adapters.md) - Multi-database support
 - [Tags and Metadata](user-guide/tags-and-metadata.md) - Tagging tables, views, and schemas
 - [SQL Dialect Conversion](user-guide/sql-dialect-conversion.md) - Write once, run anywhere
+- [dbt Import Guide](user-guide/dbt-import.md) - Importing dbt projects into t4t
+- [dbt Import Limitations](user-guide/dbt-import-limitations.md) - Known limitations and unsupported features
 - [Examples](user-guide/examples/) - Practical usage examples and tutorials
 
 ### 🔧 API Reference

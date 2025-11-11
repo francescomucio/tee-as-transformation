@@ -14,6 +14,7 @@ from tee.cli.commands import (
     cmd_compile,
     cmd_debug,
     cmd_help,
+    cmd_import,
     cmd_init,
     cmd_run,
     cmd_seed,
@@ -232,6 +233,53 @@ def compile(
 def help(ctx: typer.Context) -> None:
     """Show help information."""
     cmd_help(ctx)
+
+
+@app.command(name="import")
+def import_cmd(
+    ctx: typer.Context,
+    source_project_folder: str = typer.Argument(..., help="Path to the source project folder to import"),
+    target_project_folder: str = typer.Argument(..., help="Path where the imported t4t project will be created"),
+    format: Literal["t4t", "ots"] = typer.Option(
+        "t4t", "-f", "--format", help="Output format: t4t or ots"
+    ),
+    preserve_filenames: bool = typer.Option(
+        False, "--preserve-filenames", help="Keep original file names instead of using final table names"
+    ),
+    validate_execution: bool = typer.Option(
+        False, "--validate-execution", help="Run execution validation (requires database connection)"
+    ),
+    verbose: bool = VERBOSE_OPTION,
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be imported without actually importing"
+    ),
+    keep_jinja: bool = typer.Option(
+        False, "--keep-jinja", help="Keep Jinja2 templates in models (converts ref/source only). Note: Requires Jinja2 support in t4t (coming soon)"
+    ),
+    default_schema: str = typer.Option(
+        "public", "--default-schema", help="Default schema name for models and functions (default: public)"
+    ),
+    target_dialect: str | None = typer.Option(
+        None, "--target-dialect", help="Target database dialect for SQL conversion (e.g., postgresql, snowflake, duckdb). Defaults to PostgreSQL if not specified."
+    ),
+    select: list[str] | None = SELECT_OPTION,
+    exclude: list[str] | None = EXCLUDE_OPTION,
+) -> None:
+    """Import a project from another format (dbt, etc.) into t4t format."""
+    cmd_import(
+        source_project_folder=source_project_folder,
+        target_project_folder=target_project_folder,
+        format=format,
+        preserve_filenames=preserve_filenames,
+        validate_execution=validate_execution,
+        verbose=verbose,
+        dry_run=dry_run,
+        keep_jinja=keep_jinja,
+        default_schema=default_schema,
+        target_dialect=target_dialect,
+        select=select,
+        exclude=exclude,
+    )
 
 
 # OTS command group with alphabetical ordering

@@ -6,6 +6,7 @@ from tee.cli.commands.build import cmd_build
 from tee.cli.commands.compile import cmd_compile
 from tee.cli.commands.debug import cmd_debug
 from tee.cli.commands.help import cmd_help
+from tee.cli.commands.import_cmd import cmd_import
 from tee.cli.commands.init import cmd_init
 from tee.cli.commands.run import cmd_run
 from tee.cli.commands.seed import cmd_seed
@@ -20,4 +21,5 @@ __all__ = [
     "cmd_seed",
     "cmd_init",
     "cmd_compile",
+    "cmd_import",
 ]
