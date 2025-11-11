@@ -82,8 +82,9 @@ class MacroParser:
         # Pattern to match macro definitions
         # {% macro macro_name(param1, param2) -%} ... {%- endmacro %}
         # Handle both {%- endmacro %} and {% endmacro %}
+        # Also handle {%- macro ... -%} syntax
         macro_pattern = (
-            r"\{\%\s*macro\s+(\w+)\s*\(([^)]*)\)\s*[-]?\s*\%\}(.*?)\{\%\s*[-]?\s*endmacro\s*\%\}"
+            r"\{\%\s*[-]?\s*macro\s+(\w+)\s*\(([^)]*)\)\s*[-]?\s*\%\}(.*?)\{\%\s*[-]?\s*endmacro\s*[-]?\s*\%\}"
         )
         matches = re.finditer(macro_pattern, content, re.DOTALL | re.IGNORECASE)
 

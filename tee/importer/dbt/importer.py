@@ -73,6 +73,19 @@ def import_dbt_project(
     )
     converter.create_structure()
 
+    # Phase 1.5: Clone packages if needed
+    from tee.importer.dbt.infrastructure import PackagesHandler
+
+    packages_handler = PackagesHandler(verbose=verbose)
+    packages_info = packages_handler.discover_packages(source_path)
+    cloned_packages: dict[str, Path] = {}
+    if packages_info.get("has_packages"):
+        if verbose:
+            logger.info("Cloning dbt packages...")
+        cloned_packages = packages_handler.clone_packages(source_path, packages_info)
+        if verbose:
+            logger.info(f"Cloned {len(cloned_packages)} package(s)")
+
     # Phase 2: Model conversion and seeds
     from tee.importer.dbt.converters import ModelConverter, SeedConverter
     from tee.importer.dbt.parsers import ModelFileDiscovery, SchemaParser
@@ -157,6 +170,9 @@ def import_dbt_project(
             default_schema=default_schema,
         )
         model_converter.schema_resolver = schema_resolver
+        # Pass cloned packages and source path to model converter for Jinja2 rendering
+        model_converter.cloned_packages = cloned_packages
+        model_converter.source_path = source_path
         conversion_results = model_converter.convert_models(
             model_files, schema_metadata, source_map
         )
@@ -252,12 +268,9 @@ def import_dbt_project(
 
     # Phase 5: Configuration and Project Setup
     from tee.importer.dbt.generators import ProjectConfigGenerator
-    from tee.importer.dbt.infrastructure import PackagesHandler
     from tee.importer.dbt.parsers import ProfilesParser
 
-    # Discover packages
-    packages_handler = PackagesHandler(verbose=verbose)
-    packages_info = packages_handler.discover_packages(source_path)
+    # Packages already discovered and cloned in Phase 1.5
 
     # Generate project.toml
     config_generator = ProjectConfigGenerator(verbose=verbose)

@@ -107,19 +107,23 @@ sources:
 
 ### 6. Package Macro/Model Inlining
 
-**Status:** ⚠️ Detection Only
+**Status:** ✅ Supported
 
-**What:** Automatic inlining of dbt package macros and models
+**What:** Automatic downloading and macro expansion for dbt package dependencies
 
 **Behavior:**
-- Packages are detected and documented
-- Package macros/models are NOT automatically inlined
-- Package dependencies are logged in the import report
+- Packages are automatically downloaded from `packages.yml` or `dependencies.yml`
+- Package macros are loaded and expanded into SQL during model rendering
+- Supports packages from:
+  - dbt Hub (`package:` syntax)
+  - Git repositories (`git:` + `revision:`/`ref:`)
+  - Local paths (`local:`)
+- Packages are stored in `.packages/` directory
+- A `packages.lock` file tracks resolved commit SHAs
 
-**Workaround:**
-- Manually inline package code if needed
-- Copy package macros to your project
-- Wait for future enhancement
+**Note:**
+- Package models are not automatically inlined (only macros are expanded)
+- Complex package macros that use runtime SQL execution may still be converted to Python models
 
 ### 7. Dependency Resolution (`model+`, `+model`)
 

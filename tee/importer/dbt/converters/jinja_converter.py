@@ -23,6 +23,7 @@ class JinjaConverter:
         source_map: dict[str, dict[str, str]] | None = None,
         verbose: bool = False,
         keep_jinja: bool = False,
+        jinja_renderer: Any | None = None,
     ) -> None:
         """
         Initialize Jinja converter.
@@ -33,12 +34,14 @@ class JinjaConverter:
             source_map: Mapping of source names to schema.table format
             verbose: Enable verbose logging
             keep_jinja: Keep Jinja2 templates (only converts ref/source)
+            jinja_renderer: Optional Jinja2 renderer for full macro support
         """
         self.dbt_project = dbt_project
         self.model_name_map = model_name_map or {}
         self.source_map = source_map or {}
         self.verbose = verbose
         self.keep_jinja = keep_jinja
+        self.jinja_renderer = jinja_renderer
 
     def convert(self, sql_content: str, model_name: str | None = None) -> dict[str, Any]:
         """
@@ -67,6 +70,21 @@ class JinjaConverter:
         if not self._has_jinja(sql_content):
             result["sql"] = sql_content
             return result
+
+        # If we have a Jinja2 renderer, use it for full macro support
+        if self.jinja_renderer:
+            try:
+                rendered_sql = self.jinja_renderer.render(sql_content, model_name)
+                result["sql"] = rendered_sql
+                if self.verbose:
+                    logger.info(f"Rendered model {model_name or 'unknown'} through Jinja2 with macros")
+                return result
+            except Exception as e:
+                result["conversion_errors"].append(
+                    f"Jinja2 rendering failed for model {model_name or 'unknown'}: {e}"
+                )
+                logger.warning(f"Jinja2 rendering failed for {model_name}: {e}")
+                # Fall through to regular conversion
 
         # If keep_jinja is enabled, only convert ref() and source(), leave rest as Jinja
         if self.keep_jinja:

@@ -9,6 +9,7 @@ The `t4t import` command converts dbt projects to t4t format, preserving models,
 - ✅ SQL models with Jinja templates
 - ✅ Data quality tests (standard, generic, and singular)
 - ✅ Macros (converted to UDFs where possible)
+- ✅ **Package dependencies** (automatically downloaded and macros expanded)
 - ✅ Seeds (CSV, JSON, TSV files)
 - ✅ Project configuration (`dbt_project.yml` → `project.toml`)
 - ✅ Connection configuration (`profiles.yml` → `project.toml`)
@@ -477,7 +478,7 @@ See [dbt Import Limitations](dbt-import-limitations.md) for a complete list of u
 - **Source Freshness Tests:** Skipped with warnings (not yet supported in t4t)
 - **Complex Jinja:** Converted to Python models (may require manual review)
 - **Custom Macros:** Some complex macros may not convert automatically
-- **Package Dependencies:** Detected but not automatically inlined
+- **Package Dependencies:** ✅ Packages are automatically downloaded and macros are expanded into SQL
 - **Dependency Selection:** Basic name/tag selection only (`model+`, `+model` not yet supported)
 
 ## Next Steps

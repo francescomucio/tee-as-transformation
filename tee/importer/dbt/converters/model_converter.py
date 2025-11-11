@@ -62,6 +62,11 @@ class ModelConverter:
         # Schema resolver (will be initialized with profile schema if available)
         self.schema_resolver: Any | None = None
 
+        # Cloned packages for Jinja2 rendering (set by importer)
+        self.cloned_packages: dict[str, Path] = {}
+        # Source path for loading macros (set by importer)
+        self.source_path: Path | None = None
+
     def convert_models(
         self,
         model_files: dict[str, Path],
@@ -140,14 +145,42 @@ class ModelConverter:
             Dictionary with conversion statistics and logs
         """
         from tee.importer.dbt.converters import JinjaConverter
+        from tee.importer.dbt.renderers import JinjaRenderer
 
-        jinja_converter = JinjaConverter(
-            dbt_project=self.dbt_project,
-            model_name_map=self.model_name_map,
-            source_map=source_map or {},
-            verbose=self.verbose,
-            keep_jinja=self.keep_jinja,
+        # Check if we should use Jinja2 rendering (when packages are present or keep_jinja is True)
+        use_jinja2_rendering = (
+            self.keep_jinja or bool(self.cloned_packages) or self._has_package_macros()
         )
+
+        if use_jinja2_rendering and self.source_path:
+            # Use Jinja2 renderer for full macro support
+            jinja_renderer = JinjaRenderer(
+                project_path=self.source_path,
+                macro_paths=self.dbt_project.get("macro-paths"),
+                package_paths=self.cloned_packages,
+                model_name_map=self.model_name_map,
+                source_map=source_map or {},
+                variables=self.dbt_project.get("vars", {}),
+                verbose=self.verbose,
+            )
+            # Create a wrapper that uses Jinja2 renderer
+            jinja_converter = JinjaConverter(
+                dbt_project=self.dbt_project,
+                model_name_map=self.model_name_map,
+                source_map=source_map or {},
+                verbose=self.verbose,
+                keep_jinja=self.keep_jinja,
+                jinja_renderer=jinja_renderer,
+            )
+        else:
+            # Use regular converter
+            jinja_converter = JinjaConverter(
+                dbt_project=self.dbt_project,
+                model_name_map=self.model_name_map,
+                source_map=source_map or {},
+                verbose=self.verbose,
+                keep_jinja=self.keep_jinja,
+            )
 
         converted_count = 0
         python_model_count = 0
@@ -466,3 +499,18 @@ class ModelConverter:
                     return models[dbt_model_name]
 
         return None
+
+    def _has_package_macros(self) -> bool:
+        """Check if any cloned packages have macros."""
+        if not self.cloned_packages:
+            return False
+        from tee.importer.dbt.parsers import MacroParser
+
+        macro_parser = MacroParser(verbose=self.verbose)
+        for pkg_path in self.cloned_packages.values():
+            macros_dir = pkg_path / "macros"
+            if macros_dir.exists():
+                macro_files = macro_parser.discover_macros(pkg_path, ["macros"])
+                if macro_files:
+                    return True
+        return False

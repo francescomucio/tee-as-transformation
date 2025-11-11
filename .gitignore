@@ -21,6 +21,8 @@ venv/
 *.db
 *.duckdb
 site/
+.packages/
+packages.lock
 
 # Development/Test projects
 # Note: examples/ is committed - it contains example projects for users
