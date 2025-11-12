@@ -1,4 +1,4 @@
-from tee.parser.model_decorator import model
+from tee.parser.model import model
 
 
 @model(table_name="users_summary", description="Summary of user data")

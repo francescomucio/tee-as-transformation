@@ -209,7 +209,7 @@ class TestMetadataPropagation:
                 # Create a Python model file with decorator metadata
                 model_file = models_dir / "test_model.py"
                 model_file.write_text("""
-from tee.parser.processing.model_decorator import model
+from tee.parser.processing.model import model
 
 @model(
     table_name="test_schema.priority_test",

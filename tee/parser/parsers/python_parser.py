@@ -104,6 +104,29 @@ class PythonParser(BaseParser):
                             is_python_model=True,
                         )
                         logger.debug(f"Registered model: {table_name}")
+                
+                # Also check for create_model() calls (for dynamic model creation)
+                elif isinstance(node, ast.Call):
+                    model_metadata = self._extract_create_model_call(node)
+                    if model_metadata:
+                        table_name = model_metadata["table_name"]
+                        logger.debug(f"Found create_model() call: {table_name}")
+
+                        # Create standardized model structure
+                        model_data = {
+                            "model_metadata": model_metadata,
+                            "needs_evaluation": False,  # SQL is already provided
+                            "code": model_metadata.get("sql"),  # Use the SQL directly
+                        }
+
+                        # Standardize the model structure
+                        models[table_name] = standardize_parsed_model(
+                            model_data=model_data,
+                            table_name=table_name,
+                            file_path=str(file_path),
+                            is_python_model=True,
+                        )
+                        logger.debug(f"Registered model from create_model(): {table_name}")
 
             # Cache the result
             self._set_cache(file_path_str, models)
@@ -318,10 +341,75 @@ class PythonParser(BaseParser):
         # Only return metadata if function has @model decorator
         return None
 
+    def _extract_create_model_call(self, node: ast.Call) -> dict[str, Any] | None:
+        """
+        Extract model metadata from a create_model() function call.
+
+        Args:
+            node: AST call node
+
+        Returns:
+            Dict with model metadata or None if not a create_model call
+        """
+        # Check if this is a call to create_model
+        # Handle both: create_model() and module.create_model()
+        is_create_model = False
+        if isinstance(node.func, ast.Name) and node.func.id == "create_model":
+            is_create_model = True
+        elif isinstance(node.func, ast.Attribute) and node.func.attr == "create_model":
+            is_create_model = True
+        
+        if is_create_model:
+            # Extract keyword arguments
+            table_name = None
+            sql = None
+            description = None
+            variables = None
+            metadata = {}
+
+            for keyword in node.keywords:
+                if keyword.arg == "table_name":
+                    table_name = self._extract_string_literal(keyword.value)
+                elif keyword.arg == "sql":
+                    sql = self._extract_string_literal(keyword.value)
+                elif keyword.arg == "description":
+                    description = self._extract_string_literal(keyword.value)
+                elif keyword.arg == "variables":
+                    variables = self._extract_literal(keyword.value)
+                else:
+                    metadata[keyword.arg] = self._extract_literal(keyword.value)
+
+            if table_name and sql:
+                return {
+                    "table_name": table_name,
+                    "function_name": f"create_{table_name}".replace(".", "_"),
+                    "description": description,
+                    "variables": variables or [],
+                    "metadata": metadata,
+                    "sql": sql,  # Store SQL directly
+                }
+
+        return None
+
     def _extract_string_literal(self, node: ast.AST) -> str:
         """Extract string literal from AST node."""
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
             return node.value
+        # Handle f-strings (JoinedStr nodes)
+        elif isinstance(node, ast.JoinedStr):
+            # Try to reconstruct the f-string
+            parts = []
+            for value in node.values:
+                if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                    parts.append(value.value)
+                elif isinstance(value, ast.FormattedValue):
+                    # For f-strings with variables, we can't statically determine the value
+                    # So we'll return a placeholder or try to extract the variable name
+                    if isinstance(value.value, ast.Name):
+                        parts.append(f"{{{value.value.id}}}")
+                    else:
+                        parts.append("{...}")
+            return "".join(parts)
         return str(node)
 
     def _extract_literal(self, node: ast.AST) -> Any:
@@ -367,7 +455,7 @@ class PythonParser(BaseParser):
             sys.modules[module_name] = module
 
             # Inject the model decorator before loading the module
-            from ..processing.model_decorator import model
+            from ..processing.model import model
 
             module.model = model
 
@@ -382,12 +470,12 @@ class PythonParser(BaseParser):
 
                 parser_module = types.ModuleType("parser")
                 sys.modules["tee.parser"] = parser_module
-            if "tee.parser.model_decorator" not in sys.modules:
+            if "tee.parser.model" not in sys.modules:
                 import types
 
-                model_decorator_module = types.ModuleType("model_decorator")
-                model_decorator_module.model = model
-                sys.modules["tee.parser.model_decorator"] = model_decorator_module
+                model_module = types.ModuleType("model")
+                model_module.model = model
+                sys.modules["tee.parser.model"] = model_module
 
             spec.loader.exec_module(module)
 
@@ -400,7 +488,7 @@ class PythonParser(BaseParser):
                 )
 
             # Inject the model decorator to make it available
-            from ..processing.model_decorator import model
+            from ..processing.model import model
 
             module.model = model
             logger.debug(f"Injected model decorator into module {module_name}")

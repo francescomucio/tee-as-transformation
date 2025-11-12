@@ -27,6 +27,7 @@ Welcome to the Tee for Transform (t4t) documentation. t4t is a powerful Python f
 ### 🔧 API Reference
 - [API Reference Overview](api-reference/README.md) - API documentation status and overview
 - [Functions API](api-reference/functions.md) - Function decorators and API reference
+- [Models API](api-reference/models.md) - Model decorators and dynamic model creation
 - [Engine API](api-reference/engine/) - Execution engine classes and methods (coming soon)
 - [Parser API](api-reference/parser/) - SQL parsing and analysis (coming soon)
 - [Adapters API](api-reference/adapters/) - Database adapter implementations (coming soon)

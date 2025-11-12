@@ -22,7 +22,7 @@ Tags can be attached to individual tables and views through model metadata.
 
 ```python
 # models/users.py
-from tee.parser.processing.model_decorator import model
+from tee.parser.processing.model import model
 
 @model(
     table_name="users",
@@ -36,6 +36,67 @@ from tee.parser.processing.model_decorator import model
 )
 def users_model():
     return "SELECT * FROM source.users"
+```
+
+### Dynamic Model Creation
+
+For creating multiple similar models without code repetition, use `create_model()`:
+
+```python
+# models/staging.py
+from tee.parser.processing.model import create_model
+
+# Define table names to create models for
+STAGING_TABLES = ["users", "orders", "products"]
+STAGING_SCHEMA = "staging"
+
+# Dynamically create models for each staging table
+for table_name in STAGING_TABLES:
+    create_model(
+        table_name=table_name,
+        sql=f"SELECT * FROM {STAGING_SCHEMA}.{table_name}",
+        description=f"Select from {STAGING_SCHEMA}.{table_name}",
+        tags=["staging", "raw"]
+    )
+```
+
+**Benefits:**
+- **Zero code repetition**: Just update the list to add/remove models
+- **Consistent patterns**: All models follow the same structure
+- **Easy maintenance**: Change the pattern once, apply to all models
+
+**When to use `create_model()` vs `@model` decorator:**
+- Use `create_model()` when you have many similar models that follow a pattern
+- Use `@model` decorator when each model has unique logic or complex transformations
+
+**Example with metadata:**
+
+```python
+# models/marts.py
+from tee.parser.processing.model import create_model
+
+MART_TABLES = [
+    {"name": "daily_sales", "source": "sales", "tags": ["daily", "sales"]},
+    {"name": "monthly_revenue", "source": "revenue", "tags": ["monthly", "finance"]},
+    {"name": "user_metrics", "source": "users", "tags": ["daily", "analytics"]},
+]
+
+for table in MART_TABLES:
+    create_model(
+        table_name=table["name"],
+        sql=f"""
+        SELECT 
+            *,
+            CURRENT_TIMESTAMP() as updated_at
+        FROM staging.{table["source"]}
+        """,
+        description=f"Mart table for {table['name']}",
+        tags=table["tags"],
+        object_tags={
+            "source_table": table["source"],
+            "refresh_frequency": "daily" if "daily" in table["tags"] else "monthly"
+        }
+    )
 ```
 
 ### SQL Models with Metadata
@@ -276,7 +337,7 @@ object_tags = {
 
 ```python
 # models/fct/orders.py
-from tee.parser.processing.model_decorator import model
+from tee.parser.processing.model import model
 
 @model(
     table_name="orders",

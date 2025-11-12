@@ -97,7 +97,7 @@ class PythonModelGenerator:
         lines.append('"""')
 
         # Imports
-        lines.append("from tee.parser.processing.model_decorator import model")
+        lines.append("from tee.parser.processing.model import model")
         if metadata:
             lines.append("from tee.typing.metadata import ModelMetadataDict")
         lines.append("")

@@ -1,4 +1,4 @@
-from tee.parser.model_decorator import model
+from tee.parser.model import model
 
 
 @model(table_name="my_auto_table_one")

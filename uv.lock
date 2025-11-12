@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.14"
 
 [[package]]
@@ -841,6 +841,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "duckdb" },
+    { name = "jinja2" },
     { name = "pydantic" },
     { name = "pyyaml" },
     { name = "snowflake-connector-python" },
@@ -862,6 +863,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "duckdb", specifier = ">=1.4.1" },
+    { name = "jinja2", specifier = ">=3.1.0" },
     { name = "pydantic", specifier = ">=2.12.2" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "snowflake-connector-python", specifier = ">=4.0.0" },
