@@ -5,8 +5,6 @@ This module contains test data and helper functions for metadata testing.
 Note: TestMetadataModels is not a test class - it's a collection of helper functions.
 """
 
-from sqlglot import exp
-
 
 # Metadata fixtures for testing
 USERS_METADATA = {
@@ -135,35 +133,35 @@ class MetadataModelHelpers:
     @staticmethod
     def create_users_with_descriptions():
         """Create a users table with detailed column descriptions."""
-        return exp.select("*").from_("my_first_table")
+        return "SELECT * FROM my_first_table"
 
     @staticmethod
     def create_products_with_descriptions():
         """Create a products table with column descriptions."""
-        return exp.select("*").from_("my_first_table")
+        return "SELECT * FROM my_first_table"
 
     @staticmethod
     def create_orders_with_descriptions():
         """Create an orders table with column descriptions."""
-        return exp.select("*").from_("my_first_table")
+        return "SELECT * FROM my_first_table"
 
     @staticmethod
     def create_priority_test_table():
         """Create a table to test metadata priority."""
-        return exp.select("*").from_("my_first_table")
+        return "SELECT * FROM my_first_table"
 
     @staticmethod
     def create_malformed_metadata_table():
         """Create a table with malformed metadata."""
-        return exp.select("*").from_("my_first_table")
+        return "SELECT * FROM my_first_table"
 
     @staticmethod
     def create_long_description_table():
         """Create a table with description that's too long."""
-        return exp.select("*").from_("my_first_table")
+        return "SELECT * FROM my_first_table"
 
     @staticmethod
     def create_invalid_schema_type_table():
         """Create a table with invalid schema type."""
-        return exp.select("*").from_("my_first_table")
+        return "SELECT * FROM my_first_table"
 

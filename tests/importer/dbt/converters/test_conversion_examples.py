@@ -165,7 +165,7 @@ FROM {{ ref('staging_customers') }}
             assert "if include_email:" in python_code
             assert "sql_parts.append" in python_code
             assert "staging.staging_customers" in python_code
-            assert "exp.parse_one" in python_code
+            assert "return sql" in python_code
             # Check that description comes from schema.yml
             assert "Customer table with optional email field" in python_code
 

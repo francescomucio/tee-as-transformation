@@ -97,7 +97,6 @@ class PythonModelGenerator:
         lines.append('"""')
 
         # Imports
-        lines.append("from sqlglot import exp")
         lines.append("from tee.parser.processing.model_decorator import model")
         if metadata:
             lines.append("from tee.typing.metadata import ModelMetadataDict")
@@ -295,7 +294,7 @@ class PythonModelGenerator:
         lines.append("# Combine SQL parts")
         lines.append("sql = '\\n'.join(sql_parts)")
         lines.append("")
-        lines.append("return exp.parse_one(sql)")
+        lines.append("return sql")
 
         return lines
 
@@ -337,14 +336,7 @@ class PythonModelGenerator:
             for var in variables:
                 lines.append(f"#   Replace {{ var('{var}') }} with: {var}")
         lines.append("")
-        lines.append("try:")
-        lines.append("    # Attempt to parse and return SQL")
-        lines.append("    return exp.parse_one(original_sql)")
-        lines.append("except Exception as e:")
-        lines.append("    # If parsing fails, log warning and return placeholder")
-        lines.append("    import logging")
-        lines.append("    logger = logging.getLogger(__name__)")
-        lines.append('    logger.warning(f"Error parsing SQL: {e}")')
-        lines.append('    return exp.parse_one("SELECT 1 as placeholder -- TODO: Fix this model")')
+        lines.append("# Return SQL string (validation happens in the parser)")
+        lines.append("return original_sql")
 
         return lines

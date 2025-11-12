@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from sqlglot import exp
+import sqlglot
 
 from tee.parser.shared.exceptions import PythonParsingError
 from tee.parser.shared.model_utils import standardize_parsed_model
@@ -122,7 +122,7 @@ class PythonParser(BaseParser):
         variables: Variables | None = None,
     ) -> dict[str, Any]:
         """
-        Evaluate a model function and return the SQLGlot expression.
+        Evaluate a model function and return the SQL string.
 
         This method provides lazy evaluation of model functions when they are actually needed.
 
@@ -132,7 +132,7 @@ class PythonParser(BaseParser):
             variables: Optional dictionary of variables to inject into the function's namespace
 
         Returns:
-            Updated model data with SQLGlot expression
+            Updated model data with parsed SQL
         """
         file_path = model_data["model_metadata"]["file_path"]
         function_name = model_data["model_metadata"]["function_name"]
@@ -146,49 +146,56 @@ class PythonParser(BaseParser):
         try:
             logger.debug(f"Evaluating function {function_name} from {file_path}")
 
-            # Evaluate the function to get the SQLGlot expression
+            # Evaluate the function to get the SQL string
             file_path_obj = Path(file_path)  # Convert string back to Path
-            sqlglot_expr = self._execute_function(file_path_obj, function_name, variables)
+            sql_string = self._execute_function(file_path_obj, function_name, variables)
 
-            if sqlglot_expr and isinstance(sqlglot_expr, exp.Expression):
-                # Get table name for qualified SQL generation
-                # Use full_table_name if provided (with schema), otherwise fall back to metadata table_name
-                table_name = (
-                    full_table_name
-                    if full_table_name
-                    else model_data["model_metadata"]["table_name"]
-                )
-
-                # Parse the SQLGlot expression using the SQL parser
-                parsed_data = self._sql_parser.parse(str(sqlglot_expr), table_name=table_name)
-
-                # Update model data with code data while maintaining standardized structure
-                updated_model_data = model_data.copy()
-                updated_model_data["code"] = parsed_data["code"]
-                updated_model_data["sqlglot_hash"] = parsed_data.get("sqlglot_hash", "")
-                updated_model_data["needs_evaluation"] = False
-
-                # Ensure the structure remains standardized
-                updated_model_data = standardize_parsed_model(
-                    model_data=updated_model_data,
-                    table_name=full_table_name
-                    if full_table_name
-                    else model_data["model_metadata"]["table_name"],
-                    file_path=file_path,
-                    is_python_model=True,
-                )
-
-                # Cache the result
-                self._evaluation_cache[cache_key] = updated_model_data
-                logger.debug(
-                    f"Successfully evaluated model: {model_data['model_metadata']['table_name']}"
-                )
-
-                return updated_model_data
-            else:
+            # Validate SQL syntax before proceeding
+            try:
+                parsed = sqlglot.parse_one(sql_string)
+                if parsed is None:
+                    raise PythonModelError(
+                        f"Function {function_name} returned invalid SQL (parse returned None)"
+                    )
+            except Exception as e:
                 raise PythonModelError(
-                    f"Function {function_name} did not return a valid SQLGlot expression"
-                )
+                    f"Function {function_name} returned invalid SQL: {str(e)}"
+                ) from e
+
+            # Get table name for qualified SQL generation
+            # Use full_table_name if provided (with schema), otherwise fall back to metadata table_name
+            table_name = (
+                full_table_name
+                if full_table_name
+                else model_data["model_metadata"]["table_name"]
+            )
+
+            # Parse the SQL string using the SQL parser
+            parsed_data = self._sql_parser.parse(sql_string, file_path=file_path, table_name=table_name)
+
+            # Update model data with code data while maintaining standardized structure
+            updated_model_data = model_data.copy()
+            updated_model_data["code"] = parsed_data["code"]
+            updated_model_data["sqlglot_hash"] = parsed_data.get("sqlglot_hash", "")
+            updated_model_data["needs_evaluation"] = False
+
+            # Ensure the structure remains standardized
+            updated_model_data = standardize_parsed_model(
+                model_data=updated_model_data,
+                table_name=full_table_name
+                if full_table_name
+                else model_data["model_metadata"]["table_name"],
+                file_path=file_path,
+                is_python_model=True,
+            )
+
+            # Cache the result
+            self._evaluation_cache[cache_key] = updated_model_data
+            logger.debug(
+                f"Successfully evaluated model: {model_data['model_metadata']['table_name']}"
+            )
+
+            return updated_model_data
 
         except Exception as e:
             if isinstance(e, PythonModelError):
@@ -210,7 +217,7 @@ class PythonParser(BaseParser):
             variables: Optional dictionary of variables to inject into model functions
 
         Returns:
-            Updated parsed models with SQLGlot expressions
+            Updated parsed models with parsed SQL
         """
         updated_models = parsed_models.copy()
 
@@ -332,7 +339,7 @@ class PythonParser(BaseParser):
 
     def _execute_function(
         self, file_path: Path, function_name: str, variables: Variables | None = None
-    ) -> exp.Expression:
+    ) -> str:
         """
         Execute a function from a Python file and return its result.
 
@@ -342,10 +349,10 @@ class PythonParser(BaseParser):
             variables: Optional dictionary of variables to inject into the function's namespace
 
         Returns:
-            SQLGlot expression returned by the function
+            SQL string returned by the function
 
         Raises:
-            PythonModelError: If function execution fails
+            PythonModelError: If function execution fails or returns invalid type
         """
         module_name = f"temp_module_{hash(file_path)}_{function_name}"
 
@@ -408,13 +415,20 @@ class PythonParser(BaseParser):
             logger.debug(f"Executing function {function_name} from {file_path}")
             result = func()
 
-            # Validate result
-            if not isinstance(result, exp.Expression):
+            # Validate result is a string
+            if not isinstance(result, str):
                 raise PythonModelError(
-                    f"Function {function_name} must return a SQLGlot expression, got {type(result)}"
+                    f"Function {function_name} must return a SQL string, got {type(result)}. "
+                    f"If using sqlglot, convert to string: return str(exp.select(...))"
                 )
 
-            return result
+            # Validate SQL string is not empty
+            if not result or not result.strip():
+                raise PythonModelError(
+                    f"Function {function_name} returned an empty SQL string"
+                )
+
+            return result.strip()
 
         except Exception as e:
             if isinstance(e, PythonModelError):

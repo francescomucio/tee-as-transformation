@@ -45,7 +45,16 @@ class ModelTransformer(BaseTransformer):
         description = model_metadata.get("description")
 
         # Get code structure
-        code_data = model_data.get("code", {})
+        # Handle None case (for Python models that haven't been evaluated yet)
+        code_data = model_data.get("code")
+        if code_data is None or not isinstance(code_data, dict):
+            # For unevaluated Python models, create placeholder SQL structure
+            # OTS validator requires at least one SQL field (original_sql or resolved_sql)
+            code_data = {"sql": {"original_sql": "", "resolved_sql": "", "source_tables": [], "source_functions": []}}
+        elif "sql" not in code_data or not isinstance(code_data.get("sql"), dict):
+            # Ensure sql key exists and is a dict
+            code_data = code_data.copy()
+            code_data["sql"] = {"original_sql": "", "resolved_sql": "", "source_tables": [], "source_functions": []}
 
         # Transform structure
         transformation: OTSTransformation = {

@@ -210,7 +210,6 @@ class TestMetadataPropagation:
                 model_file = models_dir / "test_model.py"
                 model_file.write_text("""
 from tee.parser.processing.model_decorator import model
-from sqlglot import exp
 
 @model(
     table_name="test_schema.priority_test",
@@ -222,7 +221,7 @@ from sqlglot import exp
     }
 )
 def test_model():
-    return exp.select("1 as id", "'test' as name")
+    return "SELECT 1 as id, 'test' as name"
 """)
                 
                 # Create a companion metadata file with conflicting metadata (file metadata)

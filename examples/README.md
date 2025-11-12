@@ -78,7 +78,7 @@ See `t_project/models/my_schema/incremental_example.sql` for examples of:
 ### 2. Python Models
 
 See `t_project/models/my_schema/my_auto_table_*.py` for examples of:
-- Python functions that generate SQLGlot expressions
+- Python functions that return SQL strings
 - Auto-generated table schemas
 - Metadata defined in Python
 

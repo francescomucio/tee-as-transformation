@@ -1,11 +1,9 @@
-from sqlglot import exp
 from tee.parser.model_decorator import model
 
 
 @model(table_name="my_auto_table_one")
 def auto_table_one():
-    q = exp.select("*").from_("my_first_table")
-    return q
+    return "SELECT * FROM my_first_table"
 
 
     # return [{

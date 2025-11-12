@@ -43,7 +43,11 @@ def model(
     Example:
         @model(table_name="custom_table", description="My custom table", variables=["env", "debug"])
         def my_function():
-            return exp.select("*").from_("other_table").where(exp.column("environment") == env)
+            return f"SELECT * FROM other_table WHERE environment = '{env}'"
+        
+        # If using sqlglot, convert to string:
+        # from sqlglot import exp
+        # return str(exp.select("*").from_("other_table").where(exp.column("environment") == env))
     """
 
     def decorator(func: Callable) -> Callable:

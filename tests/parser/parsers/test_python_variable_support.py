@@ -7,7 +7,6 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 from tee.parser.parsers import PythonParser
 from tee.parser.processing import model
-from sqlglot import exp
 
 
 class TestPythonVariableSupport:
@@ -18,7 +17,7 @@ class TestPythonVariableSupport:
 
         @model(table_name="test_table", description="Test model", variables=["env", "debug"])
         def test_function():
-            return exp.select("*").from_("users")
+            return "SELECT * FROM users"
 
         # Check that variables are stored in metadata
         assert hasattr(test_function, "_model_metadata")
@@ -31,7 +30,7 @@ class TestPythonVariableSupport:
 
         @model(table_name="test_table")
         def test_function():
-            return exp.select("*").from_("users")
+            return "SELECT * FROM users"
 
         # Check that variables defaults to empty list
         assert hasattr(test_function, "_model_metadata")
@@ -44,12 +43,11 @@ class TestPythonVariableSupport:
         # Create a test Python file with a model that uses variables
         test_file = Path("test_variable_injection.py")
         test_content = """
-from sqlglot import exp
 from tee.parser.processing import model
 
 @model(variables=["env", "debug"])
 def test_model():
-    return exp.select("*").from_("users").where(exp.column("env") == env)
+    return f"SELECT * FROM users WHERE env = '{env}'"
 """
 
         try:
@@ -68,8 +66,20 @@ def test_model():
             variables = {"env": "production", "debug": True}
 
             # Mock the module execution to avoid import issues
-            with patch.object(parser, "_execute_function") as mock_execute:
-                mock_execute.return_value = exp.select("*").from_("users")
+            with patch.object(parser, "_execute_function") as mock_execute, \
+                 patch.object(parser._sql_parser, "parse") as mock_parse:
+                mock_execute.return_value = "SELECT * FROM users"
+                mock_parse.return_value = {
+                    "code": {
+                        "sql": {
+                            "original_sql": "SELECT * FROM users",
+                            "resolved_sql": "SELECT * FROM users",
+                            "source_tables": [],
+                            "source_functions": [],
+                        }
+                    },
+                    "sqlglot_hash": "test_hash",
+                }
 
                 # Execute the model with variables
                 result = parser.evaluate_model_function(
@@ -93,12 +103,11 @@ def test_model():
         # Create a test Python file with nested variable access
         test_file = Path("test_nested_variables.py")
         test_content = """
-from sqlglot import exp
 from tee.parser.processing import model
 
 @model(variables=["config"])
 def test_nested_model():
-    return exp.select("*").from_("users").where(exp.column("host") == config.database.host)
+    return f"SELECT * FROM users WHERE host = '{config.database.host}'"
 """
 
         try:
@@ -117,8 +126,20 @@ def test_nested_model():
             variables = {"config": {"database": {"host": "localhost", "port": 5432}}}
 
             # Mock the module execution
-            with patch.object(parser, "_execute_function") as mock_execute:
-                mock_execute.return_value = exp.select("*").from_("users")
+            with patch.object(parser, "_execute_function") as mock_execute, \
+                 patch.object(parser._sql_parser, "parse") as mock_parse:
+                mock_execute.return_value = "SELECT * FROM users"
+                mock_parse.return_value = {
+                    "code": {
+                        "sql": {
+                            "original_sql": "SELECT * FROM users",
+                            "resolved_sql": "SELECT * FROM users",
+                            "source_tables": [],
+                            "source_functions": [],
+                        }
+                    },
+                    "sqlglot_hash": "test_hash",
+                }
 
                 # Execute the model with nested variables
                 result = parser.evaluate_model_function(
@@ -237,8 +258,20 @@ def test_nested_model():
         }
 
         # Test with None variables
-        with patch.object(parser, "_execute_function") as mock_execute:
-            mock_execute.return_value = exp.select("*").from_("users")
+        with patch.object(parser, "_execute_function") as mock_execute, \
+             patch.object(parser._sql_parser, "parse") as mock_parse:
+            mock_execute.return_value = "SELECT * FROM users"
+            mock_parse.return_value = {
+                "code": {
+                    "sql": {
+                        "original_sql": "SELECT * FROM users",
+                        "resolved_sql": "SELECT * FROM users",
+                        "source_tables": [],
+                        "source_functions": [],
+                    }
+                },
+                "sqlglot_hash": "test_hash",
+            }
 
             result = parser.evaluate_model_function(model_data, "test_schema.test_model", None)
 
@@ -261,8 +294,20 @@ def test_nested_model():
             "needs_evaluation": True,
         }
 
-        with patch.object(parser2, "_execute_function") as mock_execute2:
-            mock_execute2.return_value = exp.select("*").from_("users")
+        with patch.object(parser2, "_execute_function") as mock_execute2, \
+             patch.object(parser2._sql_parser, "parse") as mock_parse2:
+            mock_execute2.return_value = "SELECT * FROM users"
+            mock_parse2.return_value = {
+                "code": {
+                    "sql": {
+                        "original_sql": "SELECT * FROM users",
+                        "resolved_sql": "SELECT * FROM users",
+                        "source_tables": [],
+                        "source_functions": [],
+                    }
+                },
+                "sqlglot_hash": "test_hash",
+            }
 
             result = parser2.evaluate_model_function(model_data2, "test_schema.test_model2", {})
 
