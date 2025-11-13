@@ -124,7 +124,7 @@ Add tests to your model metadata:
 
 ```python
 # models/users.py
-metadata: ModelMetadataDict = {
+metadata: ModelMetadata = {
     "schema": [
         {
             "name": "id",

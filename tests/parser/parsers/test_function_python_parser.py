@@ -7,19 +7,46 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 from tee.parser.parsers.function_python_parser import FunctionPythonParser, FunctionPythonParsingError
 from tee.parser.processing.function_decorator import functions
+from tee.parser.shared.registry import FunctionRegistry
 
 
 class TestFunctionPythonParser:
     """Test Python function parser."""
 
+    @pytest.fixture(autouse=True)
+    def clear_registry(self):
+        """Clear function registry before and after each test."""
+        FunctionRegistry.clear()
+        yield
+        FunctionRegistry.clear()
+
     def test_parse_metadata_only_file(self):
-        """Test parsing a metadata-only Python file."""
+        """Test parsing a metadata-only Python file with SQLFunctionMetadata."""
+        import tempfile
+        import os
+        from pathlib import Path
+        
         parser = FunctionPythonParser()
         
-        content = """
-from tee.typing.metadata import FunctionMetadataDict
+        # Create a temporary directory with test.py and test.sql
+        with tempfile.TemporaryDirectory() as tmpdir:
+            test_py = Path(tmpdir) / "test.py"
+            test_sql = Path(tmpdir) / "test.sql"
+            
+            # Create companion SQL file
+            test_sql.write_text("""
+CREATE FUNCTION calculate_percentage(numerator DOUBLE, denominator DOUBLE)
+RETURNS DOUBLE
+AS $$
+    CASE WHEN denominator = 0 THEN NULL ELSE (numerator / denominator) * 100 END
+$$;
+""")
+            
+            content = """
+from tee.parser.processing.function_builder import SQLFunctionMetadata
+from tee.typing import FunctionMetadata
 
-metadata: FunctionMetadataDict = {
+metadata: FunctionMetadata = {
     "function_name": "calculate_percentage",
     "description": "Calculates percentage",
     "function_type": "scalar",
@@ -31,25 +58,28 @@ metadata: FunctionMetadataDict = {
     ],
     "tags": ["math", "utility"]
 }
+
+# Automatically creates a function from metadata and companion SQL file
+function = SQLFunctionMetadata(metadata)
 """
-        
-        result = parser.parse(content, "test.py")
-        
-        assert len(result) == 1
-        assert "calculate_percentage" in result
-        
-        func_data = result["calculate_percentage"]
-        assert "function_metadata" in func_data
-        # Metadata-only files with language="sql" need evaluation (they generate SQL)
-        assert func_data["needs_evaluation"] is True
-        
-        metadata = func_data["function_metadata"]
-        assert metadata["function_name"] == "calculate_percentage"
-        assert metadata["description"] == "Calculates percentage"
-        assert metadata["function_type"] == "scalar"
-        assert metadata["language"] == "sql"
-        assert len(metadata["parameters"]) == 2
-        assert metadata["tags"] == ["math", "utility"]
+            
+            result = parser.parse(content, str(test_py))
+            
+            assert len(result) == 1
+            assert "calculate_percentage" in result
+            
+            func_data = result["calculate_percentage"]
+            assert "function_metadata" in func_data
+            # Metadata-only files with language="sql" need evaluation (they generate SQL)
+            assert func_data["needs_evaluation"] is True
+            
+            metadata = func_data["function_metadata"]
+            assert metadata["function_name"] == "calculate_percentage"
+            assert metadata["description"] == "Calculates percentage"
+            assert metadata["function_type"] == "scalar"
+            assert metadata["language"] == "sql"
+            assert len(metadata["parameters"]) == 2
+            assert metadata["tags"] == ["math", "utility"]
 
     def test_parse_sql_decorator_function(self):
         """Test parsing a function with @functions.sql() decorator."""

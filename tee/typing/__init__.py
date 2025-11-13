@@ -2,18 +2,25 @@
 Type definitions for the TEE project.
 """
 
+from .function import Function, ParsedFunction
 from .metadata import (
     ColumnDefinition,
     DataType,
+    FunctionMetadata,
     MaterializationType,
-    ModelMetadataDict,
-    ParsedModelMetadata,
+    ModelMetadata,
 )
+from .model import Model, ParsedModel
 
 __all__ = [
     "ColumnDefinition",
-    "ModelMetadataDict",
-    "ParsedModelMetadata",
+    "ModelMetadata",
+    "Model",
+    "FunctionMetadata",
+    "Function",
     "MaterializationType",
     "DataType",
+    # Backward compatibility
+    "ParsedModel",
+    "ParsedFunction",
 ]

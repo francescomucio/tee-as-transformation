@@ -67,3 +67,15 @@ class FunctionMetadataError(ParserError):
     """Raised when function metadata validation fails."""
 
     pass
+
+
+class ModelConflictError(ParserError):
+    """Raised when a model name conflict is detected during registration."""
+
+    pass
+
+
+class FunctionConflictError(ParserError):
+    """Raised when a function name conflict is detected during registration."""
+
+    pass

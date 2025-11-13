@@ -7,7 +7,7 @@ materialization interface and can be reused across different adapters.
 
 import pytest
 from unittest.mock import Mock, MagicMock, patch
-from typing import Dict, Any, List
+from typing import Any
 
 from tee.adapters.base import DatabaseAdapter
 from tee.typing.metadata import (

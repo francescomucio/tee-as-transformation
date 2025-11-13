@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Any
 
 from tee.parser.shared.exceptions import OutputGenerationError
+from tee.testing.base import StandardTest
+from tee.testing.python_test import PythonTest
 from tee.testing.sql_test import SqlTest
 from tee.testing.test_discovery import TestDiscovery
 
@@ -110,20 +112,30 @@ class TestLibraryExporter:
         except Exception as e:
             raise OutputGenerationError(f"Failed to export test library: {e}") from e
 
-    def _extract_test_metadata(self, sql_test: SqlTest) -> dict[str, Any]:
+    def _extract_test_metadata(self, test: StandardTest) -> dict[str, Any]:
         """
-        Extract metadata from a SQL test to build OTS test definition.
+        Extract metadata from a test to build OTS test definition.
 
         Args:
-            sql_test: SqlTest instance
+            test: StandardTest instance (SqlTest or PythonTest)
 
         Returns:
             Dictionary with 'is_generic', 'definition', and other metadata
         """
         try:
-            sql_content = sql_test._load_sql_content()
+            # Handle different test types
+            if isinstance(test, SqlTest):
+                # SqlTest: load SQL from file
+                sql_content = test._load_sql_content()
+            elif isinstance(test, PythonTest):
+                # PythonTest: SQL is already in memory
+                sql_content = test.sql
+            else:
+                # Unknown test type - log warning and use empty SQL
+                logger.warning(f"Unknown test type for {test.name}: {type(test)}")
+                sql_content = ""
         except Exception as e:
-            logger.warning(f"Failed to load SQL content for {sql_test.name}: {e}")
+            logger.warning(f"Failed to load SQL content for {test.name}: {e}")
             sql_content = ""
 
         # Determine if generic or singular
@@ -149,7 +161,7 @@ class TestLibraryExporter:
         definition = {
             "type": "sql",
             "level": level,
-            "description": description or f"SQL test: {sql_test.name}",
+            "description": description or f"SQL test: {test.name}",
             "sql": cleaned_sql.strip(),
         }
 
@@ -166,7 +178,7 @@ class TestLibraryExporter:
                 definition["target_transformation"] = target_transformation
             else:
                 logger.warning(
-                    f"Singular test '{sql_test.name}' has no identifiable target transformation. "
+                    f"Singular test '{test.name}' has no identifiable target transformation. "
                     f"Please ensure the SQL contains a fully qualified table name."
                 )
 

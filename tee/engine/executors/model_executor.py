@@ -94,7 +94,7 @@ class ModelExecutor:
                 continue
 
             try:
-                logger.info(f"Executing model: {table_name}")
+                logger.debug(f"Executing model: {table_name}")
 
                 if table_name not in parsed_models:
                     logger.warning(f"Model {table_name} not found in parsed models")
@@ -164,7 +164,7 @@ class ModelExecutor:
                     }
                 )
 
-                logger.info(
+                logger.debug(
                     f"Successfully executed {table_name} with {table_info['row_count']} rows"
                 )
 

@@ -5,9 +5,14 @@ Common type definitions for the parser module.
 from pathlib import Path
 from typing import Any
 
+from tee.typing.function import Function
+from tee.typing.model import Model
+
 # Core data structures
-ParsedModel = dict[str, Any]
-ParsedFunction = dict[str, Any]
+# Note: Model and Function are now proper TypedDicts from tee.typing
+# ParsedModel and ParsedFunction are kept as aliases for backward compatibility
+ParsedModel = Model
+ParsedFunction = Function
 DependencyGraph = dict[str, Any]
 TableReference = str
 FunctionReference = str

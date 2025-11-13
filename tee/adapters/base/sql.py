@@ -14,9 +14,13 @@ class SQLProcessor:
         """
         Convert SQL from source dialect to target dialect.
 
+        Uses auto-detection (read=None) by default, which allows SQLGlot to parse
+        SQL from various dialects more flexibly. If source_dialect is explicitly provided,
+        it will be used instead.
+
         Args:
             sql: SQL query to convert
-            source_dialect: Source dialect (uses config default if None)
+            source_dialect: Source dialect (uses None/auto-detect if None, which is more flexible)
 
         Returns:
             Converted SQL query
@@ -24,31 +28,29 @@ class SQLProcessor:
         if not sql or not sql.strip():
             return sql
 
-        # Use provided source dialect or fall back to config
-        source = source_dialect or self.config.source_dialect
-        if not source:
-            # No conversion needed
-            return sql
-
         try:
-            # Parse with source dialect
-            parsed = sqlglot.parse_one(sql, read=self._get_dialect(source))
+            # Parse with source dialect (None = auto-detect, more flexible)
+            # If source_dialect is provided, use it; otherwise let SQLGlot auto-detect
+            read_dialect = self._get_dialect(source_dialect) if source_dialect else None
+            parsed = sqlglot.parse_one(sql, read=read_dialect)
 
             # Convert to target dialect
             converted = parsed.sql(dialect=self.target_dialect)
 
-            # Log warning if dialects are different
-            if source != self.get_default_dialect():
-                self.logger.warning(
-                    f"Converted SQL from {source} to {self.get_default_dialect()}. "
+            # Log info if conversion happened
+            source_name = source_dialect or "auto-detect"
+            if source_name != self.get_default_dialect():
+                self.logger.debug(
+                    f"Converted SQL from {source_name} to {self.get_default_dialect()}. "
                     f"Please review the converted query for correctness."
                 )
 
             return converted
 
         except Exception as e:
+            source_name = source_dialect or "auto-detect"
             self.logger.error(
-                f"Failed to convert SQL from {source} to {self.get_default_dialect()}: {e}"
+                f"Failed to convert SQL from {source_name} to {self.get_default_dialect()}: {e}"
             )
             raise ValueError(f"SQL dialect conversion failed: {e}") from e
 

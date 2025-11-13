@@ -3,9 +3,10 @@ Unit tests for OTS function export functionality.
 """
 
 import pytest
-from typing import Dict, Any
+from typing import Any
+
 from tee.parser.output.ots.transformer import OTSTransformer
-from tee.parser.shared.types import ParsedModel, ParsedFunction
+from tee.typing import Function, Model
 
 
 class TestOTSFunctionExport:
@@ -20,7 +21,7 @@ class TestOTSFunctionExport:
         }
 
     @pytest.fixture
-    def sample_function(self) -> ParsedFunction:
+    def sample_function(self) -> Function:
         """Create sample parsed function for testing."""
         return {
             "function_metadata": {
@@ -50,7 +51,7 @@ class TestOTSFunctionExport:
     def test_export_function_to_ots(self, project_config, sample_function):
         """Test exporting a function to OTS format."""
         transformer = OTSTransformer(project_config)
-        parsed_functions: Dict[str, ParsedFunction] = {
+        parsed_functions: dict[str, Function] = {
             "my_schema.calculate_percentage": sample_function,
         }
 
@@ -73,7 +74,7 @@ class TestOTSFunctionExport:
     def test_ots_version_without_functions(self, project_config):
         """Test that OTS version is 0.1.0 when no functions are present."""
         transformer = OTSTransformer(project_config)
-        parsed_models: Dict[str, ParsedModel] = {
+        parsed_models: dict[str, Model] = {
             "my_schema.table1": {
                 "model_metadata": {"metadata": {}, "file_path": "models/table1.sql"},
                 "code": {"sql": {"original_sql": "SELECT 1", "resolved_sql": "SELECT 1", "source_tables": []}},
@@ -90,7 +91,7 @@ class TestOTSFunctionExport:
     def test_ots_version_with_functions(self, project_config, sample_function):
         """Test that OTS version is 0.2.0 when functions are present."""
         transformer = OTSTransformer(project_config)
-        parsed_functions: Dict[str, ParsedFunction] = {
+        parsed_functions: dict[str, Function] = {
             "my_schema.calculate_percentage": sample_function,
         }
 
@@ -103,7 +104,7 @@ class TestOTSFunctionExport:
     def test_function_tags_export(self, project_config, sample_function):
         """Test that function tags are exported to OTS."""
         transformer = OTSTransformer(project_config)
-        parsed_functions: Dict[str, ParsedFunction] = {
+        parsed_functions: dict[str, Function] = {
             "my_schema.calculate_percentage": sample_function,
         }
 
@@ -117,7 +118,7 @@ class TestOTSFunctionExport:
     def test_function_object_tags_export(self, project_config, sample_function):
         """Test that function object_tags are exported to OTS."""
         transformer = OTSTransformer(project_config)
-        parsed_functions: Dict[str, ParsedFunction] = {
+        parsed_functions: dict[str, Function] = {
             "my_schema.calculate_percentage": sample_function,
         }
 
@@ -131,7 +132,7 @@ class TestOTSFunctionExport:
     def test_function_code_structure(self, project_config, sample_function):
         """Test that function code is structured correctly in OTS."""
         transformer = OTSTransformer(project_config)
-        parsed_functions: Dict[str, ParsedFunction] = {
+        parsed_functions: dict[str, Function] = {
             "my_schema.calculate_percentage": sample_function,
         }
 
@@ -145,7 +146,7 @@ class TestOTSFunctionExport:
 
     def test_function_dependencies_export(self, project_config):
         """Test that function dependencies are exported."""
-        function_with_deps: ParsedFunction = {
+        function_with_deps: Function = {
             "function_metadata": {
                 "function_name": "helper_func",
                 "function_type": "scalar",
@@ -162,7 +163,7 @@ class TestOTSFunctionExport:
         }
 
         transformer = OTSTransformer(project_config)
-        parsed_functions: Dict[str, ParsedFunction] = {
+        parsed_functions: dict[str, Function] = {
             "my_schema.helper_func": function_with_deps,
         }
 
@@ -176,7 +177,7 @@ class TestOTSFunctionExport:
     def test_function_grouping_by_schema(self, project_config):
         """Test that functions are grouped by schema."""
         transformer = OTSTransformer(project_config)
-        parsed_functions: Dict[str, ParsedFunction] = {
+        parsed_functions: dict[str, Function] = {
             "schema1.func1": {
                 "function_metadata": {
                     "function_name": "func1",
@@ -208,13 +209,13 @@ class TestOTSFunctionExport:
     def test_functions_and_models_in_same_module(self, project_config, sample_function):
         """Test that functions and models can be in the same OTS module."""
         transformer = OTSTransformer(project_config)
-        parsed_models: Dict[str, ParsedModel] = {
+        parsed_models: dict[str, Model] = {
             "my_schema.table1": {
                 "model_metadata": {"metadata": {}, "file_path": "models/table1.sql"},
                 "code": {"sql": {"original_sql": "SELECT 1", "resolved_sql": "SELECT 1", "source_tables": []}},
             }
         }
-        parsed_functions: Dict[str, ParsedFunction] = {
+        parsed_functions: dict[str, Function] = {
             "my_schema.calculate_percentage": sample_function,
         }
 
@@ -228,7 +229,7 @@ class TestOTSFunctionExport:
 
     def test_function_with_table_return_type(self, project_config):
         """Test exporting a table function."""
-        table_function: ParsedFunction = {
+        table_function: Function = {
             "function_metadata": {
                 "function_name": "get_users",
                 "function_type": "table",
@@ -247,7 +248,7 @@ class TestOTSFunctionExport:
         }
 
         transformer = OTSTransformer(project_config)
-        parsed_functions: Dict[str, ParsedFunction] = {
+        parsed_functions: dict[str, Function] = {
             "my_schema.get_users": table_function,
         }
 
@@ -266,7 +267,7 @@ class TestOTSFunctionExport:
             "module": {"tags": ["analytics", "production"]},
         }
 
-        function_with_tags: ParsedFunction = {
+        function_with_tags: Function = {
             "function_metadata": {
                 "function_name": "calc",
                 "function_type": "scalar",
@@ -278,7 +279,7 @@ class TestOTSFunctionExport:
         }
 
         transformer = OTSTransformer(project_config_with_tags)
-        parsed_functions: Dict[str, ParsedFunction] = {
+        parsed_functions: dict[str, Function] = {
             "my_schema.calc": function_with_tags,
         }
 

@@ -7,10 +7,18 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 from tee.parser.parsers import PythonParser
 from tee.parser.processing import model
+from tee.parser.shared.registry import ModelRegistry
 
 
 class TestPythonVariableSupport:
     """Test Python variable support in model functions."""
+
+    @pytest.fixture(autouse=True)
+    def clear_registry(self):
+        """Clear model registry before and after each test."""
+        ModelRegistry.clear()
+        yield
+        ModelRegistry.clear()
 
     def test_model_decorator_with_variables(self):
         """Test that the model decorator correctly stores variables."""
@@ -53,9 +61,12 @@ def test_model():
         try:
             # Write test file
             test_file.write_text(test_content)
+            
+            # Convert to absolute path for proper file_path matching
+            test_file_abs = test_file.resolve()
 
             # Parse the file
-            parsed_models = parser.parse(test_file.read_text(), file_path=test_file)
+            parsed_models = parser.parse(test_file.read_text(), file_path=test_file_abs)
 
             # Check that the model was parsed correctly
             assert len(parsed_models) == 1
@@ -113,9 +124,12 @@ def test_nested_model():
         try:
             # Write test file
             test_file.write_text(test_content)
+            
+            # Convert to absolute path for proper file_path matching
+            test_file_abs = test_file.resolve()
 
             # Parse the file
-            parsed_models = parser.parse(test_file.read_text(), file_path=test_file)
+            parsed_models = parser.parse(test_file.read_text(), file_path=test_file_abs)
 
             # Check that the model was parsed correctly
             assert len(parsed_models) == 1

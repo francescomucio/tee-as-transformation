@@ -342,9 +342,9 @@ $$;
         description = self._extract_description_from_macro(macro_def)
         
         metadata = f"""# Function metadata converted from dbt macro: {function_name}
-from tee.typing.metadata import FunctionMetadataDict
+from tee.typing.metadata import FunctionMetadata
 
-metadata: FunctionMetadataDict = {{
+metadata: FunctionMetadata = {{
     "function_name": "{function_name}",
     "description": "{description}",
     "function_type": "scalar",

@@ -11,7 +11,7 @@ These tests cover:
 import pytest
 import tempfile
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 
 from tee.engine.execution_engine import ExecutionEngine
 from tee.parser.core.orchestrator import ParserOrchestrator

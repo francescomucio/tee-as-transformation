@@ -192,9 +192,9 @@ class TestFunctionSQLParser:
         # Create a temporary metadata file
         metadata_file = Path("test.py")
         metadata_content = """
-from tee.typing.metadata import FunctionMetadataDict
+from tee.typing.metadata import FunctionMetadata
 
-metadata: FunctionMetadataDict = {
+metadata: FunctionMetadata = {
     "function_name": "calculate_percentage",
     "description": "Calculates percentage",
     "tags": ["math", "utility"]

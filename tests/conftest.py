@@ -6,7 +6,7 @@ import pytest
 import tempfile
 import os
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 
 from tee.engine.config import AdapterConfig
 from tee.engine.model_state import ModelStateManager
@@ -70,13 +70,13 @@ def state_manager(temp_state_db_path):
 
 
 @pytest.fixture
-def sample_append_config() -> Dict[str, Any]:
+def sample_append_config() -> dict[str, Any]:
     """Sample append configuration."""
     return {"time_column": "created_at", "start_date": "2024-01-01", "lookback": "7 days"}
 
 
 @pytest.fixture
-def sample_merge_config() -> Dict[str, Any]:
+def sample_merge_config() -> dict[str, Any]:
     """Sample merge configuration."""
     return {
         "unique_key": ["id"],
@@ -87,7 +87,7 @@ def sample_merge_config() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def sample_delete_insert_config() -> Dict[str, Any]:
+def sample_delete_insert_config() -> dict[str, Any]:
     """Sample delete+insert configuration."""
     return {
         "where_condition": "updated_at >= @start_date",
@@ -97,7 +97,7 @@ def sample_delete_insert_config() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def sample_incremental_config() -> Dict[str, Any]:
+def sample_incremental_config() -> dict[str, Any]:
     """Sample incremental configuration."""
     return {
         "strategy": "append",
@@ -159,7 +159,14 @@ def pytest_configure(config):
 
 def pytest_collection_modifyitems(config, items):
     """Modify test collection to add markers."""
+    # Collect items to remove (can't modify list while iterating)
+    items_to_remove = []
     for item in items:
+        # Skip imported test decorator function (not a test)
+        if item.name == "test_decorator" and "test_test_decorator.py" in str(item.fspath):
+            items_to_remove.append(item)
+            continue
+
         # Add unit marker to tests in engine/incremental/ (incremental executor tests)
         if "engine/incremental/" in str(item.fspath):
             item.add_marker(pytest.mark.unit)
@@ -171,3 +178,7 @@ def pytest_collection_modifyitems(config, items):
         # Add slow marker to performance tests
         if "performance" in item.name or "large_dataset" in item.name or "test_incremental_performance.py" in str(item.fspath):
             item.add_marker(pytest.mark.slow)
+
+    # Remove items that shouldn't be collected as tests
+    for item in items_to_remove:
+        items.remove(item)

@@ -8,8 +8,9 @@ to database adapters (DuckDB and Snowflake).
 import os
 import sys
 import tempfile
-import pytest
 from pathlib import Path
+
+import pytest
 
 # Add the project root to the path
 project_root = Path(__file__).parent.parent.parent
@@ -17,17 +18,10 @@ sys.path.insert(0, str(project_root))
 
 from unittest.mock import MagicMock, patch
 
-from tee.executor import execute_models
 from tee.adapters.duckdb.adapter import DuckDBAdapter
 from tee.adapters.snowflake.adapter import SnowflakeAdapter
-from tee.adapters.base import AdapterConfig
+from tee.executor import execute_models
 from tests.adapters.fixtures.metadata_fixtures import (
-    USERS_METADATA,
-    PRODUCTS_METADATA,
-    ORDERS_METADATA,
-    PRIORITY_TEST_METADATA,
-    MALFORMED_METADATA,
-    LONG_DESCRIPTION_METADATA,
     INVALID_SCHEMA_TYPE_METADATA,
 )
 
@@ -51,28 +45,24 @@ class TestMetadataPropagation:
         try:
             # DuckDB configuration
             config = {"type": "duckdb", "path": db_path}
+            adapter = DuckDBAdapter(config)
+            adapter.connect()
 
-            # Test project folder
-            project_folder = "examples/t_project_sno"
+            # Create a table directly with metadata (no dependencies on other tables)
+            table_name = "test_schema.test_metadata_table"
+            query = "SELECT 1 as id, 'test' as name"
 
-            # Execute models
-            # Load project config if available
-            from tee.cli.utils import load_project_config
-            project_config = None
-            try:
-                project_config = load_project_config(project_folder)
-            except Exception:
-                pass
-            
-            results = execute_models(
-                project_folder=project_folder,
-                connection_config=config,
-                save_analysis=False,
-                project_config=project_config,
-            )
+            # Metadata with column descriptions
+            metadata = {
+                "description": "Test table for metadata propagation",
+                "schema": [
+                    {"name": "id", "datatype": "integer", "description": "Unique identifier for the record"},
+                    {"name": "name", "datatype": "string", "description": "Name of the record"},
+                ],
+            }
 
-            # Check if the main table was created (which has metadata)
-            assert "my_schema.my_first_table" in results["executed_tables"]
+            # Create the table with metadata
+            adapter.create_table(table_name, query, metadata=metadata)
 
             # Now check if column comments were actually stored
             import duckdb
@@ -80,17 +70,19 @@ class TestMetadataPropagation:
             conn = duckdb.connect(db_path)
 
             try:
-                # Query the information schema to get column comments
+                # Query DuckDB's native system tables to get column comments
+                # Using duckdb_columns() instead of information_schema.columns for better compatibility
+                # with both local DuckDB and MotherDuck
                 result = conn.execute("""
-                    SELECT column_name, column_comment 
-                    FROM information_schema.columns 
-                    WHERE table_name = 'my_first_table' 
-                    AND table_schema = 'my_schema'
-                    ORDER BY ordinal_position
+                    SELECT column_name, comment
+                    FROM duckdb_columns()
+                    WHERE table_name = 'test_metadata_table'
+                    AND schema_name = 'test_schema'
+                    ORDER BY column_index
                 """).fetchall()
 
                 # Check if we have the expected columns with comments
-                expected_columns = ["id", "name"]  # Based on the actual table structure
+                expected_columns = ["id", "name"]
                 found_columns = [row[0] for row in result]
 
                 for col in expected_columns:
@@ -100,8 +92,14 @@ class TestMetadataPropagation:
                 comments = [row[1] for row in result if row[1]]
                 assert len(comments) > 0, "At least one column should have a comment"
 
+                # Verify specific comments are stored correctly
+                comments_dict = {row[0]: row[1] for row in result}
+                assert comments_dict["id"] == "Unique identifier for the record"
+                assert comments_dict["name"] == "Name of the record"
+
             finally:
                 conn.close()
+                adapter.disconnect()
 
         finally:
             # Clean up
@@ -197,15 +195,15 @@ class TestMetadataPropagation:
             # Create a temporary project directory
             with tempfile.TemporaryDirectory() as tmpdir:
                 project_dir = Path(tmpdir)
-                
+
                 # Create data directory for state database
                 data_dir = project_dir / "data"
                 data_dir.mkdir()
-                
+
                 # Create models directory
                 models_dir = project_dir / "models"
                 models_dir.mkdir()
-                
+
                 # Create a Python model file with decorator metadata
                 model_file = models_dir / "test_model.py"
                 model_file.write_text("""
@@ -223,7 +221,7 @@ from tee.parser.processing.model import model
 def test_model():
     return "SELECT 1 as id, 'test' as name"
 """)
-                
+
                 # Create a companion metadata file with conflicting metadata (file metadata)
                 metadata_file = models_dir / "test_model_metadata.py"
                 metadata_file.write_text("""
@@ -234,16 +232,16 @@ metadata = {
     ]
 }
 """)
-                
+
                 # Create project.toml
                 project_toml = project_dir / "project.toml"
-                project_toml.write_text("""
+                project_toml.write_text(f"""
 project_folder = "."
 [connection]
 type = "duckdb"
 path = "{db_path}"
-""".format(db_path=db_path))
-                
+""")
+
                 # Execute models
                 config = {"type": "duckdb", "path": db_path}
                 # Load project config if available
@@ -253,29 +251,32 @@ path = "{db_path}"
                     project_config = load_project_config(str(project_dir))
                 except Exception:
                     pass
-                
+
                 results = execute_models(
                     project_folder=str(project_dir),
                     connection_config=config,
                     save_analysis=False,
                     project_config=project_config,
                 )
-                
+
                 # Verify the model was executed
                 assert "test_schema.priority_test" in results["executed_tables"]
-                
+
                 # Check that decorator metadata (not file metadata) was used
                 import duckdb
                 conn = duckdb.connect(db_path)
                 try:
+                    # Query DuckDB's native system tables to get column comments
+                    # Using duckdb_columns() instead of information_schema.columns for better compatibility
+                    # with both local DuckDB and MotherDuck
                     result = conn.execute("""
-                        SELECT column_name, column_comment 
-                        FROM information_schema.columns 
+                        SELECT column_name, comment 
+                        FROM duckdb_columns() 
                         WHERE table_name = 'priority_test' 
-                        AND table_schema = 'test_schema'
-                        ORDER BY ordinal_position
+                        AND schema_name = 'test_schema'
+                        ORDER BY column_index
                     """).fetchall()
-                    
+
                     # Verify decorator metadata descriptions were used
                     comments = {row[0]: row[1] for row in result}
                     assert "id" in comments
@@ -304,17 +305,17 @@ path = "{db_path}"
             "database": "test_db",
             "schema": "test_schema",
         }
-        
+
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
         mock_cursor.fetchone.return_value = (0,)  # Schema doesn't exist
-        
+
         with patch("tee.adapters.snowflake.adapter.snowflake.connector.connect") as mock_connect:
             mock_connect.return_value = mock_conn
             adapter = SnowflakeAdapter(snowflake_config)
             adapter.connection = mock_conn
-            
+
             # Test metadata with column descriptions
             metadata = {
                 "description": "Test table",
@@ -331,14 +332,14 @@ path = "{db_path}"
                     }
                 ]
             }
-            
+
             # Create table with metadata
             adapter.create_table("test_schema.test_table", "SELECT 1 as id, 'test' as name", metadata=metadata)
-            
+
             # Verify that COMMENT ON COLUMN was called for each column
             comment_calls = [str(call) for call in mock_cursor.execute.call_args_list if "COMMENT ON COLUMN" in str(call)]
             assert len(comment_calls) == 2, f"Expected 2 COMMENT ON COLUMN calls, got {len(comment_calls)}"
-            
+
             # Verify the comments contain the descriptions
             all_calls = [str(call) for call in mock_cursor.execute.call_args_list]
             assert any("Primary key identifier" in call for call in all_calls)

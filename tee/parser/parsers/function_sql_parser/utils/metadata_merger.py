@@ -6,7 +6,7 @@ from typing import Any
 
 from tee.parser.shared.exceptions import FunctionMetadataError
 from tee.parser.shared.function_utils import validate_function_metadata_consistency
-from tee.typing.metadata import ParsedFunctionMetadata
+from tee.typing.metadata import FunctionMetadata
 
 
 class MetadataMerger:
@@ -15,7 +15,7 @@ class MetadataMerger:
     @staticmethod
     def merge(
         sql_metadata: dict[str, Any], python_metadata: dict[str, Any]
-    ) -> ParsedFunctionMetadata:
+    ) -> FunctionMetadata:
         """
         Merge SQL-extracted metadata with Python metadata file.
 

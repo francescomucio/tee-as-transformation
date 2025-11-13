@@ -5,7 +5,10 @@ This function calculates the percentage of a numerator over a denominator,
 handling edge cases like division by zero.
 """
 
-metadata = {
+from tee.parser.processing.function_builder import SQLFunctionMetadata
+from tee.typing import FunctionMetadata
+
+metadata: FunctionMetadata = {
     "function_name": "calculate_percentage",
     "description": "Calculates the percentage of a numerator over a denominator. Returns NULL if denominator is zero or NULL.",
     "function_type": "scalar",
@@ -43,4 +46,7 @@ metadata = {
         }
     ]
 }
+
+# Automatically creates a function from metadata and companion SQL file
+function = SQLFunctionMetadata(metadata)
 

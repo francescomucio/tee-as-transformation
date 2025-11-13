@@ -6,7 +6,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 from tee.parser.core.orchestrator import ParserOrchestrator
-from tee.parser.shared.types import ParsedFunction
+from tee.typing import Function
 
 
 class TestFunctionOrchestration:
@@ -132,9 +132,9 @@ def generate_sql(adapter_type: str) -> str:
         # Create companion metadata file
         metadata_file = schema_folder / "test_func.py"
         metadata_file.write_text("""
-from tee.typing.metadata import FunctionMetadataDict
+from tee.typing.metadata import FunctionMetadata
 
-metadata: FunctionMetadataDict = {
+metadata: FunctionMetadata = {
     "function_name": "test_func",
     "description": "Test function with metadata",
     "tags": ["test", "utility"]
@@ -210,9 +210,9 @@ metadata: FunctionMetadataDict = {
 
         metadata_file = schema_folder / "test_func.py"
         metadata_file.write_text("""
-from tee.typing.metadata import FunctionMetadataDict
+from tee.typing.metadata import FunctionMetadata
 
-metadata: FunctionMetadataDict = {
+metadata: FunctionMetadata = {
     "function_name": "test_func",
     "schema": "my_schema"  # Override schema from path
 }

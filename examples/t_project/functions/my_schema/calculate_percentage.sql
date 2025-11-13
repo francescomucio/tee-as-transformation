@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION calculate_percentage(
     numerator DOUBLE,
     denominator DOUBLE
 ) RETURNS DOUBLE AS $$
-    SELECT 
+      
         CASE 
             WHEN denominator = 0 OR denominator IS NULL THEN NULL
             ELSE (numerator / denominator) * 100.0

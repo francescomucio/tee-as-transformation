@@ -6,7 +6,7 @@ import pytest
 from pathlib import Path
 from tee.parser.analysis.dependency_graph import DependencyGraphBuilder
 from tee.parser.analysis.table_resolver import TableResolver
-from tee.parser.shared.types import ParsedModel, ParsedFunction
+from tee.typing import Function, Model
 
 
 class TestFunctionDependencyGraph:

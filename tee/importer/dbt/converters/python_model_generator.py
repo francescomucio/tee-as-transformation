@@ -99,18 +99,18 @@ class PythonModelGenerator:
         # Imports
         lines.append("from tee.parser.processing.model import model")
         if metadata:
-            lines.append("from tee.typing.metadata import ModelMetadataDict")
+            lines.append("from tee.typing.metadata import ModelMetadata")
         lines.append("")
 
         # Metadata dict (if provided)
         if metadata:
             lines.append("# Model metadata")
             metadata_str = self._format_metadata_dict(metadata)
-            lines.append(f"metadata: ModelMetadataDict = {metadata_str}")
+            lines.append(f"metadata: ModelMetadata = {metadata_str}")
             lines.append("")
         else:
             # Create empty metadata dict
-            lines.append("metadata: ModelMetadataDict = {}")
+            lines.append("metadata: ModelMetadata = {}")
             lines.append("")
 
         # Decorator

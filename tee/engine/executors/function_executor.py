@@ -138,14 +138,20 @@ class FunctionExecutor:
 
     def _extract_function_sql(self, function_data: dict[str, Any], function_name: str) -> str:
         """
-        Extract SQL query from function data.
+        Extract SQL query from function data and convert to target dialect.
+
+        Source dialect is determined in priority order:
+        1. source_sql_dialect from function metadata
+        2. source_sql_dialect from project.toml
+        3. source_dialect from adapter config
+        4. "generic" (default, most flexible)
 
         Args:
             function_data: Parsed function data
             function_name: Name of the function
 
         Returns:
-            SQL query string or empty string if not found
+            SQL query string converted to target dialect, or empty string if not found
         """
         code_data = function_data.get("code", {})
         if not code_data or "sql" not in code_data:
@@ -153,12 +159,156 @@ class FunctionExecutor:
             return ""
 
         sql_data = code_data["sql"]
-        # For functions, we use original_sql (the CREATE OR REPLACE FUNCTION statement)
-        if "original_sql" in sql_data:
-            return sql_data["original_sql"]
 
-        logger.error(f"No original_sql found for function {function_name}")
-        return ""
+        # Get the SQL (prefer resolved_sql if available, fallback to original_sql)
+        function_sql = None
+        if "resolved_sql" in sql_data:
+            function_sql = sql_data["resolved_sql"]
+        elif "original_sql" in sql_data:
+            function_sql = sql_data["original_sql"]
+
+            # Determine source dialect in priority order:
+            # 1. source_sql_dialect from function metadata
+            # 2. source_sql_dialect from project.toml
+            # 3. source_dialect from adapter config
+            # 4. "generic" (default, most flexible)
+            source_dialect = None
+
+            # Check function metadata first
+            function_metadata = function_data.get("function_metadata", {})
+            if isinstance(function_metadata, dict):
+                # Check for source_sql_dialect in metadata dict
+                metadata_dict = function_metadata.get("metadata", {})
+                if isinstance(metadata_dict, dict):
+                    source_dialect = metadata_dict.get("source_sql_dialect")
+                # Also check directly in function_metadata
+                if not source_dialect:
+                    source_dialect = function_metadata.get("source_sql_dialect")
+
+            # Check project.toml if not found in metadata
+            if not source_dialect:
+                source_dialect = self._get_source_sql_dialect_from_project()
+
+            # Fall back to adapter config
+            if not source_dialect:
+                source_dialect = self.adapter.config.source_dialect
+
+            # Default to None (auto-detect) for flexible parsing (convert_sql_dialect will use this)
+            # No need to set it explicitly here since convert_sql_dialect defaults to None/auto-detect
+
+            target_dialect = self.adapter.get_default_dialect()
+
+            # Convert SQL to target dialect (convert_sql_dialect uses auto-detect if source_dialect is None)
+            if source_dialect:
+                logger.debug(
+                    f"Converting function {function_name} SQL from {source_dialect} to {target_dialect}"
+                )
+            else:
+                logger.debug(
+                    f"Converting function {function_name} SQL using auto-detect to {target_dialect}"
+                )
+
+            try:
+                # Convert SQL to target dialect
+                logger.debug(
+                    f"Converting function {function_name} SQL (source: {source_dialect or 'auto-detect'}, target: {target_dialect})"
+                )
+                original_sql = function_sql
+                function_sql = self.adapter.convert_sql_dialect(
+                    function_sql, source_dialect=source_dialect
+                )
+
+                # Persist the converted SQL back to function_data
+                sql_data["resolved_sql"] = function_sql
+
+                if function_sql != original_sql:
+                    logger.debug(
+                        f"Successfully converted function {function_name} SQL to {target_dialect}"
+                    )
+                    logger.debug(f"Converted SQL preview: {function_sql[:200]}...")
+                    # Print full converted SQL only in debug mode
+                    self._print_converted_function_sql(function_name, function_sql, target_dialect)
+                else:
+                    logger.debug(
+                        f"Function {function_name} SQL unchanged after conversion (may be compatible or conversion not needed)"
+                    )
+            except Exception as e:
+                logger.error(
+                    f"Failed to convert function {function_name} SQL to {target_dialect}: {e}. "
+                    f"Using original SQL. Please review manually."
+                )
+                # Store original SQL as resolved_sql if conversion fails
+                sql_data["resolved_sql"] = function_sql
+                # Don't raise - continue with original SQL (might work if dialects are compatible)
+        else:
+            logger.error(f"No original_sql or resolved_sql found for function {function_name}")
+            return ""
+
+        return function_sql or ""
+
+    def _print_converted_function_sql(
+        self, function_name: str, converted_sql: str, target_dialect: str
+    ) -> None:
+        """
+        Print the converted function SQL in a formatted, human-readable way.
+
+        Displays the complete converted SQL that will be executed in the target database.
+
+        Args:
+            function_name: Name of the function
+            converted_sql: The converted SQL string
+            target_dialect: Target database dialect
+        """
+        output = []
+        output.append("\n" + "━" * 80)
+        output.append(f"  🔧 CONVERTED FUNCTION SQL: {function_name}")
+        output.append(f"  🎯 Target Dialect: {target_dialect}")
+        output.append("━" * 80)
+        output.append("")
+        output.append("  📝 Converted SQL Definition:")
+        sql_lines = converted_sql.split("\n")
+        for line in sql_lines:
+            output.append(f"     {line}")
+        output.append("")
+        output.append("━" * 80)
+        output.append("")
+
+        logger.debug("\n".join(output))
+
+    def _get_source_sql_dialect_from_project(self) -> str | None:
+        """
+        Get source_sql_dialect from project.toml.
+
+        Checks root level first, then connection section for backward compatibility.
+
+        Returns:
+            source_sql_dialect from project config, or None if not found
+        """
+        try:
+            import tomllib
+            from pathlib import Path
+
+            project_toml = Path(self.project_folder) / "project.toml"
+            if not project_toml.exists():
+                return None
+
+            with open(project_toml, "rb") as f:
+                project_config = tomllib.load(f)
+
+            # Check at root level first (preferred location)
+            if "source_sql_dialect" in project_config:
+                return project_config.get("source_sql_dialect")
+
+            # Also check in connection section (for backward compatibility)
+            connection_config = project_config.get("connection", {})
+            if isinstance(connection_config, dict):
+                return connection_config.get("source_sql_dialect")
+
+            return None
+
+        except Exception as e:
+            logger.debug(f"Could not read source_sql_dialect from project.toml: {e}")
+            return None
 
     def _extract_schema_name(self, function_name: str) -> str:
         """

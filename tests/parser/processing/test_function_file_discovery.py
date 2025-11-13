@@ -5,7 +5,7 @@ Tests for function file discovery.
 import pytest
 import tempfile
 from pathlib import Path
-from typing import Dict, List
+from typing import Any
 
 from tee.parser.processing.file_discovery import FileDiscovery
 from tee.parser.shared.exceptions import FileDiscoveryError

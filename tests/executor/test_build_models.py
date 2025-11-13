@@ -5,7 +5,7 @@ Unit tests for build_models function.
 import pytest
 import tempfile
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 from unittest.mock import Mock, patch
 
 from tee.executor import build_models
@@ -61,7 +61,7 @@ class TestBuildModels:
         mock_execution_engine.adapter = Mock()
         return mock_execution_engine
 
-    def _setup_real_project(self, temp_dir, models_sql: Dict[str, str], connection_config: Dict[str, Any]) -> Path:
+    def _setup_real_project(self, temp_dir, models_sql: dict[str, str], connection_config: dict[str, Any]) -> Path:
         """Helper to set up a real project structure with models and compile to OTS."""
         # Create project structure
         models_dir = temp_dir / "models"

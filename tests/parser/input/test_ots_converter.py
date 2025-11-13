@@ -1,5 +1,5 @@
 """
-Tests for OTS to ParsedModel converter.
+Tests for OTS to Model converter.
 """
 
 import pytest

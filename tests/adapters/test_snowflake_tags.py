@@ -4,7 +4,6 @@ Test cases for Snowflake tag attachment functionality.
 
 import pytest
 from unittest.mock import Mock, MagicMock, patch
-from typing import List
 from tee.adapters.snowflake.adapter import SnowflakeAdapter
 
 

@@ -7,7 +7,7 @@ as a template for testing other database adapters.
 
 import pytest
 from unittest.mock import Mock, patch
-from typing import Dict, Any
+from typing import Any
 
 from tee.adapters.duckdb.adapter import DuckDBAdapter
 from tee.typing.metadata import (

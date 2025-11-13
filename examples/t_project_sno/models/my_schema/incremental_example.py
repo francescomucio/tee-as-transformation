@@ -1,8 +1,8 @@
 # Metadata for incremental_example.sql
-from tee.typing.metadata import ModelMetadataDict
+from tee.typing.metadata import ModelMetadata
 
 # Example 1: Append-only incremental
-metadata_append: ModelMetadataDict = {
+metadata_append: ModelMetadata = {
     "description": "Incremental table using append strategy",
     "materialization": "incremental",
     "incremental": {
@@ -16,7 +16,7 @@ metadata_append: ModelMetadataDict = {
 }
 
 # Example 2: Merge incremental
-metadata_merge: ModelMetadataDict = {
+metadata_merge: ModelMetadata = {
     "description": "Incremental table using merge strategy",
     "materialization": "incremental", 
     "incremental": {
@@ -31,7 +31,7 @@ metadata_merge: ModelMetadataDict = {
 }
 
 # Example 3: Delete+insert incremental
-metadata_delete_insert: ModelMetadataDict = {
+metadata_delete_insert: ModelMetadata = {
     "description": "Incremental table using delete+insert strategy",
     "materialization": "incremental",
     "incremental": {

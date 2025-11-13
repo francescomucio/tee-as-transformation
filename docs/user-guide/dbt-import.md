@@ -238,9 +238,9 @@ Every SQL model gets a corresponding Python metadata file (`.py`) created automa
 **Structure:**
 ```python
 # Model metadata converted from dbt
-from tee.typing.metadata import ModelMetadataDict
+from tee.typing import ModelMetadata
 
-metadata: ModelMetadataDict = {
+metadata: ModelMetadata = {
     "table_name": "schema.table_name",  # Always included
     "description": "Model description or TODO: Add model description",
     "schema": [...],  # Column definitions (if available)
@@ -257,7 +257,7 @@ metadata: ModelMetadataDict = {
 
 **Example - Model with metadata:**
 ```python
-metadata: ModelMetadataDict = {
+metadata: ModelMetadata = {
     "table_name": "marts.customers",
     "description": "Customer overview data mart",
     "schema": [
@@ -269,7 +269,7 @@ metadata: ModelMetadataDict = {
 
 **Example - Model without metadata:**
 ```python
-metadata: ModelMetadataDict = {
+metadata: ModelMetadata = {
     "table_name": "marts.locations",
     "description": "TODO: Add model description",
 }

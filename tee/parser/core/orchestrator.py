@@ -12,6 +12,7 @@ from tee.parser.parsers import FunctionPythonParser, FunctionSQLParser, ParserFa
 from tee.parser.processing import FileDiscovery, substitute_sql_variables, validate_sql_variables
 from tee.parser.shared.exceptions import ParserError
 from tee.parser.shared.function_utils import standardize_parsed_function
+from tee.parser.shared.registry import FunctionRegistry, ModelRegistry
 from tee.parser.shared.types import (
     ConnectionConfig,
     DependencyGraph,
@@ -80,6 +81,10 @@ class ParserOrchestrator:
         try:
             logger.info("Starting model discovery and parsing")
 
+            # Clear ModelRegistry before starting discovery
+            # This ensures we start with a clean slate
+            ModelRegistry.clear()
+
             # Discover all files
             files = self.file_discovery.discover_all_files()
             logger.info(
@@ -99,8 +104,51 @@ class ParserOrchestrator:
                 # For now, we'll skip loading them here - they'll be loaded during compile
                 # This prevents conflicts during regular parsing
 
-            # Parse SQL files
+            # Build a set of Python file bases to check for companion SQL files
+            python_file_bases = {f.stem for f in files["python"]}
+
+            # Parse Python files FIRST (as per the new approach)
+            for python_file in files["python"]:
+                try:
+                    logger.debug(f"Processing Python file: {python_file}")
+
+                    # Read Python content
+                    with open(python_file, encoding="utf-8") as f:
+                        python_content = f.read()
+
+                    # Parse with Python parser
+                    parser = ParserFactory.create_parser(python_file)
+                    python_models = parser.parse(python_content, file_path=python_file)
+
+                    # Add each model to the result with proper table naming
+                    for table_name, model_data in python_models.items():
+                        # For Python models, use the table_name from the decorator directly
+                        # Only generate full table name if it doesn't already contain a schema
+                        if "." in table_name:
+                            # Table name already includes schema (e.g., "my_schema.incremental_example")
+                            full_table_name = table_name
+                        else:
+                            # Generate full table name for unqualified table names
+                            fake_file_path = python_file.parent / f"{table_name}.py"
+                            full_table_name = self.table_resolver.generate_full_table_name(
+                                fake_file_path, self.models_folder
+                            )
+
+                        parsed_models[full_table_name] = model_data
+                        logger.debug(f"Successfully parsed Python model: {full_table_name}")
+
+                except Exception as e:
+                    logger.error(f"Error processing Python file {python_file}: {e}")
+                    continue
+
+            # Parse SQL files (skip those with companion Python files)
             for sql_file in files["sql"]:
+                # Skip SQL files that have a companion Python file (already processed)
+                if sql_file.stem in python_file_bases:
+                    logger.debug(
+                        f"Skipping SQL file {sql_file} (has companion Python file {sql_file.stem}.py)"
+                    )
+                    continue
                 try:
                     logger.debug(f"Processing SQL file: {sql_file}")
 
@@ -134,40 +182,6 @@ class ParserOrchestrator:
 
                 except Exception as e:
                     logger.error(f"Error processing SQL file {sql_file}: {e}")
-                    continue
-
-            # Parse Python files
-            for python_file in files["python"]:
-                try:
-                    logger.debug(f"Processing Python file: {python_file}")
-
-                    # Read Python content
-                    with open(python_file, encoding="utf-8") as f:
-                        python_content = f.read()
-
-                    # Parse with Python parser
-                    parser = ParserFactory.create_parser(python_file)
-                    python_models = parser.parse(python_content, file_path=python_file)
-
-                    # Add each model to the result with proper table naming
-                    for table_name, model_data in python_models.items():
-                        # For Python models, use the table_name from the decorator directly
-                        # Only generate full table name if it doesn't already contain a schema
-                        if "." in table_name:
-                            # Table name already includes schema (e.g., "my_schema.incremental_example")
-                            full_table_name = table_name
-                        else:
-                            # Generate full table name for unqualified table names
-                            fake_file_path = python_file.parent / f"{table_name}.py"
-                            full_table_name = self.table_resolver.generate_full_table_name(
-                                fake_file_path, self.models_folder
-                            )
-
-                        parsed_models[full_table_name] = model_data
-                        logger.debug(f"Successfully parsed Python model: {full_table_name}")
-
-                except Exception as e:
-                    logger.error(f"Error processing Python file {python_file}: {e}")
                     continue
 
             # Evaluate Python models to populate their code data
@@ -322,7 +336,13 @@ class ParserOrchestrator:
                         )
                         continue
 
-            # Parse Python functions
+            # Clear FunctionRegistry before starting discovery
+            FunctionRegistry.clear()
+
+            # Build a set of Python file bases to check for companion SQL files
+            python_file_bases = {f.stem for f in function_files["python"]}
+
+            # Parse Python functions FIRST (as per the new approach)
             python_parser = FunctionPythonParser()
             for python_file in function_files["python"]:
                 try:
@@ -332,47 +352,85 @@ class ParserOrchestrator:
                     with open(python_file, encoding="utf-8") as f:
                         python_content = f.read()
 
-                    # Parse Python functions
-                    function_results = python_parser.parse(python_content, file_path=python_file)
+                    # Parse with Python parser (this will trigger auto-registration)
+                    python_parser.parse(python_content, file_path=python_file)
+
+                except Exception as e:
+                    logger.error(f"Error processing Python function file {python_file}: {e}")
+                    continue
+
+            # After all Python files are processed, collect from FunctionRegistry
+            # Filter functions by file_path to ensure only functions from this project are included
+            all_registered_functions = FunctionRegistry.get_all()
+            for function_name, function_data in all_registered_functions.items():
+                function_file_path = function_data.get("function_metadata", {}).get("file_path")
+                if function_file_path and Path(function_file_path).is_relative_to(self.functions_folder):
+                    # Generate qualified function name
+                    qualified_name = self.table_resolver.generate_full_function_name(
+                        Path(function_file_path), self.functions_folder, function_data["function_metadata"]
+                    )
+                    parsed_functions[qualified_name] = function_data
+                    logger.debug(f"Collected Python function from registry: {qualified_name}")
+
+            # Parse SQL functions (skip those with companion Python files)
+            for sql_file in function_files["sql"]:
+                # Skip SQL files that have a companion Python file (already processed)
+                # Check if a function with this stem was already registered from a Python file
+                if sql_file.stem in python_file_bases:
+                    # Check if .py file registered a function with the same name (via SQLFunctionMetadata)
+                    # If yes, skip SQL file (already registered)
+                    # If no, process SQL file (Python file didn't register anything)
+                    sql_stem = sql_file.stem
+                    if any(
+                        Path(f["function_metadata"].get("file_path", "")).stem == sql_stem
+                        for f in parsed_functions.values()
+                    ):
+                        logger.debug(
+                            f"Skipping {sql_file} - companion Python file already registered function '{sql_stem}'"
+                        )
+                        continue
+
+                try:
+                    logger.debug(f"Processing SQL function file: {sql_file}")
+
+                    # Check if there's a database override for this function
+                    sql_stem = sql_file.stem  # filename without extension
+                    override_file = None
+                    if current_db_type and current_db_type in override_map:
+                        if sql_stem in override_map[current_db_type]:
+                            override_file = override_map[current_db_type][sql_stem]
+                            logger.debug(f"Found database override for {sql_stem}: {override_file}")
+
+                    # Use override file if available, otherwise use generic SQL file
+                    file_to_parse = override_file if override_file else sql_file
+
+                    # Read SQL content
+                    with open(file_to_parse, encoding="utf-8") as f:
+                        sql_content = f.read()
+
+                    # Parse SQL function
+                    function_results = sql_parser.parse(sql_content, file_path=file_to_parse)
 
                     # Process each function found in the file
                     for function_name, function_data in function_results.items():
                         # Generate qualified function name
                         qualified_name = self.table_resolver.generate_full_function_name(
-                            python_file, self.functions_folder, function_data["function_metadata"]
+                            sql_file, self.functions_folder, function_data["function_metadata"]
                         )
-
-                        # Check if this function already exists (e.g., from SQL file)
-                        if qualified_name in parsed_functions:
-                            existing_function = parsed_functions[qualified_name]
-                            # If existing function has code but Python function doesn't,
-                            # this is likely a metadata-only Python file for a SQL function
-                            if existing_function.get("code") and not function_data.get("code"):
-                                # Merge metadata from Python file into existing function
-                                existing_metadata = existing_function.get("function_metadata", {})
-                                new_metadata = function_data.get("function_metadata", {})
-                                # Merge metadata (Python metadata takes precedence)
-                                merged_metadata = {**existing_metadata, **new_metadata}
-                                # Update the existing function with merged metadata
-                                existing_function["function_metadata"] = merged_metadata
-                                logger.debug(
-                                    f"Merged metadata from Python file into existing SQL function: {qualified_name}"
-                                )
-                                continue
 
                         # Standardize function structure
                         standardized = standardize_parsed_function(
                             function_data=function_data,
                             function_name=function_name,
-                            file_path=str(python_file),
-                            is_python_function=True,
+                            file_path=str(file_to_parse),
+                            is_python_function=False,
                         )
 
                         parsed_functions[qualified_name] = standardized
-                        logger.debug(f"Successfully parsed Python function: {qualified_name}")
+                        logger.debug(f"Successfully parsed SQL function: {qualified_name}")
 
                 except Exception as e:
-                    logger.error(f"Error processing Python function file {python_file}: {e}")
+                    logger.error(f"Error processing SQL function file {sql_file}: {e}")
                     continue
 
             # Cache the result
@@ -401,7 +459,7 @@ class ParserOrchestrator:
             else:
                 parsed_models = self._parsed_models
 
-            logger.info("Building dependency graph")
+            logger.debug("Building dependency graph")
 
             # Get parsed functions if available
             parsed_functions = None
@@ -427,7 +485,7 @@ class ParserOrchestrator:
                 parsed_functions=parsed_functions,
             )
 
-            logger.info(f"Built dependency graph with {len(self._dependency_graph['nodes'])} nodes")
+            logger.debug(f"Built dependency graph with {len(self._dependency_graph['nodes'])} nodes")
 
             return self._dependency_graph
 

@@ -2,7 +2,6 @@
 Metadata schema definitions and validation for SQL models.
 """
 
-import ast
 import logging
 import os
 from dataclasses import dataclass
@@ -13,7 +12,7 @@ from tee.typing.metadata import (
     DataType,
     IncrementalConfig,
     MaterializationType,
-    ModelMetadataDict,
+    ModelMetadata,
     ModelTestName,
 )
 
@@ -40,8 +39,8 @@ class ColumnSchema:
 
 
 @dataclass
-class ModelMetadata:
-    """Metadata definition for a SQL model."""
+class ValidatedModelMetadata:
+    """Validated metadata definition for a SQL model (internal use)."""
 
     description: str | None = None
     schema: list[ColumnSchema] | None = None
@@ -110,15 +109,15 @@ class ModelMetadata:
                 )
 
 
-def validate_metadata_dict(metadata_dict: ModelMetadataDict) -> ModelMetadata:
+def validate_metadata_dict(metadata_dict: ModelMetadata) -> ValidatedModelMetadata:
     """
-    Validate and convert a metadata dictionary to ModelMetadata object.
+    Validate and convert a metadata dictionary to ValidatedModelMetadata object.
 
     Args:
-        metadata_dict: Dictionary containing metadata
+        metadata_dict: Dictionary containing metadata (TypedDict ModelMetadata)
 
     Returns:
-        Validated ModelMetadata object
+        Validated ValidatedModelMetadata object (dataclass)
 
     Raises:
         ValueError: If metadata is invalid
@@ -168,7 +167,7 @@ def validate_metadata_dict(metadata_dict: ModelMetadataDict) -> ModelMetadata:
         if incremental is not None and not isinstance(incremental, dict):
             raise ValueError("Incremental configuration must be a dictionary")
 
-        return ModelMetadata(
+        return ValidatedModelMetadata(
             description=metadata_dict.get("description"),
             schema=schema,
             partitions=partitions,
@@ -181,10 +180,10 @@ def validate_metadata_dict(metadata_dict: ModelMetadataDict) -> ModelMetadata:
         raise ValueError(f"Invalid metadata format: {str(e)}") from e
 
 
-def parse_metadata_from_python_file(file_path: str) -> ModelMetadataDict | None:
+def parse_metadata_from_python_file(file_path: str) -> dict[str, Any] | None:
     """
     Parse metadata from a Python file containing a metadata object.
-    Supports both typed imports and AST parsing approaches.
+    Uses execution-based parsing (requires file to be executable).
 
     Args:
         file_path: Path to the Python file
@@ -218,16 +217,14 @@ def parse_metadata_from_python_file(file_path: str) -> ModelMetadataDict | None:
                 IncrementalMergeConfig,
                 IncrementalStrategy,
                 MaterializationType,
-                ModelMetadataDict,
+                ModelMetadata,
                 ModelTestName,
-                ParsedModelMetadata,
             )
 
             namespace.update(
                 {
-                    "ModelMetadataDict": ModelMetadataDict,
+                    "ModelMetadata": ModelMetadata,
                     "ColumnDefinition": ColumnDefinition,
-                    "ParsedModelMetadata": ParsedModelMetadata,
                     "DataType": DataType,
                     "MaterializationType": MaterializationType,
                     "ColumnTestName": ColumnTestName,
@@ -253,65 +250,15 @@ def parse_metadata_from_python_file(file_path: str) -> ModelMetadataDict | None:
                     return metadata.__dict__
 
         except Exception as exec_error:
-            logger.debug(
-                f"Typed execution failed for {file_path}, falling back to AST parsing: {exec_error}"
+            logger.warning(
+                f"Failed to execute metadata file {file_path}: {exec_error}. "
+                f"Metadata files must be executable Python files."
             )
-
-        # Fall back to AST parsing if typed execution failed
-        tree = ast.parse(content)
-
-        # Look for metadata variable assignment
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Assign):
-                for target in node.targets:
-                    if isinstance(target, ast.Name) and target.id == "metadata":
-                        # Evaluate the metadata value
-                        if isinstance(node.value, ast.Dict):
-                            # Convert AST dict to Python dict
-                            metadata_dict = {}
-                            for key, value in zip(node.value.keys, node.value.values):
-                                if isinstance(key, ast.Constant):
-                                    key_name = key.value
-                                else:
-                                    continue
-
-                                metadata_dict[key_name] = _ast_to_python_value(value)
-
-                            return metadata_dict
-                        elif isinstance(node.value, ast.Constant):
-                            # Direct constant assignment
-                            return node.value.value
+            # Return None if execution fails - let caller handle the error
+            return None
 
         return None
 
     except Exception as e:
         logger.warning(f"Failed to parse metadata from {file_path}: {str(e)}")
         return None
-
-
-def _ast_to_python_value(node: ast.AST) -> Any:
-    """
-    Convert an AST node to its Python value.
-
-    Args:
-        node: AST node to convert
-
-    Returns:
-        Python value
-    """
-    if isinstance(node, ast.Constant):
-        return node.value
-    elif isinstance(node, ast.List):
-        return [_ast_to_python_value(item) for item in node.elts]
-    elif isinstance(node, ast.Dict):
-        result = {}
-        for key, value in zip(node.keys, node.values):
-            if isinstance(key, ast.Constant):
-                key_name = key.value
-            else:
-                continue
-            result[key_name] = _ast_to_python_value(value)
-        return result
-    else:
-        # For complex expressions, return a string representation
-        return str(node)

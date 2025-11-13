@@ -89,6 +89,9 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
 
     def _create_adapter_config(self, config_dict: dict[str, Any]) -> AdapterConfig:
         """Create AdapterConfig from validated dictionary."""
+        # Map source_sql_dialect to source_dialect (source_sql_dialect is the preferred name in project.toml)
+        source_dialect = config_dict.get("source_dialect") or config_dict.get("source_sql_dialect")
+        
         return AdapterConfig(
             type=config_dict["type"],
             host=config_dict.get("host"),
@@ -97,7 +100,7 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
             user=config_dict.get("user"),
             password=config_dict.get("password"),
             path=config_dict.get("path"),
-            source_dialect=config_dict.get("source_dialect"),
+            source_dialect=source_dialect,
             target_dialect=config_dict.get("target_dialect"),
             connection_timeout=config_dict.get("connection_timeout", 30),
             query_timeout=config_dict.get("query_timeout", 300),

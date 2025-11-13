@@ -7,7 +7,7 @@ import logging
 import sqlglot
 from sqlglot import exp
 
-from tee.parser.analysis.sql_qualifier import generate_resolved_sql, validate_resolved_sql
+from tee.parser.analysis.sql_qualifier import generate_resolved_sql
 from tee.parser.shared.constants import SQL_BUILT_IN_FUNCTIONS
 from tee.parser.shared.exceptions import SQLParsingError
 from tee.parser.shared.file_utils import find_metadata_file
@@ -17,7 +17,7 @@ from tee.parser.shared.metadata_schema import (
 )
 from tee.parser.shared.model_utils import compute_sqlglot_hash, create_model_metadata
 from tee.parser.shared.types import FilePath, ParsedModel
-from tee.typing.metadata import ParsedModelMetadata
+from tee.typing.metadata import ModelMetadata
 
 from .base import BaseParser
 
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 class SQLParser(BaseParser):
     """Handles SQL parsing using sqlglot."""
 
-    def _parse_metadata(self, sql_file_path: str) -> ParsedModelMetadata | None:
+    def _parse_metadata(self, sql_file_path: str) -> ModelMetadata | None:
         """
         Parse metadata from companion Python file or SQL comments.
 
@@ -46,30 +46,30 @@ class SQLParser(BaseParser):
                 if raw_metadata:
                     # Validate the metadata
                     validated_metadata = validate_metadata_dict(raw_metadata)
-                return ParsedModelMetadata(
-                    description=validated_metadata.description,
-                    schema=[
-                        {
-                            "name": col.name,
-                            "datatype": col.datatype,
-                            "description": col.description,
-                            "tests": col.tests,
-                        }
-                        for col in validated_metadata.schema
-                    ]
-                    if validated_metadata.schema
-                    else None,
-                    partitions=validated_metadata.partitions or [],
-                    materialization=validated_metadata.materialization,
-                    tests=validated_metadata.tests or [],
-                    incremental=validated_metadata.incremental,
-                )
+                    return ModelMetadata(
+                        description=validated_metadata.description,
+                        schema=[
+                            {
+                                "name": col.name,
+                                "datatype": col.datatype,
+                                "description": col.description,
+                                "tests": col.tests,
+                            }
+                            for col in validated_metadata.schema
+                        ]
+                        if validated_metadata.schema
+                        else None,
+                        partitions=validated_metadata.partitions or [],
+                        materialization=validated_metadata.materialization,
+                        tests=validated_metadata.tests or [],
+                        incremental=validated_metadata.incremental,
+                    )
             except Exception as e:
                 logger.warning(f"Failed to parse metadata from {metadata_file}: {str(e)}")
 
         # If no Python file, try to extract metadata from SQL comments
         try:
-            logger.info(f"Trying to extract metadata from SQL comments in {sql_file_path}")
+            logger.debug(f"Trying to extract metadata from SQL comments in {sql_file_path}")
             with open(sql_file_path, encoding="utf-8") as f:
                 content = f.read()
 
@@ -80,13 +80,13 @@ class SQLParser(BaseParser):
             metadata_match = re.search(r"--\s*metadata:\s*(\{.*\})", content, re.DOTALL)
             if metadata_match:
                 metadata_json = metadata_match.group(1)
-                logger.info(f"Found metadata JSON in SQL comments: {metadata_json}")
+                logger.debug(f"Found metadata JSON in SQL comments: {metadata_json}")
                 raw_metadata = json.loads(metadata_json)
                 if raw_metadata:
-                    logger.info(f"Parsed metadata from SQL comments: {raw_metadata}")
+                    logger.debug(f"Parsed metadata from SQL comments: {raw_metadata}")
                     # Validate the metadata
                     validated_metadata = validate_metadata_dict(raw_metadata)
-                    return ParsedModelMetadata(
+                    return ModelMetadata(
                         description=validated_metadata.description,
                         schema=[
                             {
@@ -105,7 +105,7 @@ class SQLParser(BaseParser):
                         incremental=validated_metadata.incremental,
                     )
             else:
-                logger.info(f"No metadata found in SQL comments for {sql_file_path}")
+                logger.debug(f"No metadata found in SQL comments for {sql_file_path}")
         except Exception as e:
             logger.warning(
                 f"Failed to parse metadata from SQL comments in {sql_file_path}: {str(e)}"
@@ -212,9 +212,6 @@ class SQLParser(BaseParser):
             # Generate resolved SQL with table reference resolution if table_name provided
             if table_name:
                 resolved_sql = generate_resolved_sql(str(expr), source_tables, table_name)
-
-                # Validate resolved SQL length and log warning if significantly different
-                validate_resolved_sql(sql_content.strip(), resolved_sql, table_name)
             else:
                 # No table name provided, use original SQL as resolved SQL
                 resolved_sql = sql_content.strip()

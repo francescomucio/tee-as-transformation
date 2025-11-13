@@ -190,28 +190,23 @@ def compile_project(
         print(f"   Total: {len(all_models)} transformations")
 
         # Step 4.5: Build dependency graph and save analysis files
-        print("\n" + "=" * 50)
-        print("STEP 4.5: Building dependency graph")
-        print("=" * 50)
-
         # Inject merged models into parser for dependency graph building
         parser.parsed_models = all_models
         graph = parser.build_dependency_graph()
         execution_order = parser.get_execution_order()
-        print(f"✅ Built dependency graph with {len(graph['nodes'])} nodes")
-        print(f"   Execution order: {' -> '.join(execution_order)}")
 
         # Save analysis files (dependency graph JSON, Mermaid diagram, Markdown report)
-        print("\nSaving analysis files...")
         parser.save_dependency_graph()
         parser.save_mermaid_diagram()
         parser.save_markdown_report()
         parser.save_to_json()
-        print("✅ Analysis files saved to output folder")
 
-        # Step 5: Convert to OTS modules
+        logger.debug(f"Built dependency graph with {len(graph['nodes'])} nodes")
+        logger.debug(f"Execution order: {' -> '.join(execution_order)}")
+
+        # Step 5: Convert, validate, and export OTS modules
         print("\n" + "=" * 50)
-        print("STEP 5: Converting to OTS modules")
+        print("STEP 5: Building OTS modules")
         print("=" * 50)
 
         from tee.parser.output import OTSTransformer
@@ -238,13 +233,8 @@ def compile_project(
         ots_modules = transformer.transform_to_ots_modules(
             all_models, parsed_functions=parsed_functions, test_library_path=test_library_path
         )
-        print(f"✅ Converted to {len(ots_modules)} OTS module(s)")
 
-        # Step 6: Validate compiled modules
-        print("\n" + "=" * 50)
-        print("STEP 6: Validating compiled OTS modules")
-        print("=" * 50)
-
+        # Validate compiled modules
         for module_name, module in ots_modules.items():
             try:
                 # Re-read to validate (this will check version, structure, etc.)
@@ -260,18 +250,10 @@ def compile_project(
                 reader = OTSModuleReader()
                 reader.read_module(tmp_path)
                 tmp_path.unlink()  # Clean up
-
-                print(f"  ✅ Validated {module_name}")
             except Exception as e:
                 raise CompilationError(f"Validation failed for module {module_name}: {e}") from e
 
-        print("✅ All modules validated")
-
-        # Step 7: Export to output/ots_modules/
-        print("\n" + "=" * 50)
-        print("STEP 7: Exporting OTS modules")
-        print("=" * 50)
-
+        # Export OTS modules
         output_folder.mkdir(parents=True, exist_ok=True)
 
         from tee.parser.output import JSONExporter
@@ -286,7 +268,7 @@ def compile_project(
             format=format,
         )
 
-        print(f"✅ Exported {len(exported_paths)} OTS module(s) to {output_folder}")
+        print(f"✅ Built and exported {len(ots_modules)} OTS module(s)")
 
         return {
             "success": True,
@@ -493,12 +475,8 @@ def _merge_test_libraries(
         else:
             json.dump(merged_test_library, f, indent=2, ensure_ascii=False)
 
-    logger.info(f"Exported merged test library to {output_file}")
-    print(f"✅ Final merged test library saved to {output_file}")
-    print(
-        f"   Contains {len(merged_generic_tests)} generic test(s) and {len(merged_singular_tests)} singular test(s)"
-    )
+    logger.debug(f"Exported merged test library to {output_file}")
     if conflicts:
-        print(f"   ⚠️  {len(conflicts)} test conflict(s) resolved (project version used)")
+        logger.debug(f"{len(conflicts)} test conflict(s) resolved (project version used)")
 
     return output_file

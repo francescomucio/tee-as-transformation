@@ -23,9 +23,9 @@ def write_metadata_file(target_file: Path, metadata: dict[str, Any], table_name:
     # Generate Python file content
     lines = [
         "# Model metadata converted from dbt",
-        "from tee.typing.metadata import ModelMetadataDict",
+        "from tee.typing.metadata import ModelMetadata",
         "",
-        "metadata: ModelMetadataDict = {",
+        "metadata: ModelMetadata = {",
     ]
 
     # Add table_name first (if provided)

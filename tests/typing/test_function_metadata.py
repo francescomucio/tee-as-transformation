@@ -3,13 +3,12 @@ Tests for function metadata type definitions.
 """
 
 import pytest
-from typing import Dict, Any
+from typing import Any
 
 from tee.typing.metadata import (
     FunctionType,
     FunctionParameter,
-    FunctionMetadataDict,
-    ParsedFunctionMetadata,
+    FunctionMetadata,
     OTSFunction,
     OTSModule,
     ColumnDefinition,
@@ -62,19 +61,19 @@ class TestFunctionParameter:
         assert "mode" not in param or param.get("mode") is None
 
 
-class TestFunctionMetadataDict:
-    """Test FunctionMetadataDict TypedDict."""
+class TestFunctionMetadata:
+    """Test FunctionMetadata TypedDict."""
 
     def test_function_metadata_minimal(self):
         """Test minimal function metadata."""
-        metadata: FunctionMetadataDict = {
+        metadata: FunctionMetadata = {
             "function_name": "calculate_metric",
         }
         assert metadata["function_name"] == "calculate_metric"
 
     def test_function_metadata_full(self):
         """Test function metadata with all fields."""
-        metadata: FunctionMetadataDict = {
+        metadata: FunctionMetadata = {
             "function_name": "calculate_metric",
             "description": "Calculates a custom metric",
             "function_type": "scalar",
@@ -104,7 +103,7 @@ class TestFunctionMetadataDict:
 
     def test_function_metadata_table_function(self):
         """Test function metadata for table-valued function."""
-        metadata: FunctionMetadataDict = {
+        metadata: FunctionMetadata = {
             "function_name": "get_users",
             "function_type": "table",
             "return_table_schema": [
@@ -123,14 +122,14 @@ class TestFunctionMetadataDict:
         assert len(metadata["return_table_schema"]) == 2
 
 
-class TestParsedFunctionMetadata:
-    """Test ParsedFunctionMetadata TypedDict."""
+class TestFunctionMetadataParsed:
+    """Test FunctionMetadata with parsed/validated fields."""
 
-    def test_parsed_function_metadata(self):
-        """Test parsed function metadata structure."""
-        metadata: ParsedFunctionMetadata = {
+    def test_function_metadata_parsed(self):
+        """Test function metadata structure with parsed fields."""
+        metadata: FunctionMetadata = {
             "function_name": "calculate_metric",
-            "function_type": "scalar",  # Required after parsing
+            "function_type": "scalar",  # Can be provided or defaulted
             "parameters": [],
             "deterministic": False,
             "tests": [],

@@ -1,7 +1,8 @@
 # Metadata for my_first_table.sql
-from tee.typing.metadata import ModelMetadataDict
+from tee.parser.processing.model_builder import SqlModelMetadata
+from tee.typing.metadata import ModelMetadata
 
-metadata: ModelMetadataDict = {
+metadata: ModelMetadata = {
     "schema": [
         {
             "name": "id",
@@ -25,3 +26,6 @@ metadata: ModelMetadataDict = {
         # Example: {"name": "check_minimum_rows", "params": {"min_rows": 3}}
     ]
 }
+
+# Automatically creates a model from metadata and companion SQL file
+model = SqlModelMetadata(metadata)

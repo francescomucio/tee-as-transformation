@@ -89,8 +89,12 @@ class IncrementalConfig(TypedDict):
     delete_insert: NotRequired[IncrementalDeleteInsertConfig | None]
 
 
-class ModelMetadataDict(TypedDict):
-    """Type definition for the raw metadata dictionary from Python files."""
+class ModelMetadata(TypedDict):
+    """
+    Unified type definition for model metadata.
+
+    Works for both user input (from Python files) and parsed/validated metadata.
+    """
 
     description: NotRequired[str | None]
     schema: NotRequired[list[ColumnDefinition] | None]
@@ -98,17 +102,6 @@ class ModelMetadataDict(TypedDict):
     materialization: NotRequired[MaterializationType | None]
     # Tests can be simple strings or dicts with parameters and severity
     tests: NotRequired[list[ModelTestName | dict[str, Any]] | None]
-    incremental: NotRequired[IncrementalConfig | None]
-
-
-class ParsedModelMetadata(TypedDict):
-    """Type definition for parsed and validated metadata."""
-
-    description: NotRequired[str | None]
-    schema: NotRequired[list[ColumnDefinition] | None]
-    partitions: NotRequired[list[str]]
-    materialization: NotRequired[MaterializationType | None]
-    tests: NotRequired[list[ModelTestName]]
     incremental: NotRequired[IncrementalConfig | None]
     scd2_details: NotRequired[dict[str, Any] | None]  # For SCD2 materialization
     indexes: NotRequired[list[dict[str, Any]] | None]  # Explicit index definitions
@@ -127,8 +120,12 @@ class FunctionParameter(TypedDict):
     mode: NotRequired[Literal["IN", "OUT", "INOUT"]]  # Parameter mode (for some databases)
 
 
-class FunctionMetadataDict(TypedDict):
-    """Type definition for the raw function metadata dictionary from Python files."""
+class FunctionMetadata(TypedDict):
+    """
+    Unified type definition for function metadata.
+
+    Works for both user input (from Python files) and parsed/validated metadata.
+    """
 
     function_name: str
     description: NotRequired[str | None]
@@ -145,23 +142,9 @@ class FunctionMetadataDict(TypedDict):
     tags: NotRequired[list[str] | None]
     # Object tags (database-style, key-value pairs)
     object_tags: NotRequired[dict[str, str] | None]
-
-
-class ParsedFunctionMetadata(TypedDict):
-    """Type definition for parsed and validated function metadata."""
-
-    function_name: str
-    description: NotRequired[str | None]
-    function_type: FunctionType  # Required after parsing (defaults to "scalar")
-    language: NotRequired[str | None]
-    parameters: NotRequired[list[FunctionParameter]]
-    return_type: NotRequired[str | None]  # For scalar/aggregate functions
-    return_table_schema: NotRequired[list[ColumnDefinition] | None]  # For table functions
-    schema: NotRequired[str | None]
-    deterministic: NotRequired[bool]
-    tests: NotRequired[list[str | dict[str, Any]]]
-    tags: NotRequired[list[str]]
-    object_tags: NotRequired[dict[str, str]]
+    # Source SQL dialect for conversion (e.g., "postgres", "mysql", "generic")
+    # If not specified, uses project config source_sql_dialect or "generic" as default
+    source_sql_dialect: NotRequired[str | None]
 
 
 # OTS-specific types for the Open Transformation Specification

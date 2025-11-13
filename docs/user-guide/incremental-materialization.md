@@ -21,10 +21,10 @@ Incremental materialization is configured through model metadata. You can define
 
 ```python
 # models/my_schema/incremental_example.py
-from tee.typing.metadata import ModelMetadataDict
+from tee.typing import ModelMetadata
 
 # Append strategy
-metadata_append: ModelMetadataDict = {
+metadata_append: ModelMetadata = {
     "description": "Incremental table using append strategy",
     "materialization": "incremental",
     "incremental": {
@@ -38,7 +38,7 @@ metadata_append: ModelMetadataDict = {
 }
 
 # Merge strategy
-metadata_merge: ModelMetadataDict = {
+metadata_merge: ModelMetadata = {
     "description": "Incremental table using merge strategy",
     "materialization": "incremental",
     "incremental": {
@@ -53,7 +53,7 @@ metadata_merge: ModelMetadataDict = {
 }
 
 # Delete+Insert strategy
-metadata_delete_insert: ModelMetadataDict = {
+metadata_delete_insert: ModelMetadata = {
     "description": "Incremental table using delete+insert strategy",
     "materialization": "incremental",
     "incremental": {
@@ -370,9 +370,9 @@ This will show:
 
 ```python
 # models/my_schema/user_events.py
-from tee.typing.metadata import ModelMetadataDict
+from tee.typing import ModelMetadata
 
-metadata: ModelMetadataDict = {
+metadata: ModelMetadata = {
     "description": "Incremental user events table",
     "materialization": "incremental",
     "incremental": {

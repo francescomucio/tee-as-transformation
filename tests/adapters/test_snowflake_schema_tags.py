@@ -4,7 +4,7 @@ Test cases for Snowflake schema-level tag attachment functionality.
 
 import pytest
 from unittest.mock import Mock, MagicMock, patch
-from typing import Dict, Any
+from typing import Any
 from tee.adapters.snowflake.adapter import SnowflakeAdapter
 
 

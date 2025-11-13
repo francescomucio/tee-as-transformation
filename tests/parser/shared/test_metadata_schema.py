@@ -9,14 +9,13 @@ from pathlib import Path
 
 from tee.parser.shared.metadata_schema import (
     ColumnSchema,
-    ModelMetadata,
+    ValidatedModelMetadata,
     validate_metadata_dict,
     parse_metadata_from_python_file,
 )
 from tee.typing.metadata import (
     ColumnDefinition,
-    ModelMetadataDict,
-    ParsedModelMetadata,
+    ModelMetadata,
     DataType,
     MaterializationType,
     ColumnTestName,
@@ -56,11 +55,11 @@ class TestColumnSchema:
 
 
 class TestModelMetadata:
-    """Test ModelMetadata dataclass."""
+    """Test ValidatedModelMetadata dataclass."""
 
     def test_model_metadata_defaults(self):
         """Test default values."""
-        metadata = ModelMetadata()
+        metadata = ValidatedModelMetadata()
         assert metadata.schema is None
         assert metadata.partitions == []
         assert metadata.materialization is None
@@ -69,7 +68,7 @@ class TestModelMetadata:
     def test_model_metadata_validation(self):
         """Test validation of materialization type."""
         with pytest.raises(ValueError, match="Invalid materialization type"):
-            ModelMetadata(materialization="invalid_type")
+            ValidatedModelMetadata(materialization="invalid_type")
 
 
 class TestValidateMetadataDict:
@@ -92,7 +91,7 @@ class TestValidateMetadataDict:
         }
 
         result = validate_metadata_dict(metadata_dict)
-        assert isinstance(result, ModelMetadata)
+        assert isinstance(result, ValidatedModelMetadata)
         assert len(result.schema) == 1
         assert result.schema[0].name == "id"
         assert result.partitions == ["id"]
@@ -103,7 +102,7 @@ class TestValidateMetadataDict:
         """Test minimal metadata dictionary."""
         metadata_dict = {}
         result = validate_metadata_dict(metadata_dict)
-        assert isinstance(result, ModelMetadata)
+        assert isinstance(result, ValidatedModelMetadata)
         assert result.schema is None
         assert result.partitions == []
         assert result.materialization is None
@@ -225,8 +224,8 @@ class TestTyping:
         assert col["tests"] == ["not_null", "unique"]
 
     def test_model_metadata_dict_typing(self):
-        """Test that ModelMetadataDict typing works correctly."""
-        metadata: ModelMetadataDict = {
+        """Test that ModelMetadata typing works correctly."""
+        metadata: ModelMetadata = {
             "schema": [
                 {
                     "name": "id",
@@ -244,8 +243,8 @@ class TestTyping:
         assert metadata["partitions"] == ["id"]
 
     def test_parsed_model_metadata_typing(self):
-        """Test that ParsedModelMetadata typing works correctly."""
-        metadata: ParsedModelMetadata = {
+        """Test that ModelMetadata typing works correctly."""
+        metadata: ModelMetadata = {
             "schema": [
                 {
                     "name": "id",

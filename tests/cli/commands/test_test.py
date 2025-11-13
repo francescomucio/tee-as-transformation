@@ -6,7 +6,7 @@ import pytest
 import sys
 import tempfile
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 from unittest.mock import patch, MagicMock, Mock
 from io import StringIO
 
@@ -40,7 +40,7 @@ class TestTestCommand:
         args.severity = None
         return args
 
-    def _setup_real_project(self, temp_dir: Path, models_sql: Dict[str, str], connection_config: Dict[str, Any]) -> Path:
+    def _setup_real_project(self, temp_dir: Path, models_sql: dict[str, str], connection_config: dict[str, Any]) -> Path:
         """Helper to set up a real project structure with models and compile to OTS."""
         # Create project structure
         models_dir = temp_dir / "models"

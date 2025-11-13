@@ -5,7 +5,7 @@ Utility functions for model metadata standardization.
 import hashlib
 from typing import Any
 
-from tee.typing.metadata import ParsedModelMetadata
+from tee.typing.metadata import ModelMetadata
 
 
 def create_model_metadata(
@@ -14,7 +14,7 @@ def create_model_metadata(
     file_path: str | None = None,
     description: str | None = None,
     variables: list | None = None,
-    metadata: ParsedModelMetadata | None = None,
+    metadata: ModelMetadata | None = None,
 ) -> dict[str, Any]:
     """
     Create standardized model metadata for both SQL and Python models.
@@ -110,10 +110,25 @@ def standardize_parsed_model(
         code_data = model_data.get("code")
 
     else:
-        # For SQL models, create model_metadata from table_name
-        model_metadata = create_model_metadata(
-            table_name=table_name, file_path=file_path, description=f"SQL model for {table_name}"
-        )
+        # For SQL models, preserve existing model_metadata if it exists
+        # (e.g., from SqlModelMetadata which already has proper structure)
+        if "model_metadata" in model_data and model_data["model_metadata"]:
+            # Preserve the existing model_metadata structure
+            original_metadata = model_data["model_metadata"]
+            model_metadata = {
+                "table_name": original_metadata.get("table_name", table_name),
+                "function_name": original_metadata.get("function_name"),
+                "description": original_metadata.get("description", f"SQL model for {table_name}"),
+                "variables": original_metadata.get("variables", []),
+                "metadata": original_metadata.get("metadata", {}),
+            }
+            if file_path:
+                model_metadata["file_path"] = file_path
+        else:
+            # For pure SQL models without metadata, create basic structure
+            model_metadata = create_model_metadata(
+                table_name=table_name, file_path=file_path, description=f"SQL model for {table_name}"
+            )
 
         # Keep existing code data
         code_data = model_data.get("code", {})

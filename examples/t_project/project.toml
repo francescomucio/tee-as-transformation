@@ -1,4 +1,5 @@
 project_folder = "t_project"
+source_sql_dialect = "postgres"  # Optional: specify source SQL dialect for conversion (default: "generic")
 
 [connection]
 type = "duckdb"

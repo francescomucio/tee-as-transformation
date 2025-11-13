@@ -1,18 +1,31 @@
 """
-Test discovery for finding SQL test files in project's tests/ folder.
+Test discovery for finding SQL and Python test files in project's tests/ folder.
 """
 
+import importlib.util
 import logging
+import sys
+import types
 from pathlib import Path
 
-from .base import TestRegistry, TestSeverity
+from .base import StandardTest, TestRegistry, TestSeverity
 from .sql_test import SqlTest
+from .test_builder import SqlTestMetadata
+from .test_decorator import TestDecoratorError, create_test, test
 
 logger = logging.getLogger(__name__)
 
 
+class TestDiscoveryError(Exception):
+    """Raised when test discovery fails."""
+
+    __test__ = False  # Tell pytest this is not a test class
+
+    pass
+
+
 class TestDiscovery:
-    """Discovers SQL test files in the project's tests/ folder."""
+    """Discovers SQL and Python test files in the project's tests/ folder."""
 
     __test__ = False  # Tell pytest this is not a test class
 
@@ -26,18 +39,22 @@ class TestDiscovery:
         self.project_folder = Path(project_folder)
         self.tests_folder = self.project_folder / "tests"
         self.functions_tests_folder = self.project_folder / "tests" / "functions"
-        self._discovered_tests: dict[str, SqlTest] = {}
+        self._discovered_tests: dict[str, StandardTest] = {}
         self._discovered_function_tests: dict[str, SqlTest] = {}
+        self._python_test_files: set[Path] = set()
 
-    def discover_tests(self) -> dict[str, SqlTest]:
+    def discover_tests(self) -> dict[str, StandardTest]:
         """
-        Discover all SQL test files in the tests/ folder (excluding tests/functions/).
+        Discover all test files (Python + SQL) in the tests/ folder (excluding tests/functions/).
 
         Returns:
-            Dictionary mapping test names to SqlTest instances
+            Dictionary mapping test names to StandardTest instances (PythonTest or SqlTest)
 
-        Test names are derived from file names (without .sql extension).
-        Example: tests/my_custom_test.sql -> test name "my_custom_test"
+        Discovery flow:
+        1. Clear TestRegistry
+        2. Execute Python test files (they auto-register)
+        3. Discover remaining SQL files (those without companion .py or with SqlTestMetadata .py)
+        4. If companion .py exists, assume it's SqlTestMetadata and skip SQL file
         """
         if self._discovered_tests:
             return self._discovered_tests
@@ -46,9 +63,32 @@ class TestDiscovery:
             logger.debug(f"Tests folder not found: {self.tests_folder}")
             return {}
 
-        discovered = {}
+        # Clear TestRegistry before discovery
+        TestRegistry.clear()
 
-        # Find all .sql files in tests/ folder, excluding tests/functions/
+        # Step 1: Discover and execute Python test files
+        python_files = self._discover_python_test_files()
+        python_file_bases = {f.stem for f in python_files}
+        self._python_test_files = python_files
+
+        for py_file in python_files:
+            try:
+                self._execute_python_test_file(py_file)
+            except Exception as e:
+                error_msg = f"Failed to execute Python test file {py_file}: {e}"
+                logger.error(error_msg)
+                raise TestDiscoveryError(error_msg) from e
+
+        # Step 2: Get all registered tests from TestRegistry (from Python files)
+        discovered = {}
+        registered_test_names = TestRegistry.list_all()
+        for test_name in registered_test_names:
+            registered_test = TestRegistry.get(test_name)
+            if registered_test:
+                discovered[test_name] = registered_test
+                logger.debug(f"Registered test from Python file: {test_name}")
+
+        # Step 3: Discover remaining SQL files (those without companion .py or with SqlTestMetadata .py)
         sql_files = [
             f
             for f in self.tests_folder.rglob("*.sql")
@@ -56,19 +96,36 @@ class TestDiscovery:
         ]
 
         for sql_file in sql_files:
-            try:
-                # Test name is the file name without extension and path
-                # e.g., tests/my_test.sql -> "my_test"
-                # e.g., tests/subfolder/test.sql -> "subfolder_test" or just "test"?
-                # For now, use just the filename (without path components)
-                test_name = sql_file.stem  # filename without extension
+            sql_file_stem = sql_file.stem
 
-                # If there are duplicate names in subfolders, we could use path
-                # For now, subfolder structure is not supported - use unique filenames
+            # Check if companion .py file exists
+            if sql_file_stem in python_file_bases:
+                # If companion .py exists, assume it's SqlTestMetadata and skip SQL file
+                # The Python file should have already registered the test during execution
+                companion_py = None
+                for py_file in python_files:
+                    if py_file.stem == sql_file_stem:
+                        companion_py = py_file
+                        break
+
+                if companion_py:
+                    # Check if .py file registered a test with the same name (via SqlTestMetadata)
+                    # If yes, skip SQL file (already registered)
+                    # If no, process SQL file (Python file didn't register anything)
+                    if sql_file_stem in discovered:
+                        logger.debug(
+                            f"Skipping {sql_file} - companion Python file {companion_py} already registered test '{sql_file_stem}'"
+                        )
+                        continue
+
+            # No companion .py or .py is metadata-only: create SqlTest
+            try:
+                test_name = sql_file_stem
+
                 if test_name in discovered:
                     logger.warning(
                         f"Duplicate test name '{test_name}' found. "
-                        f"Using {sql_file} (previous: {discovered[test_name].sql_file_path})"
+                        f"Using {sql_file} (previous: {discovered[test_name]})"
                     )
 
                 # Create SqlTest instance
@@ -80,15 +137,99 @@ class TestDiscovery:
                 )
 
                 discovered[test_name] = sql_test
+                TestRegistry.register(sql_test)
                 logger.debug(f"Discovered SQL test: {test_name} from {sql_file}")
 
             except Exception as e:
                 logger.error(f"Failed to load SQL test from {sql_file}: {e}")
                 continue
 
-        logger.info(f"Discovered {len(discovered)} SQL test(s) from {self.tests_folder}")
+        logger.info(
+            f"Discovered {len(discovered)} test(s) from {self.tests_folder} "
+            f"({len(python_files)} Python, {len(sql_files)} SQL)"
+        )
         self._discovered_tests = discovered
         return discovered
+
+    def _discover_python_test_files(self) -> list[Path]:
+        """Discover all Python test files in tests/ folder (excluding tests/functions/)."""
+        if not self.tests_folder.exists():
+            return []
+
+        python_files = []
+        for ext in [".py"]:
+            python_files.extend(
+                [
+                    f
+                    for f in self.tests_folder.rglob(f"*{ext}")
+                    if not str(f).startswith(str(self.functions_tests_folder))
+                ]
+            )
+
+        python_files.sort()
+        return python_files
+
+    def _execute_python_test_file(self, py_file: Path) -> None:
+        """
+        Execute a Python test file in an isolated module namespace.
+
+        The file will have access to: test, create_test, SqlTestMetadata
+        Tests will auto-register themselves when executed.
+
+        Args:
+            py_file: Path to the Python test file
+
+        Raises:
+            TestDiscoveryError: If execution fails
+        """
+        module_name = f"temp_test_module_{hash(py_file)}"
+
+        try:
+            # Read file content
+            with open(py_file, encoding="utf-8") as f:
+                content = f.read()
+
+            # Create a module spec and execute the file
+            spec = importlib.util.spec_from_loader(module_name, loader=None)
+            if spec is None:
+                raise TestDiscoveryError(f"Could not create module spec for {py_file}")
+
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
+
+            # Inject test decorator, create_test, and SqlTestMetadata into the module
+            module.test = test
+            module.create_test = create_test
+            module.SqlTestMetadata = SqlTestMetadata
+
+            # Also inject into tee.testing structure for imports
+            if "tee" not in sys.modules:
+                tee_module = types.ModuleType("tee")
+                sys.modules["tee"] = tee_module
+            if "tee.testing" not in sys.modules:
+                testing_module = types.ModuleType("testing")
+                sys.modules["tee.testing"] = testing_module
+            sys.modules["tee.testing"].test = test
+            sys.modules["tee.testing"].create_test = create_test
+            sys.modules["tee.testing"].SqlTestMetadata = SqlTestMetadata
+
+            # Set __file__ so SqlTestMetadata can find the companion SQL file
+            module.__file__ = str(py_file.absolute())
+
+            # Execute the file content
+            exec(content, module.__dict__)
+
+            logger.debug(f"Executed Python test file: {py_file}")
+
+        except TestDecoratorError as e:
+            # Re-raise test decorator errors as discovery errors
+            raise TestDiscoveryError(f"Test registration error in {py_file}: {e}") from e
+        except Exception as e:
+            raise TestDiscoveryError(f"Failed to execute Python test file {py_file}: {e}") from e
+        finally:
+            # Clean up
+            if module_name in sys.modules:
+                del sys.modules[module_name]
 
     def discover_function_tests(self) -> dict[str, SqlTest]:
         """
@@ -146,16 +287,21 @@ class TestDiscovery:
 
     def register_discovered_tests(self) -> None:
         """
-        Discover and register all SQL tests (both model and function tests) with the TestRegistry.
+        Discover and register all tests (Python + SQL, both model and function tests) with the TestRegistry.
 
-        This should be called before test execution to ensure SQL tests
+        This should be called before test execution to ensure all tests
         are available in the registry.
+
+        Note: Python tests are already registered during discovery (they auto-register),
+        but this method ensures SQL tests are also registered.
         """
-        # Register model tests
+        # Discover tests (Python tests auto-register, SQL tests are registered here)
         tests = self.discover_tests()
-        for test_name, sql_test in tests.items():
-            TestRegistry.register(sql_test)
-            logger.debug(f"Registered SQL test: {test_name}")
+        # Python tests are already registered, but ensure SQL tests are registered
+        for test_name, test_instance in tests.items():
+            if test_name not in TestRegistry.list_all():
+                TestRegistry.register(test_instance)
+                logger.debug(f"Registered test: {test_name}")
 
         # Register function tests
         function_tests = self.discover_function_tests()

@@ -1,16 +1,19 @@
 """
 Python function file parsing functionality for UDFs.
+
+Uses execution-based discovery: Python files are executed, and functions
+auto-register themselves via @functions.sql(), @functions.python(), or SQLFunctionMetadata.
 """
 
-import ast
 import importlib.util
 import logging
+import sys
 from pathlib import Path
 from typing import Any
 
 from tee.parser.shared.exceptions import FunctionParsingError
+from tee.parser.shared.registry import FunctionRegistry
 from tee.parser.shared.types import FilePath
-from tee.typing.metadata import FunctionMetadataDict, FunctionType, ParsedFunctionMetadata
 
 from .base import BaseParser
 
@@ -25,7 +28,7 @@ class FunctionPythonParsingError(FunctionParsingError):
 
 
 class FunctionPythonParser(BaseParser):
-    """Handles Python file parsing and function extraction using static analysis."""
+    """Handles Python file parsing and function extraction using execution-based discovery."""
 
     def __init__(self):
         """Initialize the Python function parser."""
@@ -40,7 +43,10 @@ class FunctionPythonParser(BaseParser):
 
     def parse(self, content: str, file_path: FilePath = None) -> dict[str, dict[str, Any]]:
         """
-        Parse Python content and extract UDF functions using static analysis.
+        Parse Python content and extract UDF functions using execution-based discovery.
+
+        This method executes the Python file, which causes functions to auto-register
+        themselves via @functions.sql(), @functions.python(), or SQLFunctionMetadata.
 
         Args:
             content: The Python content to parse
@@ -60,61 +66,37 @@ class FunctionPythonParser(BaseParser):
 
         # Check cache first
         if file_path_str in self._cache:
+            logger.debug(f"Using cached result for {file_path}")
             return self._cache[file_path_str]
 
         try:
-            logger.info(f"Parsing Python function file: {file_path}")
+            logger.debug(f"Parsing Python function file: {file_path}")
 
-            # First, try to parse as metadata-only file
-            metadata_dict = self._try_parse_metadata_only(content, file_path_str)
-            if metadata_dict:
-                # This is a metadata-only file
-                functions = self._parse_metadata_dict(metadata_dict, file_path_str)
-                self._set_cache(file_path_str, functions)
-                logger.info(
-                    f"Successfully parsed {len(functions)} function(s) from metadata in {file_path}"
-                )
-                return functions
+            # Execute the file to trigger auto-registration
+            # Functions will register themselves via decorators or SQLFunctionMetadata
+            self._execute_python_file(content, file_path)
 
-            # Otherwise, parse AST to find functions with decorators
-            tree = ast.parse(content, filename=file_path_str)
-
-            # Extract functions and their metadata
+            # Collect all functions registered from this file
+            # Functions register themselves during execution, so we collect from registry
+            all_functions = FunctionRegistry.get_all()
             functions = {}
 
-            # Walk through function definitions
-            for node in ast.walk(tree):
-                if isinstance(node, ast.FunctionDef):
-                    # Check if function has function metadata (from @functions.sql() or @functions.python() decorator)
-                    function_metadata = self._extract_function_metadata(node)
-
-                    if function_metadata:
-                        function_name = function_metadata["function_name"]
-                        logger.debug(f"Found function: {node.name} -> {function_name}")
-
-                        # Extract docstring for description if not provided
-                        if not function_metadata.get("description"):
-                            docstring = ast.get_docstring(node)
-                            if docstring:
-                                function_metadata["description"] = docstring.strip()
-
-                        # Extract function signature for parameters if not provided
-                        if not function_metadata.get("parameters"):
-                            function_metadata["parameters"] = self._extract_function_signature(node)
-
-                        # Create standardized function structure
-                        function_data = {
-                            "function_metadata": function_metadata,
-                            "needs_evaluation": function_metadata.get("needs_evaluation", False),
-                            "code": None,  # Will be populated when evaluated (for SQL-generating functions)
-                        }
-
+            # Filter functions by file_path (functions registered from this file)
+            # Use absolute paths for comparison
+            file_path_abs = str(file_path.absolute())
+            for function_name, function_data in all_functions.items():
+                function_file_path = function_data.get("function_metadata", {}).get("file_path")
+                # Compare absolute paths
+                if function_file_path:
+                    function_file_path_abs = str(Path(function_file_path).absolute())
+                    if function_file_path_abs == file_path_abs:
                         functions[function_name] = function_data
-                        logger.debug(f"Registered function: {function_name}")
+                        logger.debug(f"Found function from {file_path}: {function_name}")
 
             # Cache the result
             self._set_cache(file_path_str, functions)
-            logger.info(f"Successfully registered {len(functions)} function(s) from {file_path}")
+            if functions:
+                logger.debug(f"Successfully registered {len(functions)} function(s) from {file_path}")
             return functions
 
         except Exception as e:
@@ -124,246 +106,85 @@ class FunctionPythonParser(BaseParser):
                 f"Error parsing Python function file {file_path}: {str(e)}"
             ) from e
 
-    def _try_parse_metadata_only(
-        self, content: str, file_path_str: str
-    ) -> FunctionMetadataDict | None:
+    def _execute_python_file(self, content: str, file_path: Path) -> None:
         """
-        Try to parse the file as a metadata-only file (with a `metadata` dict).
+        Execute a Python file in an isolated module namespace.
+
+        The file will have access to: functions.sql, functions.python, SQLFunctionMetadata
+        Functions will auto-register themselves when executed.
 
         Args:
-            content: File content
-            file_path_str: File path for error messages
+            content: Python file content
+            file_path: Path to the Python file
 
-        Returns:
-            Metadata dict if found, None otherwise
+        Raises:
+            FunctionPythonParsingError: If execution fails
         """
+        module_name = f"temp_module_{hash(file_path)}"
+
         try:
-            # Create a temporary module to execute the file
-            spec = importlib.util.spec_from_loader("temp_module", loader=None)
+            # Create a module spec and execute the file
+            spec = importlib.util.spec_from_loader(module_name, loader=None)
             if spec is None:
-                return None
+                raise FunctionPythonParsingError(f"Could not create module spec for {file_path}")
 
             module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
+
+            # Inject function decorators and SQLFunctionMetadata into the module
+            from tee.typing import FunctionMetadata
+
+            from ..processing.function_builder import SQLFunctionMetadata
+            from ..processing.function_decorator import functions
+
+            module.functions = functions
+            module.SQLFunctionMetadata = SQLFunctionMetadata
+            module.FunctionMetadata = FunctionMetadata
+
+            # Also inject into tee.parser structure for imports
+            if "tee" not in sys.modules:
+                import types
+
+                tee_module = types.ModuleType("tee")
+                sys.modules["tee"] = tee_module
+            if "tee.parser" not in sys.modules:
+                import types
+
+                parser_module = types.ModuleType("parser")
+                sys.modules["tee.parser"] = parser_module
+            if "tee.parser.processing" not in sys.modules:
+                import types
+
+                processing_module = types.ModuleType("processing")
+                sys.modules["tee.parser.processing"] = processing_module
+            # Ensure function_builder module exists and has SQLFunctionMetadata
+            if not hasattr(sys.modules["tee.parser.processing"], "function_builder"):
+                import types
+
+                processing_module = sys.modules["tee.parser.processing"]
+                processing_module.function_builder = types.ModuleType("function_builder")
+                sys.modules["tee.parser.processing.function_builder"] = processing_module.function_builder
+            sys.modules["tee.parser.processing.function_builder"].SQLFunctionMetadata = SQLFunctionMetadata
+
+            # Set __file__ to absolute path so functions can find companion files and match file_path
+            file_path_abs = str(file_path.absolute())
+            module.__file__ = file_path_abs
+
+            # Inject a special variable that decorators can use to get the file path
+            # This is more reliable than frame inspection in executed modules
+            module.__tee_file_path__ = file_path_abs
+
             # Execute the file content
+            # This will trigger auto-registration of functions via decorators or SQLFunctionMetadata
             exec(content, module.__dict__)
 
-            # Check if there's a metadata variable
-            if hasattr(module, "metadata"):
-                metadata = module.metadata
-                if isinstance(metadata, dict):
-                    # Validate it has function_name (required)
-                    if "function_name" in metadata:
-                        logger.debug(f"Found metadata-only function definition in {file_path_str}")
-                        return metadata
-
-            # Also check for multiple functions (list of metadata dicts)
-            if hasattr(module, "functions"):
-                functions_list = module.functions
-                if isinstance(functions_list, list):
-                    logger.debug(f"Found multiple function metadata definitions in {file_path_str}")
-                    # For now, we'll handle the first one (multiple functions per file will be handled later)
-                    if functions_list and isinstance(functions_list[0], dict):
-                        return functions_list[0]
+            logger.debug(f"Executed Python function file: {file_path}")
 
         except Exception as e:
-            logger.debug(f"Failed to parse as metadata-only file: {e}")
-            # Not a metadata-only file, continue with AST parsing
-
-        return None
-
-    def _parse_metadata_dict(
-        self, metadata_dict: FunctionMetadataDict, file_path_str: str
-    ) -> dict[str, dict[str, Any]]:
-        """
-        Parse a metadata dictionary into a function structure.
-
-        Args:
-            metadata_dict: Function metadata dictionary
-            file_path_str: File path
-
-        Returns:
-            Dict mapping function_name to function data
-        """
-        function_name = metadata_dict["function_name"]
-        function_type: FunctionType = metadata_dict.get("function_type", "scalar")
-        language = metadata_dict.get("language", "sql")
-
-        # Create standardized function metadata
-        function_metadata: ParsedFunctionMetadata = {
-            "function_name": function_name,
-            "description": metadata_dict.get("description"),
-            "function_type": function_type,
-            "language": language,
-            "parameters": metadata_dict.get("parameters", []),
-            "return_type": metadata_dict.get("return_type"),
-            "return_table_schema": metadata_dict.get("return_table_schema"),
-            "schema": metadata_dict.get("schema"),
-            "deterministic": metadata_dict.get("deterministic", False),
-            "tests": metadata_dict.get("tests", []),
-            "tags": metadata_dict.get("tags", []),
-            "object_tags": metadata_dict.get("object_tags", {}),
-        }
-
-        function_data = {
-            "function_metadata": function_metadata,
-            "needs_evaluation": language == "sql",  # SQL-generating functions need evaluation
-            "code": None,
-            "file_path": file_path_str,
-        }
-
-        return {function_name: function_data}
-
-    def _extract_function_metadata(self, node: ast.FunctionDef) -> dict[str, Any] | None:
-        """
-        Extract function metadata from a function node by looking for @functions.sql() or @functions.python() decorators.
-
-        Args:
-            node: AST function definition node
-
-        Returns:
-            Dict with function metadata or None if not a function
-        """
-        # Look for @functions.sql() or @functions.python() decorators
-        for decorator in node.decorator_list:
-            metadata = None
-
-            # Handle @functions.sql() or @functions.python()
-            if isinstance(decorator, ast.Call):
-                # Check for functions.sql() or functions.python()
-                if isinstance(decorator.func, ast.Attribute):
-                    if (
-                        isinstance(decorator.func.value, ast.Name)
-                        and decorator.func.value.id == "functions"
-                        and decorator.func.attr in ("sql", "python")
-                    ):
-                        # Extract decorator arguments
-                        metadata = self._extract_decorator_arguments(decorator, decorator.func.attr)
-                        if metadata:
-                            # Add function name if not provided
-                            if "function_name" not in metadata or not metadata["function_name"]:
-                                metadata["function_name"] = node.name
-                            metadata["language"] = decorator.func.attr
-                            return metadata
-
-                # Also check for direct function calls (e.g., @sql() if imported as from functions import sql)
-                elif isinstance(decorator.func, ast.Name):
-                    # This would require checking imports, which is complex
-                    # For now, we'll only support functions.sql() and functions.python()
-                    pass
-
-        return None
-
-    def _extract_decorator_arguments(
-        self, decorator: ast.Call, language: str
-    ) -> dict[str, Any] | None:
-        """
-        Extract arguments from a decorator call.
-
-        Args:
-            decorator: AST call node for the decorator
-            language: Language type ("sql" or "python")
-
-        Returns:
-            Dict with extracted arguments or None
-        """
-        metadata = {}
-
-        # Extract keyword arguments
-        for keyword in decorator.keywords:
-            if keyword.arg:
-                value = self._extract_ast_value(keyword.value)
-                if value is not None:
-                    metadata[keyword.arg] = value
-
-        # Set defaults
-        metadata.setdefault("function_type", "scalar")
-        metadata.setdefault("needs_evaluation", language == "sql")
-
-        return metadata
-
-    def _extract_ast_value(self, node: ast.AST) -> Any:
-        """
-        Extract a Python value from an AST node.
-
-        Args:
-            node: AST node
-
-        Returns:
-            Extracted value or None if cannot be extracted
-        """
-        if isinstance(node, ast.Constant):
-            return node.value
-        elif isinstance(node, ast.List):
-            return [self._extract_ast_value(item) for item in node.elts]
-        elif isinstance(node, ast.Dict):
-            return {
-                self._extract_ast_value(k): self._extract_ast_value(v)
-                for k, v in zip(node.keys, node.values)
-            }
-        elif isinstance(node, ast.Tuple):
-            return tuple(self._extract_ast_value(item) for item in node.elts)
-
-        # For complex expressions, return None (caller should handle)
-        return None
-
-    def _extract_function_signature(self, node: ast.FunctionDef) -> list[dict[str, Any]]:
-        """
-        Extract function parameters from AST node signature.
-
-        Args:
-            node: AST function definition node
-
-        Returns:
-            List of parameter dictionaries
-        """
-        parameters = []
-
-        for arg in node.args.args:
-            param: dict[str, Any] = {
-                "name": arg.arg,
-            }
-
-            # Extract type hint if available
-            if arg.annotation:
-                type_str = self._extract_type_hint(arg.annotation)
-                if type_str:
-                    param["type"] = type_str
-
-            # Check for default value
-            # Note: defaults are in node.args.defaults, aligned with args from the end
-            arg_index = node.args.args.index(arg)
-            defaults_start = len(node.args.args) - len(node.args.defaults)
-            if arg_index >= defaults_start:
-                default_node = node.args.defaults[arg_index - defaults_start]
-                default_value = self._extract_ast_value(default_node)
-                if default_value is not None:
-                    param["default"] = str(default_value)
-
-            parameters.append(param)
-
-        return parameters
-
-    def _extract_type_hint(self, annotation: ast.AST) -> str | None:
-        """
-        Extract type hint as string from AST annotation node.
-
-        Args:
-            annotation: AST annotation node
-
-        Returns:
-            Type string or None
-        """
-        if isinstance(annotation, ast.Name):
-            # Map Python types to SQL types
-            type_mapping = {
-                "int": "INTEGER",
-                "float": "FLOAT",
-                "str": "VARCHAR",
-                "bool": "BOOLEAN",
-            }
-            return type_mapping.get(annotation.id, annotation.id.upper())
-        elif isinstance(annotation, ast.Constant) and isinstance(annotation.value, str):
-            return annotation.value
-
-        # For complex types, return None (caller should handle)
-        return None
+            if isinstance(e, FunctionPythonParsingError):
+                raise
+            raise FunctionPythonParsingError(f"Failed to execute Python function file {file_path}: {e}") from e
+        finally:
+            # Clean up
+            if module_name in sys.modules:
+                del sys.modules[module_name]

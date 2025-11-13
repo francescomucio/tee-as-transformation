@@ -7,10 +7,10 @@ import tempfile
 import json
 import yaml
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 
 from tee.parser.output import JSONExporter
-from tee.parser.shared.types import ParsedModel, ParsedFunction
+from tee.typing import Function, Model
 
 
 class TestJSONExporterYAML:
@@ -23,7 +23,7 @@ class TestJSONExporterYAML:
             yield Path(tmpdir)
 
     @pytest.fixture
-    def sample_parsed_models(self) -> Dict[str, ParsedModel]:
+    def sample_parsed_models(self) -> dict[str, Model]:
         """Create sample parsed models for testing."""
         return {
             "schema1.table1": {
@@ -120,7 +120,7 @@ class TestJSONExporterYAML:
 
     def test_export_ots_modules_with_functions(self, temp_dir, sample_parsed_models, project_config):
         """Test exporting OTS modules with functions."""
-        sample_function: ParsedFunction = {
+        sample_function: Function = {
             "function_metadata": {
                 "function_name": "calculate_percentage",
                 "function_type": "scalar",

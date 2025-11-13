@@ -103,7 +103,7 @@ class BigQueryAdapter(DatabaseAdapter):
             raise
 
     def create_table(
-        self, table_name: str, query: str, metadata: Optional[Dict[str, Any]] = None
+        self, table_name: str, query: str, metadata: dict[str, Any] | None = None
     ) -> None:
         """Create a table from a qualified SQL query."""
         if not self.client:
@@ -134,7 +134,7 @@ class BigQueryAdapter(DatabaseAdapter):
             raise
 
     def create_view(
-        self, view_name: str, query: str, metadata: Optional[Dict[str, Any]] = None
+        self, view_name: str, query: str, metadata: dict[str, Any] | None = None
     ) -> None:
         """Create a view from a qualified SQL query."""
         if not self.client:
@@ -310,7 +310,7 @@ class BigQueryAdapter(DatabaseAdapter):
         self,
         function_name: str,
         function_sql: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Create or replace a user-defined function in the database."""
         if not self.client:
@@ -351,7 +351,7 @@ class BigQueryAdapter(DatabaseAdapter):
                 f"Failed to create function {full_function_name}: {e}"
             ) from e
 
-    def function_exists(self, function_name: str, signature: Optional[str] = None) -> bool:
+    def function_exists(self, function_name: str, signature: str | None = None) -> bool:
         """Check if a function exists in the database."""
         if not self.client:
             raise RuntimeError("Not connected to database. Call connect() first.")

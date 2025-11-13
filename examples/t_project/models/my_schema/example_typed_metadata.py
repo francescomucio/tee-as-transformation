@@ -1,8 +1,8 @@
 # Example of typed metadata with full IDE support
-from tee.typing.metadata import ModelMetadataDict
+from tee.typing.metadata import ModelMetadata
 
 # This provides full type checking, autocomplete, and IDE support
-metadata: ModelMetadataDict = {
+metadata: ModelMetadata = {
     "schema": [
         {
             "name": "user_id",

@@ -133,19 +133,25 @@ class TestTestDiscovery:
         assert "Duplicate test name" in caplog.text
 
     def test_discover_tests_ignores_non_sql_files(self, temp_dir):
-        """Test that non-SQL files are ignored."""
+        """Test that non-SQL files are ignored (except .py files which are now discovered)."""
         tests_folder = temp_dir / "tests"
         tests_folder.mkdir()
 
         (tests_folder / "test.sql").write_text("SELECT 1")
         (tests_folder / "test.txt").write_text("Not a SQL file")
+        # Python files are now discovered, but this one has no test definitions, so it won't register anything
         (tests_folder / "test.py").write_text("print('not sql')")
 
         discovery = TestDiscovery(temp_dir)
         tests = discovery.discover_tests()
 
+        # Should discover the SQL file (Python file has no test definitions, so nothing registered)
         assert len(tests) == 1
         assert "test" in tests
+        # The test should be a SqlTest (from the .sql file)
+        from tee.testing.sql_test import SqlTest
+
+        assert isinstance(tests["test"], SqlTest)
         assert tests["test"].sql_file_path.suffix == ".sql"
 
     def test_discover_tests_caching(self, temp_dir):

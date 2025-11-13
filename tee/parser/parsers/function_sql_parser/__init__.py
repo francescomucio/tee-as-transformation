@@ -12,7 +12,7 @@ The main FunctionSQLParser class orchestrates these components.
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 from tee.parser.shared.exceptions import FunctionMetadataError, FunctionParsingError
 from tee.parser.shared.file_utils import find_metadata_file
@@ -88,7 +88,7 @@ class FunctionSQLParser(BaseParser):
             return cached_result
 
         try:
-            logger.info(f"Parsing SQL function file: {file_path}")
+            logger.debug(f"Parsing SQL function file: {file_path}")
 
             # Try to find and parse companion metadata file first (to check for dialect override)
             metadata_file = find_metadata_file(file_path_str)
@@ -173,7 +173,7 @@ class FunctionSQLParser(BaseParser):
 
             # Cache the result
             self._set_cache(cache_key, result)
-            logger.info(
+            logger.debug(
                 f"Successfully parsed function {function_name} from {file_path} (dialect: {dialect})"
             )
             return result

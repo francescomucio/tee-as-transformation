@@ -5,9 +5,10 @@ This module contains test data and helper functions for metadata testing.
 Note: TestMetadataModels is not a test class - it's a collection of helper functions.
 """
 
+from tee.typing import ModelMetadata
 
 # Metadata fixtures for testing
-USERS_METADATA = {
+USERS_METADATA: ModelMetadata = {
     "schema": [
         {"name": "id", "datatype": "integer", "description": "Unique identifier for the user"},
         {
@@ -33,7 +34,7 @@ USERS_METADATA = {
     ]
 }
 
-PRODUCTS_METADATA = {
+PRODUCTS_METADATA: ModelMetadata = {
     "schema": [
         {"name": "product_id", "datatype": "integer", "description": "Primary key for the product"},
         {
@@ -59,7 +60,7 @@ PRODUCTS_METADATA = {
     ]
 }
 
-ORDERS_METADATA = {
+ORDERS_METADATA: ModelMetadata = {
     "schema": [
         {"name": "order_id", "datatype": "integer", "description": "Unique order identifier"},
         {
@@ -85,7 +86,7 @@ ORDERS_METADATA = {
     ]
 }
 
-PRIORITY_TEST_METADATA = {
+PRIORITY_TEST_METADATA: ModelMetadata = {
     "schema": [
         {
             "name": "id",
@@ -100,7 +101,7 @@ PRIORITY_TEST_METADATA = {
     ]
 }
 
-MALFORMED_METADATA = {
+MALFORMED_METADATA: ModelMetadata = {
     "schema": [
         {"name": "id", "datatype": "integer", "description": "Valid description"},
         {
@@ -111,7 +112,7 @@ MALFORMED_METADATA = {
     ]
 }
 
-LONG_DESCRIPTION_METADATA = {
+LONG_DESCRIPTION_METADATA: ModelMetadata = {
     "schema": [
         {
             "name": "id",
@@ -121,7 +122,7 @@ LONG_DESCRIPTION_METADATA = {
     ]
 }
 
-INVALID_SCHEMA_TYPE_METADATA = {
+INVALID_SCHEMA_TYPE_METADATA: ModelMetadata = {
     "schema": "not_a_list"  # Should be a list, not a string
 }
 

@@ -107,9 +107,9 @@ class JSONExporter:
             with open(output_file, "w", encoding="utf-8") as f:
                 json.dump(graph, f, indent=2, ensure_ascii=False)
 
-            print(f"Dependency graph saved to {output_file}")
-            print(f"Found {len(graph['nodes'])} tables")
-            print(f"Execution order: {' -> '.join(graph['execution_order'])}")
+            logger.debug(f"Dependency graph saved to {output_file}")
+            logger.debug(f"Found {len(graph['nodes'])} tables")
+            logger.debug(f"Execution order: {' -> '.join(graph['execution_order'])}")
             if graph["cycles"]:
                 print(f"Warning: Found {len(graph['cycles'])} circular dependencies!")
                 for cycle in graph["cycles"]:
@@ -217,14 +217,9 @@ class JSONExporter:
                 logger.info(
                     f"Exported OTS module '{module_name}' to {output_file} ({format.upper()})"
                 )
-                print(f"✅ OTS module '{module_name}' saved to {output_file} ({format.upper()})")
-                print(f"   Contains {len(module_data['transformations'])} transformations", end="")
-                if "functions" in module_data and module_data["functions"]:
-                    print(f" and {len(module_data['functions'])} functions")
-                else:
-                    print()
+                logger.debug(f"OTS module '{module_name}' saved to {output_file} ({format.upper()})")
 
-            print(f"\n✨ Exported {len(results)} OTS module(s) ({format.upper()})")
+            logger.debug(f"Exported {len(results)} OTS module(s) ({format.upper()})")
 
             return results
 

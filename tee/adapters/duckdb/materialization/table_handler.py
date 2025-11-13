@@ -39,7 +39,7 @@ class TableHandler:
 
         try:
             self.adapter.utils.execute_query(create_query)
-            self.logger.info(f"Created table: {table_name}")
+            self.logger.debug(f"Created table: {table_name}")
 
             # Add table and column comments if metadata is provided
             if metadata:

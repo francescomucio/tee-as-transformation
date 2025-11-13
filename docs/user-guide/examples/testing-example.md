@@ -22,9 +22,9 @@ t_project/
 
 **`models/my_schema/users.py`:**
 ```python
-from tee.typing.metadata import ModelMetadataDict
+from tee.typing import ModelMetadata
 
-metadata: ModelMetadataDict = {
+metadata: ModelMetadata = {
     "description": "Users table",
     "materialization": "table",
     "schema": [
@@ -80,9 +80,9 @@ WHERE deleted_at IS NULL
 
 **`models/my_schema/orders.py`:**
 ```python
-from tee.typing.metadata import ModelMetadataDict
+from tee.typing import ModelMetadata
 
-metadata: ModelMetadataDict = {
+metadata: ModelMetadata = {
     "description": "Orders table",
     "materialization": "table",
     "schema": [
@@ -267,7 +267,7 @@ WHERE {{ date_column }} < CURRENT_TIMESTAMP - INTERVAL '{{ max_age_hours | defau
 
 **Usage:**
 ```python
-metadata: ModelMetadataDict = {
+metadata: ModelMetadata = {
     "tests": [
         {
             "name": "data_freshness",
@@ -295,7 +295,7 @@ WHERE {{ column_name }} < {{ min_value | default(0) }}
 
 **Usage:**
 ```python
-metadata: ModelMetadataDict = {
+metadata: ModelMetadata = {
     "schema": [
         {
             "name": "score",

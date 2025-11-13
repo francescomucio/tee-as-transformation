@@ -35,10 +35,10 @@ materialization_change_behavior = "warn"
 ### Model Configuration (`incremental_example.py`)
 
 ```python
-from tee.typing.metadata import ModelMetadataDict
+from tee.typing import ModelMetadata
 
 # Example 1: Append strategy
-metadata_append: ModelMetadataDict = {
+metadata_append: ModelMetadata = {
     "description": "Incremental table using append strategy",
     "materialization": "incremental",
     "incremental": {
@@ -52,7 +52,7 @@ metadata_append: ModelMetadataDict = {
 }
 
 # Example 2: Merge strategy
-metadata_merge: ModelMetadataDict = {
+metadata_merge: ModelMetadata = {
     "description": "Incremental table using merge strategy",
     "materialization": "incremental",
     "incremental": {
@@ -67,7 +67,7 @@ metadata_merge: ModelMetadataDict = {
 }
 
 # Example 3: Delete+Insert strategy
-metadata_delete_insert: ModelMetadataDict = {
+metadata_delete_insert: ModelMetadata = {
     "description": "Incremental table using delete+insert strategy",
     "materialization": "incremental",
     "incremental": {

@@ -5,7 +5,7 @@ Utility functions for function metadata standardization.
 import hashlib
 from typing import Any
 
-from tee.typing.metadata import FunctionParameter, FunctionType, ParsedFunctionMetadata
+from tee.typing.metadata import FunctionMetadata, FunctionParameter, FunctionType
 
 
 def create_function_metadata(
@@ -17,7 +17,7 @@ def create_function_metadata(
     language: str | None = None,
     parameters: list[FunctionParameter] | None = None,
     return_type: str | None = None,
-    metadata: ParsedFunctionMetadata | None = None,
+    metadata: FunctionMetadata | None = None,
 ) -> dict[str, Any]:
     """
     Create standardized function metadata.
@@ -106,6 +106,10 @@ def standardize_parsed_function(
         if sql_content:
             function_hash = hashlib.sha256(sql_content.encode("utf-8")).hexdigest()
 
+    # Add file_path to function_metadata if provided (for consistent access)
+    if file_path:
+        function_metadata["file_path"] = file_path
+
     # Return standardized structure
     result = {
         "code": code_data,
@@ -113,11 +117,14 @@ def standardize_parsed_function(
         "function_hash": function_hash,
     }
 
-    # Preserve other important flags
-    if is_python_function:
-        result["needs_evaluation"] = function_data.get("needs_evaluation", False)
+    # Preserve needs_evaluation flag (important for SQL-generating functions)
+    # If not explicitly set, determine based on language
+    needs_evaluation = function_data.get("needs_evaluation")
+    if needs_evaluation is None:
+        needs_evaluation = function_metadata.get("language") == "sql"
+    result["needs_evaluation"] = needs_evaluation
 
-    # Add file_path if provided
+    # Also store file_path at top level for backward compatibility
     if file_path:
         result["file_path"] = file_path
 

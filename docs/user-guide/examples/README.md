@@ -15,9 +15,9 @@ This section contains practical examples demonstrating t4t's capabilities.
 
 ```python
 # models/my_table.py
-from tee.typing.metadata import ModelMetadataDict
+from tee.typing import ModelMetadata
 
-metadata: ModelMetadataDict = {
+metadata: ModelMetadata = {
     "description": "My first table",
     "materialization": "table"
 }
@@ -37,9 +37,9 @@ WHERE status = 'active'
 
 ```python
 # models/incremental_table.py
-from tee.typing.metadata import ModelMetadataDict
+from tee.typing import ModelMetadata
 
-metadata: ModelMetadataDict = {
+metadata: ModelMetadata = {
     "description": "Incremental table",
     "materialization": "incremental",
     "incremental": {

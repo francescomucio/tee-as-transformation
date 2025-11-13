@@ -3,11 +3,12 @@ Test cases for OTS transformer tag extraction and merging functionality.
 """
 
 import pytest
-from typing import Dict, Any, List
-from tee.parser.output.ots.transformer import OTSTransformer
+from typing import Any
+
 from tee.parser.output.ots.taggers import TagManager
 from tee.parser.output.ots.transformers import ModelTransformer
-from tee.parser.shared.types import ParsedModel
+from tee.parser.output.ots.transformer import OTSTransformer
+from tee.typing import Model
 
 
 class TestOTSTagExtraction:
@@ -113,7 +114,7 @@ class TestOTSTagExtraction:
         }
 
         transformer = OTSTransformer(project_config)
-        parsed_models: Dict[str, ParsedModel] = {
+        parsed_models: dict[str, Model] = {
             "schema.table1": {
                 "model_metadata": {
                     "metadata": {},
@@ -138,7 +139,7 @@ class TestOTSTagExtraction:
         }
 
         transformer = OTSTransformer(project_config)
-        parsed_models: Dict[str, ParsedModel] = {
+        parsed_models: dict[str, Model] = {
             "schema.table1": {
                 "model_metadata": {
                     "metadata": {"tags": ["fct", "daily"]},
@@ -168,7 +169,7 @@ class TestOTSTagExtraction:
         }
 
         transformer = OTSTransformer(project_config)
-        parsed_models: Dict[str, ParsedModel] = {
+        parsed_models: dict[str, Model] = {
             "schema.table1": {
                 "model_metadata": {
                     "metadata": {"tags": ["fct", "daily"]},
@@ -283,7 +284,7 @@ class TestOTSTagExtraction:
         }
 
         transformer = OTSTransformer(project_config)
-        parsed_models: Dict[str, ParsedModel] = {
+        parsed_models: dict[str, Model] = {
             "schema.table1": {
                 "model_metadata": {
                     "metadata": {
@@ -314,7 +315,7 @@ class TestOTSTagExtraction:
         }
 
         transformer = OTSTransformer(project_config)
-        parsed_models: Dict[str, ParsedModel] = {
+        parsed_models: dict[str, Model] = {
             "schema.table1": {
                 "model_metadata": {
                     "metadata": {

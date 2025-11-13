@@ -64,6 +64,10 @@ class ModelExecutor:
             if extra_fields:
                 config["extra"] = extra_fields
 
+            # Map source_sql_dialect to source_dialect (source_sql_dialect is the preferred name in project.toml)
+            if "source_sql_dialect" in config and "source_dialect" not in config:
+                config["source_dialect"] = config.pop("source_sql_dialect")
+
             self.config = AdapterConfig(**config)
         else:
             self.config = config
@@ -130,20 +134,28 @@ class ModelExecutor:
                         f"Successfully executed {len(function_results.get('executed_functions', []))} functions"
                     )
 
-            self.logger.info(f"Executing {len(execution_order)} models in dependency order")
-            self.logger.info(f"Execution order: {' -> '.join(execution_order)}")
+            # Filter out functions from execution order before executing models
+            # Functions are already executed above, so we only need models here
+            model_execution_order = [
+                name for name in execution_order
+                if name not in (parsed_functions or {})
+                and not name.startswith("test:")
+            ]
 
-            # Log database and dialect information
+            self.logger.info(f"Executing {len(model_execution_order)} models in dependency order")
+            self.logger.debug(f"Execution order: {' -> '.join(model_execution_order)}")
+
+            # Log database and dialect information (debug level for details)
             db_info = self.execution_engine.get_database_info()
-            self.logger.info(f"Using adapter: {db_info['adapter_type']}")
-            self.logger.info(f"Database type: {db_info['database_type']}")
+            self.logger.debug(f"Using adapter: {db_info['adapter_type']}")
+            self.logger.debug(f"Database type: {db_info['database_type']}")
             if db_info.get("source_dialect") and db_info.get("target_dialect"):
-                self.logger.info(
+                self.logger.debug(
                     f"SQL dialect conversion: {db_info['source_dialect']} -> {db_info['target_dialect']}"
                 )
 
-            # Execute all models
-            results = self.execution_engine.execute_models(parsed_models, execution_order)
+            # Execute all models (excluding functions which were already executed)
+            results = self.execution_engine.execute_models(parsed_models, model_execution_order)
 
             # Merge function results into main results
             if function_results:
@@ -164,6 +176,10 @@ class ModelExecutor:
             # Log results
             self.logger.info(f"Successfully executed: {len(results['executed_tables'])} tables")
             self.logger.info(f"Failed: {len(results['failed_tables'])} tables")
+            if results.get("executed_functions"):
+                self.logger.info(f"Successfully executed: {len(results['executed_functions'])} functions")
+            if results.get("failed_functions"):
+                self.logger.info(f"Failed: {len(results['failed_functions'])} functions")
             if results.get("warnings"):
                 self.logger.info(f"Warnings: {len(results['warnings'])} warnings")
 

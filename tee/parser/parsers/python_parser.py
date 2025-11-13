@@ -1,8 +1,10 @@
 """
 Python file parsing functionality for SQL models.
+
+Uses execution-based discovery: Python files are executed, and models
+auto-register themselves via @model decorator, create_model(), or SqlModelMetadata.
 """
 
-import ast
 import importlib.util
 import logging
 import sys
@@ -13,6 +15,7 @@ import sqlglot
 
 from tee.parser.shared.exceptions import PythonParsingError
 from tee.parser.shared.model_utils import standardize_parsed_model
+from tee.parser.shared.registry import ModelRegistry
 from tee.parser.shared.types import FilePath, ParsedModel, Variables
 
 from .base import BaseParser
@@ -29,7 +32,7 @@ class PythonModelError(PythonParsingError):
 
 
 class PythonParser(BaseParser):
-    """Handles Python file parsing and model extraction using static analysis."""
+    """Handles Python file parsing and model extraction using execution-based discovery."""
 
     def __init__(self):
         """Initialize the Python parser."""
@@ -47,7 +50,10 @@ class PythonParser(BaseParser):
 
     def parse(self, content: str, file_path: FilePath = None) -> ParsedModel:
         """
-        Parse Python content and extract SQL models using static analysis.
+        Parse Python content and extract SQL models using execution-based discovery.
+
+        This method executes the Python file, which causes models to auto-register
+        themselves via @model decorator, create_model(), or SqlModelMetadata.
 
         Args:
             content: The Python content to parse
@@ -71,66 +77,33 @@ class PythonParser(BaseParser):
             return self._cache[file_path_str]
 
         try:
-            logger.info(f"Parsing Python file: {file_path}")
+            logger.debug(f"Parsing Python file: {file_path}")
 
-            # Parse the AST to find functions
-            tree = ast.parse(content, filename=file_path_str)
+            # Execute the file to trigger auto-registration
+            # Models will register themselves via @model, create_model(), or SqlModelMetadata
+            self._execute_python_file(content, file_path)
 
-            # Extract functions and their metadata
+            # Collect all models registered from this file
+            # Models register themselves during execution, so we collect from registry
+            all_models = ModelRegistry.get_all()
             models = {}
 
-            # Walk through function definitions
-            for node in ast.walk(tree):
-                if isinstance(node, ast.FunctionDef):
-                    # Check if function has model metadata (from @model decorator)
-                    model_metadata = self._extract_model_metadata(node)
-
-                    if model_metadata:
-                        table_name = model_metadata["table_name"]
-                        logger.debug(f"Found model function: {node.name} -> {table_name}")
-
-                        # Create standardized model structure
-                        model_data = {
-                            "model_metadata": model_metadata,  # Include the original metadata
-                            "needs_evaluation": True,
-                            "code": None,  # Will be populated when evaluated
-                        }
-
-                        # Standardize the model structure
-                        models[table_name] = standardize_parsed_model(
-                            model_data=model_data,
-                            table_name=table_name,
-                            file_path=str(file_path),
-                            is_python_model=True,
-                        )
-                        logger.debug(f"Registered model: {table_name}")
-                
-                # Also check for create_model() calls (for dynamic model creation)
-                elif isinstance(node, ast.Call):
-                    model_metadata = self._extract_create_model_call(node)
-                    if model_metadata:
-                        table_name = model_metadata["table_name"]
-                        logger.debug(f"Found create_model() call: {table_name}")
-
-                        # Create standardized model structure
-                        model_data = {
-                            "model_metadata": model_metadata,
-                            "needs_evaluation": False,  # SQL is already provided
-                            "code": model_metadata.get("sql"),  # Use the SQL directly
-                        }
-
-                        # Standardize the model structure
-                        models[table_name] = standardize_parsed_model(
-                            model_data=model_data,
-                            table_name=table_name,
-                            file_path=str(file_path),
-                            is_python_model=True,
-                        )
-                        logger.debug(f"Registered model from create_model(): {table_name}")
+            # Filter models by file_path (models registered from this file)
+            # Use absolute paths for comparison
+            file_path_abs = str(file_path.absolute())
+            for table_name, model_data in all_models.items():
+                model_file_path = model_data.get("model_metadata", {}).get("file_path")
+                # Compare absolute paths
+                if model_file_path:
+                    model_file_path_abs = str(Path(model_file_path).absolute())
+                    if model_file_path_abs == file_path_abs:
+                        models[table_name] = model_data
+                        logger.debug(f"Found model from {file_path}: {table_name}")
 
             # Cache the result
             self._set_cache(file_path_str, models)
-            logger.info(f"Successfully registered {len(models)} models from {file_path}")
+            if models:
+                logger.debug(f"Successfully registered {len(models)} models from {file_path}")
             return models
 
         except Exception as e:
@@ -295,136 +268,6 @@ class PythonParser(BaseParser):
                     self._cache[file_path][table_name] = model_data
                     logger.debug(f"Updated file cache with qualified SQL for {table_name}")
 
-    def _extract_model_metadata(self, node: ast.FunctionDef) -> dict[str, Any] | None:
-        """
-        Extract model metadata from a function node by looking for @model decorator.
-
-        Args:
-            node: AST function definition node
-
-        Returns:
-            Dict with model metadata or None if not a model
-        """
-        # Look for @model decorator
-        for decorator in node.decorator_list:
-            if isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Name):
-                if decorator.func.id == "model":
-                    # Extract decorator arguments
-                    table_name = None
-                    description = None
-                    metadata = {}
-
-                    # Handle positional arguments
-                    if decorator.args:
-                        table_name = self._extract_string_literal(decorator.args[0])
-
-                    # Handle keyword arguments
-                    variables = None
-                    for keyword in decorator.keywords:
-                        if keyword.arg == "table_name":
-                            table_name = self._extract_string_literal(keyword.value)
-                        elif keyword.arg == "description":
-                            description = self._extract_string_literal(keyword.value)
-                        elif keyword.arg == "variables":
-                            variables = self._extract_literal(keyword.value)
-                        else:
-                            metadata[keyword.arg] = self._extract_literal(keyword.value)
-
-                    return {
-                        "table_name": table_name or node.name,
-                        "function_name": node.name,
-                        "description": description,
-                        "variables": variables or [],
-                        "metadata": metadata,
-                    }
-
-        # Only return metadata if function has @model decorator
-        return None
-
-    def _extract_create_model_call(self, node: ast.Call) -> dict[str, Any] | None:
-        """
-        Extract model metadata from a create_model() function call.
-
-        Args:
-            node: AST call node
-
-        Returns:
-            Dict with model metadata or None if not a create_model call
-        """
-        # Check if this is a call to create_model
-        # Handle both: create_model() and module.create_model()
-        is_create_model = False
-        if isinstance(node.func, ast.Name) and node.func.id == "create_model":
-            is_create_model = True
-        elif isinstance(node.func, ast.Attribute) and node.func.attr == "create_model":
-            is_create_model = True
-        
-        if is_create_model:
-            # Extract keyword arguments
-            table_name = None
-            sql = None
-            description = None
-            variables = None
-            metadata = {}
-
-            for keyword in node.keywords:
-                if keyword.arg == "table_name":
-                    table_name = self._extract_string_literal(keyword.value)
-                elif keyword.arg == "sql":
-                    sql = self._extract_string_literal(keyword.value)
-                elif keyword.arg == "description":
-                    description = self._extract_string_literal(keyword.value)
-                elif keyword.arg == "variables":
-                    variables = self._extract_literal(keyword.value)
-                else:
-                    metadata[keyword.arg] = self._extract_literal(keyword.value)
-
-            if table_name and sql:
-                return {
-                    "table_name": table_name,
-                    "function_name": f"create_{table_name}".replace(".", "_"),
-                    "description": description,
-                    "variables": variables or [],
-                    "metadata": metadata,
-                    "sql": sql,  # Store SQL directly
-                }
-
-        return None
-
-    def _extract_string_literal(self, node: ast.AST) -> str:
-        """Extract string literal from AST node."""
-        if isinstance(node, ast.Constant) and isinstance(node.value, str):
-            return node.value
-        # Handle f-strings (JoinedStr nodes)
-        elif isinstance(node, ast.JoinedStr):
-            # Try to reconstruct the f-string
-            parts = []
-            for value in node.values:
-                if isinstance(value, ast.Constant) and isinstance(value.value, str):
-                    parts.append(value.value)
-                elif isinstance(value, ast.FormattedValue):
-                    # For f-strings with variables, we can't statically determine the value
-                    # So we'll return a placeholder or try to extract the variable name
-                    if isinstance(value.value, ast.Name):
-                        parts.append(f"{{{value.value.id}}}")
-                    else:
-                        parts.append("{...}")
-            return "".join(parts)
-        return str(node)
-
-    def _extract_literal(self, node: ast.AST) -> Any:
-        """Extract literal value from AST node."""
-        if isinstance(node, ast.Constant):
-            return node.value
-        elif isinstance(node, ast.List):
-            return [self._extract_literal(item) for item in node.elts]
-        elif isinstance(node, ast.Dict):
-            return {
-                self._extract_literal(k): self._extract_literal(v)
-                for k, v in zip(node.keys, node.values)
-            }
-        return str(node)
-
     def _execute_function(
         self, file_path: Path, function_name: str, variables: Variables | None = None
     ) -> str:
@@ -454,10 +297,11 @@ class PythonParser(BaseParser):
             module = importlib.util.module_from_spec(spec)
             sys.modules[module_name] = module
 
-            # Inject the model decorator before loading the module
-            from ..processing.model import model
+            # Inject the model decorator and factory before loading the module
+            from ..processing.model import create_model, model
 
             module.model = model
+            module.create_model = create_model
 
             # Also inject it into the tee.parser module structure
             if "tee" not in sys.modules:
@@ -475,7 +319,14 @@ class PythonParser(BaseParser):
 
                 model_module = types.ModuleType("model")
                 model_module.model = model
+                model_module.create_model = create_model
                 sys.modules["tee.parser.model"] = model_module
+
+            # Set __file__ and __tee_file_path__ before executing module
+            # This ensures decorators can find the correct file path
+            file_path_abs = str(file_path.absolute())
+            module.__file__ = file_path_abs
+            module.__tee_file_path__ = file_path_abs
 
             spec.loader.exec_module(module)
 
@@ -487,11 +338,12 @@ class PythonParser(BaseParser):
                     f"Injected variables {list(variables.keys())} into module {module_name}"
                 )
 
-            # Inject the model decorator to make it available
-            from ..processing.model import model
+            # Inject the model decorator and factory to make them available
+            from ..processing.model import create_model, model
 
             module.model = model
-            logger.debug(f"Injected model decorator into module {module_name}")
+            module.create_model = create_model
+            logger.debug(f"Injected model decorator and create_model into module {module_name}")
 
             # Get the function
             if not hasattr(module, function_name):
@@ -525,6 +377,93 @@ class PythonParser(BaseParser):
                 f"Error executing function {function_name} in {file_path}: {str(e)}"
             ) from e
 
+    def _execute_python_file(self, content: str, file_path: Path) -> None:
+        """
+        Execute a Python file in an isolated module namespace.
+
+        The file will have access to: model, create_model, SqlModelMetadata
+        Models will auto-register themselves when executed.
+
+        Args:
+            content: Python file content
+            file_path: Path to the Python file
+
+        Raises:
+            PythonParsingError: If execution fails
+        """
+        module_name = f"temp_module_{hash(file_path)}"
+
+        try:
+            # Create a module spec and execute the file
+            spec = importlib.util.spec_from_loader(module_name, loader=None)
+            if spec is None:
+                raise PythonParsingError(f"Could not create module spec for {file_path}")
+
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
+
+            # Inject model decorator, create_model, and SqlModelMetadata into the module
+            from tee.typing import ModelMetadata
+
+            from ..processing.model import create_model, model
+            from ..processing.model_builder import SqlModelMetadata
+
+            module.model = model
+            module.create_model = create_model
+            module.SqlModelMetadata = SqlModelMetadata
+            module.ModelMetadata = ModelMetadata
+
+            # Also inject into tee.parser structure for imports
+            if "tee" not in sys.modules:
+                import types
+
+                tee_module = types.ModuleType("tee")
+                sys.modules["tee"] = tee_module
+            if "tee.parser" not in sys.modules:
+                import types
+
+                parser_module = types.ModuleType("parser")
+                sys.modules["tee.parser"] = parser_module
+            # Inject tee.parser.model for backward compatibility
+            if "tee.parser.model" not in sys.modules:
+                import types
+
+                model_module = types.ModuleType("model")
+                model_module.model = model
+                model_module.create_model = create_model
+                sys.modules["tee.parser.model"] = model_module
+            if "tee.parser.processing" not in sys.modules:
+                import types
+
+                processing_module = types.ModuleType("processing")
+                sys.modules["tee.parser.processing"] = processing_module
+            # Ensure model_builder module exists and has SqlModelMetadata
+            if not hasattr(sys.modules["tee.parser.processing"], "model_builder"):
+                import types
+
+                processing_module = sys.modules["tee.parser.processing"]
+                processing_module.model_builder = types.ModuleType("model_builder")
+                sys.modules["tee.parser.processing.model_builder"] = processing_module.model_builder
+            sys.modules["tee.parser.processing.model_builder"].SqlModelMetadata = SqlModelMetadata
+
+            # Set __file__ to absolute path so models can find companion files and match file_path
+            file_path_abs = str(file_path.absolute())
+            module.__file__ = file_path_abs
+
+            # Inject a special variable that decorators can use to get the file path
+            # This is more reliable than frame inspection in executed modules
+            module.__tee_file_path__ = file_path_abs
+
+            # Execute the file content
+            # This will trigger auto-registration of models via decorators/factory functions
+            exec(content, module.__dict__)
+
+            logger.debug(f"Executed Python file: {file_path}")
+
+        except Exception as e:
+            if isinstance(e, PythonParsingError):
+                raise
+            raise PythonParsingError(f"Failed to execute Python file {file_path}: {e}") from e
         finally:
             # Clean up
             if module_name in sys.modules:

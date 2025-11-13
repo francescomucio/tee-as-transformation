@@ -284,11 +284,26 @@ class DependencyGraphBuilder:
             test_deps.add(table_name)
             return list(test_deps)
 
-        # SQL test - parse the SQL to find dependencies
-        sql_test = discovered_tests[test_name]
+        # SQL test or Python test - parse the SQL to find dependencies
+        test_instance = discovered_tests[test_name]
         try:
-            # Load test SQL
-            test_sql = sql_test._load_sql_content()
+            # Load test SQL (handle both SqlTest and PythonTest)
+            from ...testing.sql_test import SqlTest
+            from ...testing.python_test import PythonTest
+
+            if isinstance(test_instance, SqlTest):
+                # SqlTest: load from file
+                test_sql = test_instance._load_sql_content()
+                test_file_path = str(test_instance.sql_file_path)
+            elif isinstance(test_instance, PythonTest):
+                # PythonTest: SQL is in memory
+                test_sql = test_instance.sql
+                # Use a dummy file path for parsing (not critical for dependency extraction)
+                test_file_path = f"<python_test:{test_name}>"
+            else:
+                # Unknown test type - fallback to table dependency only
+                test_deps.add(table_name)
+                return list(test_deps)
 
             # Substitute @table_name and {{ table_name }} with actual table
             substituted_sql = test_sql.replace("@table_name", table_name)
@@ -302,7 +317,7 @@ class DependencyGraphBuilder:
                 substituted_sql = substituted_sql.replace("{{column_name}}", column_name)
 
             # Parse with SQLParser (reuses existing sqlglot code!)
-            parsed = sql_parser.parse(substituted_sql, file_path=str(sql_test.sql_file_path))
+            parsed = sql_parser.parse(substituted_sql, file_path=test_file_path)
 
             # Extract source tables from parsed result
             source_tables = parsed.get("code", {}).get("sql", {}).get("source_tables", [])

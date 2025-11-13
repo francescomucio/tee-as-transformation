@@ -7,7 +7,7 @@ import tempfile
 import json
 import yaml
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 
 from tee.compiler import compile_project, _merge_test_libraries, CompilationError
 
@@ -29,7 +29,7 @@ class TestCompileProject:
             "path": ":memory:",
         }
 
-    def _setup_project(self, temp_dir: Path, models_sql: Dict[str, str], connection_config: Dict[str, Any]) -> Path:
+    def _setup_project(self, temp_dir: Path, models_sql: dict[str, str], connection_config: dict[str, Any]) -> Path:
         """Helper to set up a project structure."""
         models_dir = temp_dir / "models"
         models_dir.mkdir(parents=True, exist_ok=True)
@@ -210,7 +210,7 @@ class TestCompileProject:
         assert len(json_files) == 0
         
         # Verify YAML is valid
-        with open(yaml_files[0], "r") as f:
+        with open(yaml_files[0]) as f:
             yaml_data = yaml.safe_load(f)
             assert yaml_data["ots_version"] == "0.1.0"
             assert yaml_data["module_name"] == "test_project.schema1"
@@ -254,7 +254,7 @@ HAVING COUNT(*) < @min_rows:10
         assert result.exists()
         
         # Verify test library content
-        with open(result, "r") as f:
+        with open(result) as f:
             test_lib = json.load(f)
             assert "generic_tests" in test_lib
             assert "test_minimum_rows" in test_lib["generic_tests"]  # Test name comes from filename
@@ -325,7 +325,7 @@ HAVING COUNT(*) < @min_rows:10
         assert result.exists()
         
         # Verify merged test library
-        with open(result, "r") as f:
+        with open(result) as f:
             merged_lib = json.load(f)
             assert "generic_tests" in merged_lib
             assert "test_minimum_rows" in merged_lib["generic_tests"]  # From project (filename-based)
@@ -393,7 +393,7 @@ SELECT 1 as violation FROM @table_name
         assert result is not None
         
         # Verify project version was used
-        with open(result, "r") as f:
+        with open(result) as f:
             merged_lib = json.load(f)
             assert "test_conflict" in merged_lib["generic_tests"]
             # Project version should have "Project version" in description
@@ -426,7 +426,7 @@ SELECT 1 as violation FROM @table_name GROUP BY 1 HAVING COUNT(*) < @min_rows:10
         assert result.suffixes == [".ots", ".yaml"]
         
         # Verify YAML is valid
-        with open(result, "r") as f:
+        with open(result) as f:
             test_lib = yaml.safe_load(f)
             assert "generic_tests" in test_lib
             assert "test_minimum_rows" in test_lib["generic_tests"]  # Test name comes from filename

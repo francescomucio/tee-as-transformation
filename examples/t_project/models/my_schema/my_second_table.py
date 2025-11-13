@@ -1,7 +1,7 @@
 # Metadata for my_second_table.sql
-from tee.typing.metadata import ModelMetadataDict
+from tee.typing.metadata import ModelMetadata
 
-metadata: ModelMetadataDict = {
+metadata: ModelMetadata = {
     "schema": [
         {
             "name": "id",
