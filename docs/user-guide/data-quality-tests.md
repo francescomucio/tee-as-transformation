@@ -21,9 +21,9 @@ Tests are defined in your model metadata files:
 
 ```python
 # models/my_table.py
-from tee.typing.metadata import ModelMetadataDict
+from tee.typing import ModelMetadata
 
-metadata: ModelMetadataDict = {
+metadata: ModelMetadata = {
     "description": "My first table",
     "materialization": "table",
     "schema": [
@@ -47,12 +47,17 @@ metadata: ModelMetadataDict = {
 Tests are automatically executed after model runs:
 
 ```bash
-# Run models (tests execute automatically)
+# Run models (tests execute automatically with interleaved execution)
+t4t build examples/t_project
+
+# Run models without tests
 t4t run examples/t_project
 
 # Run tests independently
 t4t test examples/t_project
 ```
+
+**Note:** The `build` command executes models and tests interleaved (test runs immediately after each model), while `run` executes models without tests. Use `t4t test` to run tests independently.
 
 ## Test Definition Formats
 
@@ -400,7 +405,7 @@ HAVING COUNT(*) < 5
 
 **Usage in model metadata:**
 ```python
-metadata: ModelMetadataDict = {
+metadata: ModelMetadata = {
     "description": "My table",
     "tests": [
         "check_minimum_rows"  # Uses default min_rows=10
@@ -422,7 +427,7 @@ HAVING COUNT(*) < @min_rows:10
 
 **Usage with parameters:**
 ```python
-metadata: ModelMetadataDict = {
+metadata: ModelMetadata = {
     "description": "My table",
     "tests": [
         {
@@ -446,7 +451,7 @@ WHERE @column_name < 0
 
 **Usage in column metadata:**
 ```python
-metadata: ModelMetadataDict = {
+metadata: ModelMetadata = {
     "schema": [
         {
             "name": "amount",
@@ -479,12 +484,12 @@ HAVING COUNT(*) < @min_rows:10
 **Usage:** Reference the test in multiple models' metadata:
 ```python
 # models/table1.py
-metadata: ModelMetadataDict = {
+metadata: ModelMetadata = {
     "tests": ["check_minimum_rows"]  # Reusable!
 }
 
 # models/table2.py
-metadata: ModelMetadataDict = {
+metadata: ModelMetadata = {
     "tests": ["check_minimum_rows"]  # Same test, different table!
 }
 ```
@@ -517,7 +522,7 @@ WHERE name LIKE '%invalid%'
 **Usage:** Reference the test only in the specific table's metadata:
 ```python
 # models/my_schema/my_first_table.py
-metadata: ModelMetadataDict = {
+metadata: ModelMetadata = {
     "tests": ["test_my_first_table"]  # Only for this table
 }
 ```
@@ -554,8 +559,9 @@ WHERE @column_name = @status
 ### Test Discovery
 
 SQL tests are automatically discovered from the `tests/` folder when:
-- Running `t4t test`
-- Running `t4t run` (tests execute automatically)
+- Running `t4t test` - Standalone test execution
+- Running `t4t build` - Tests execute automatically with interleaved execution (test runs immediately after each model/function)
+- Running `t4t run` - Tests do NOT execute automatically (use `t4t build` or `t4t test` for tests)
 
 Function tests are discovered from the `tests/functions/` folder:
 - `tests/functions/test_calculate_percentage.sql` → test name `"test_calculate_percentage"`
@@ -586,7 +592,7 @@ You'll see a warning like this:
 **How to fix:**
 1. Add the test to the appropriate model's metadata:
    ```python
-   metadata: ModelMetadataDict = {
+   metadata: ModelMetadata = {
        "tests": ["check_minimum_rows"]  # Add the test here
    }
    ```
@@ -762,9 +768,9 @@ Tests are categorized into:
 
 ```python
 # models/orders.py
-from tee.typing.metadata import ModelMetadataDict
+from tee.typing import ModelMetadata
 
-metadata: ModelMetadataDict = {
+metadata: ModelMetadata = {
     "description": "Orders table",
     "materialization": "table",
     "schema": [
@@ -885,7 +891,7 @@ This means you have a generic SQL test file that uses placeholders (like `@table
 1. **Add the test to model metadata** if you want to use it:
    ```python
    # models/my_table.py
-   metadata: ModelMetadataDict = {
+   metadata: ModelMetadata = {
        "tests": ["my_custom_test"]  # Add here
    }
    ```

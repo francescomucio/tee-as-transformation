@@ -240,11 +240,18 @@ t4t run ./my_project --select my_model --exclude tag:deprecated
 ```
 
 **What it does:**
-1. Compiles project to OTS modules (parses SQL/Python models, loads imported OTS modules)
+1. Compiles project to OTS modules (parses SQL/Python models and functions, loads imported OTS modules)
 2. Loads compiled OTS modules from `output/ots_modules/`
-3. Resolves dependencies automatically
-4. Executes models in the correct order
-5. Materializes results as tables/views in the database
+3. Executes functions before models (functions must be created before models that depend on them)
+4. Resolves dependencies automatically
+5. Executes models in the correct order
+6. Materializes results as tables/views in the database
+
+**Output:**
+The run command provides detailed output including:
+- Function execution status (functions are executed before models)
+- Model execution status with row counts
+- Final summary with counts of executed tables and functions
 
 **Note:** The `run` command does NOT execute tests. Use `t4t test` to run tests separately, or `t4t build` to execute models with interleaved test execution.
 
@@ -282,14 +289,24 @@ t4t build ./my_project --select my_model
 ```
 
 **What it does:**
-1. Compiles project to OTS modules (parses SQL/Python models, loads imported OTS modules)
+1. Compiles project to OTS modules (parses SQL/Python models and functions, loads imported OTS modules)
 2. Loads compiled OTS modules from `output/ots_modules/`
-3. Executes models in dependency order
-4. Automatically loads seeds before execution
+3. Executes functions before models (functions must be created before models that depend on them)
+4. Executes models in dependency order with interleaved test execution
+5. Runs tests immediately after each model/function execution
+6. Automatically loads seeds before execution
+7. Stops on the first ERROR severity test failure
+
+**Output:**
+The build command provides detailed output including:
+- Function execution status (functions are executed before models)
+- Model execution status with row counts
+- Test execution results for each model/function
+- Final summary with counts of executed tables, functions, and tests
 
 **Exit codes:**
-- `0` - All models and tests passed
-- `1` - Model execution failed or ERROR severity test failed
+- `0` - All models, functions, and tests passed
+- `1` - Model/function execution failed or ERROR severity test failed
 
 ---
 

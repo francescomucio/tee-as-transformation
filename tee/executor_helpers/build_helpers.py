@@ -16,6 +16,9 @@ from tee.testing import TestExecutor, TestSeverity
 if TYPE_CHECKING:
     from tee.adapters import AdapterConfig
 
+# Constants
+TEST_NODE_PREFIX = "test:"
+
 
 def setup_build_context_from_compile(
     project_folder: str,
@@ -120,7 +123,7 @@ def should_skip_model(
     graph: dict[str, Any],
 ) -> bool:
     """Check if a model should be skipped."""
-    if node_name.startswith("test:"):
+    if node_name.startswith(TEST_NODE_PREFIX):
         return True
     if node_name in skipped_models:
         return True
@@ -128,7 +131,7 @@ def should_skip_model(
     # Check if this model depends on any failed model
     node_deps = graph["dependencies"].get(node_name, [])
     depends_on_failed = any(
-        dep in failed_models for dep in node_deps if not dep.startswith("test:")
+                        dep in failed_models for dep in node_deps if not dep.startswith(TEST_NODE_PREFIX)
     )
     if depends_on_failed:
         return True
@@ -144,7 +147,7 @@ def mark_dependents_as_skipped(
     """Mark all dependents of a node as skipped."""
     dependents = parser.get_table_dependents(node_name)
     for dependent in dependents:
-        if not dependent.startswith("test:"):
+        if not dependent.startswith(TEST_NODE_PREFIX):
             skipped_models.add(dependent)
 
 
@@ -282,12 +285,21 @@ def compile_build_results(
     all_test_results: list[Any],
     parsed_models: dict[str, Any],
     graph: dict[str, Any],
+    parsed_functions: dict[str, list[str]] | None = None,
+    function_results: dict[str, list[str] | list[dict[str, str]]] | None = None,
 ) -> dict[str, Any]:
     """Compile final build results."""
+    parsed_functions = parsed_functions or {}
+    function_results = function_results or {"executed_functions": [], "failed_functions": []}
+    
+    # Filter out functions from executed_tables - only count actual models
     executed_tables = [
         name
         for name in execution_order
-        if name not in skipped_models and name not in failed_models and not name.startswith("test:")
+        if name not in skipped_models 
+        and name not in failed_models 
+        and name not in parsed_functions  # Exclude functions
+        and not name.startswith(TEST_NODE_PREFIX)
     ]
 
     failed_tables = [
@@ -316,6 +328,8 @@ def compile_build_results(
         "executed_tables": executed_tables,
         "failed_tables": failed_tables,
         "skipped_tables": list(skipped_models),
+        "executed_functions": function_results.get("executed_functions", []),
+        "failed_functions": function_results.get("failed_functions", []),
         "test_results": test_results_summary,
         "analysis": {
             "total_models": len(parsed_models),
@@ -330,6 +344,8 @@ def print_build_summary(
 ) -> None:
     """Print build summary."""
     executed_tables = results["executed_tables"]
+    executed_functions = results.get("executed_functions", [])
+    failed_functions = results.get("failed_functions", [])
     test_results = results["test_results"]
 
     print("\n" + "=" * 50)
@@ -338,6 +354,10 @@ def print_build_summary(
     print(f"  Models executed: {len(executed_tables)}")
     print(f"  Models failed: {len(failed_models)}")
     print(f"  Models skipped: {len(skipped_models)}")
+    if executed_functions or failed_functions:
+        print(f"  Functions executed: {len(executed_functions)}")
+        if failed_functions:
+            print(f"  Functions failed: {len(failed_functions)}")
     print(f"  Tests passed: {test_results['passed']}")
     print(f"  Tests failed: {test_results['failed']}")
     if test_results["warnings"] > 0:

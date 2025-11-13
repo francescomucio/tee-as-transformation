@@ -9,6 +9,23 @@ from tee.engine.connection_manager import ConnectionManager
 from tee.executor import execute_models
 
 
+def _pluralize(count: int, singular: str, plural: str | None = None) -> str:
+    """
+    Pluralize a word based on count.
+
+    Args:
+        count: Number to check
+        singular: Singular form of the word
+        plural: Optional plural form (defaults to singular + 's')
+
+    Returns:
+        Plural form if count != 1, otherwise singular
+    """
+    if plural is None:
+        plural = singular + "s"
+    return plural if count != 1 else singular
+
+
 def cmd_run(
     project_folder: str,
     vars: str | None = None,
@@ -51,21 +68,45 @@ def cmd_run(
 
         # Calculate statistics
         total_tables = len(results["executed_tables"]) + len(results["failed_tables"])
-        successful_count = len(results["executed_tables"])
-        failed_count = len(results["failed_tables"])
+        successful_tables = len(results["executed_tables"])
+        failed_tables = len(results["failed_tables"])
+        
+        executed_functions = results.get("executed_functions", [])
+        failed_functions = results.get("failed_functions", [])
+        total_functions = len(executed_functions) + len(failed_functions)
+        successful_functions = len(executed_functions)
+        failed_functions_count = len(failed_functions)
+        
         warning_count = len(results.get("warnings", []))
 
-        typer.echo(
-            f"\nCompleted! Executed {successful_count} out of {total_tables} tables successfully."
-        )
-        if failed_count > 0 or warning_count > 0:
-            typer.echo(f"  ✅ Successful: {successful_count} tables")
-            if failed_count > 0:
-                typer.echo(f"  ❌ Failed: {failed_count} tables")
-            if warning_count > 0:
-                typer.echo(f"  ⚠️  Warnings: {warning_count} warnings")
+        # Build completion message
+        parts = []
+        if successful_tables > 0:
+            parts.append(f"{successful_tables} {_pluralize(successful_tables, 'table')}")
+        if successful_functions > 0:
+            parts.append(f"{successful_functions} {_pluralize(successful_functions, 'function')}")
+        
+        if parts:
+            typer.echo(f"\nCompleted! Successfully executed: {', '.join(parts)}")
         else:
-            typer.echo(f"  ✅ All {successful_count} tables executed successfully!")
+            typer.echo("\nCompleted!")
+        
+        # Show failures if any
+        if failed_tables > 0 or failed_functions_count > 0 or warning_count > 0:
+            if successful_tables > 0 or successful_functions > 0:
+                typer.echo(f"  ✅ Successful: {successful_tables} {_pluralize(successful_tables, 'table')}, {successful_functions} {_pluralize(successful_functions, 'function')}")
+            if failed_tables > 0:
+                typer.echo(f"  ❌ Failed: {failed_tables} {_pluralize(failed_tables, 'table')}")
+            if failed_functions_count > 0:
+                typer.echo(f"  ❌ Failed: {failed_functions_count} {_pluralize(failed_functions_count, 'function')}")
+            if warning_count > 0:
+                typer.echo(f"  ⚠️  Warnings: {warning_count} {_pluralize(warning_count, 'warning')}")
+        elif successful_tables > 0 or successful_functions > 0:
+            # All successful
+            if successful_tables > 0:
+                typer.echo(f"  ✅ All {successful_tables} {_pluralize(successful_tables, 'table')} executed successfully!")
+            if successful_functions > 0:
+                typer.echo(f"  ✅ All {successful_functions} {_pluralize(successful_functions, 'function')} deployed successfully!")
 
         if ctx.verbose:
             typer.echo(f"Analysis info: {results.get('analysis', {})}")

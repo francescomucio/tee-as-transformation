@@ -8,6 +8,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from tee.testing.sql_test import SqlTest
 from tee.testing.test_discovery import TestDiscovery
 from tee.testing.utils import MetadataExtractor
 
@@ -171,10 +172,11 @@ class UnusedTestChecker:
 
             # Check if this is a generic test (has placeholders)
             if self._is_generic_test(sql_test):
+                file_info = self._get_test_file_info(sql_test, test_name)
                 warnings.append(
                     f"Generic SQL test '{test_name}' is never used. "
                     f"Add it to model metadata to apply it to tables. "
-                    f"File: {sql_test.sql_file_path.relative_to(self.project_folder) if self.project_folder else sql_test.sql_file_path}"
+                    f"{file_info}"
                 )
 
         return warnings
@@ -209,13 +211,32 @@ class UnusedTestChecker:
 
             # Check if this is a generic test (has placeholders)
             if self._is_generic_test(sql_test):
+                file_info = self._get_test_file_info(sql_test, test_name)
                 warnings.append(
                     f"Generic function SQL test '{test_name}' is never used. "
                     f"Add it to function metadata to apply it to functions. "
-                    f"File: {sql_test.sql_file_path.relative_to(self.project_folder) if self.project_folder else sql_test.sql_file_path}"
+                    f"{file_info}"
                 )
 
         return warnings
+
+    def _get_test_file_info(self, test: Any, test_name: str) -> str:
+        """
+        Get file information for a test (SqlTest or PythonTest).
+
+        Args:
+            test: Test instance (SqlTest or PythonTest)
+            test_name: Name of the test
+
+        Returns:
+            File information string
+        """
+        if isinstance(test, SqlTest):
+            file_path = test.sql_file_path.relative_to(self.project_folder) if self.project_folder else test.sql_file_path
+            return f"File: {file_path}"
+        else:
+            # PythonTest - use test name to indicate it's from a Python file
+            return f"Test defined in Python file (name: {test_name})"
 
     def _is_generic_test(self, sql_test: Any) -> bool:
         """

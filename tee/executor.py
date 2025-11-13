@@ -73,8 +73,8 @@ def execute_models(
         if not graph or not execution_order:
             raise RuntimeError("Compilation did not return dependency graph or execution order")
 
-        print(f"✅ Using dependency graph from compilation: {len(graph['nodes'])} nodes")
-        print(f"   Execution order: {' -> '.join(execution_order)}")
+        logger.debug(f"Using dependency graph from compilation: {len(graph['nodes'])} nodes")
+        logger.debug(f"Execution order: {' -> '.join(execution_order)}")
 
     except Exception as e:
         logger.error(f"Compilation failed: {e}")
@@ -138,12 +138,20 @@ def execute_models(
             parser.save_to_json()
             print("Analysis files saved to output folder")
 
-        # Print results
+        # Print detailed results
         print("\n" + "=" * 50)
         print("EXECUTION RESULTS")
         print("=" * 50)
-        print(f"  Successfully executed: {len(results['executed_tables'])} tables")
-        print(f"  Failed: {len(results['failed_tables'])} tables")
+
+        if results.get("executed_functions"):
+            print("\nSuccessfully executed functions:")
+            for function in results["executed_functions"]:
+                print(f"  - {function}")
+
+        if results.get("failed_functions"):
+            print("\nFailed functions:")
+            for failure in results["failed_functions"]:
+                print(f"  - {failure['function']}: {failure['error']}")
 
         if results["executed_tables"]:
             print("\nSuccessfully executed tables:")
@@ -248,8 +256,8 @@ def build_models(
         if not graph or not execution_order:
             raise RuntimeError("Compilation did not return dependency graph or execution order")
 
-        print(f"✅ Using dependency graph from compilation: {len(graph['nodes'])} nodes")
-        print(f"   Execution order: {' -> '.join(execution_order)}")
+        logger.debug(f"Using dependency graph from compilation: {len(graph['nodes'])} nodes")
+        logger.debug(f"Execution order: {' -> '.join(execution_order)}")
 
     except Exception as e:
         logger.error(f"Compilation failed: {e}")
@@ -291,6 +299,7 @@ def build_models(
         # Step 2.5: Execute functions before models
         # Functions must be created before models that depend on them
         parsed_functions = {}
+        function_results = {"executed_functions": [], "failed_functions": []}
         try:
             parsed_functions = parser.orchestrator.discover_and_parse_functions()
             if parsed_functions:
@@ -327,9 +336,16 @@ def build_models(
         except Exception as e:
             # If function discovery/parsing fails, log warning but continue
             # This allows builds to work even if function parsing has issues
-            logger.warning(
-                f"Could not discover/parse functions: {e}. Continuing with model execution."
-            )
+            # Catch specific exceptions if available, otherwise catch general Exception
+            from tee.parser.shared.exceptions import ParserError
+            if isinstance(e, ParserError):
+                logger.warning(
+                    f"Function parsing error: {e}. Continuing with model execution."
+                )
+            else:
+                logger.warning(
+                    f"Could not discover/parse functions: {e}. Continuing with model execution."
+                )
 
         # Step 3: Execute models and tests interleaved
         for node_name in execution_order:
@@ -340,10 +356,11 @@ def build_models(
 
             if build_helpers.should_skip_model(node_name, skipped_models, failed_models, graph):
                 # Mark as skipped if it depends on a failed model
-                if node_name not in skipped_models and not node_name.startswith("test:"):
+                from tee.executor_helpers.build_helpers import TEST_NODE_PREFIX
+                if node_name not in skipped_models and not node_name.startswith(TEST_NODE_PREFIX):
                     node_deps = graph["dependencies"].get(node_name, [])
                     if any(
-                        dep in failed_models for dep in node_deps if not dep.startswith("test:")
+                        dep in failed_models for dep in node_deps if not dep.startswith(TEST_NODE_PREFIX)
                     ):
                         skipped_models.add(node_name)
                 continue
@@ -389,7 +406,7 @@ def build_models(
 
         # Step 5: Compile and return results
         results = build_helpers.compile_build_results(
-            execution_order, failed_models, skipped_models, all_test_results, parsed_models, graph
+            execution_order, failed_models, skipped_models, all_test_results, parsed_models, graph, parsed_functions, function_results
         )
         build_helpers.print_build_summary(results, failed_models, skipped_models)
 

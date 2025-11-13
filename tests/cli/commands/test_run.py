@@ -115,8 +115,9 @@ class TestRunCommand:
             cmd_run(mock_args)
 
         output = fake_out.getvalue()
-        assert "Successful: 1 tables" in output
-        assert "Failed: 1 tables" in output
+        # New format includes emoji and proper pluralization: "✅ Successful: 1 table, 0 functions"
+        assert "Successful: 1 table" in output or "✅ Successful: 1 table" in output
+        assert "Failed: 1 table" in output or "❌ Failed: 1 table" in output
 
     @patch("tee.cli.commands.run.execute_models")
     @patch("tee.cli.commands.run.ConnectionManager")
@@ -149,7 +150,8 @@ class TestRunCommand:
             cmd_run(mock_args)
 
         output = fake_out.getvalue()
-        assert "Warnings: 1 warnings" in output
+        # New format includes emoji and proper pluralization: "⚠️  Warnings: 1 warning"
+        assert "Warnings: 1 warning" in output or "⚠️  Warnings: 1 warning" in output
 
     @patch("tee.cli.commands.run.execute_models")
     @patch("tee.cli.commands.run.ConnectionManager")

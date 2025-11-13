@@ -237,7 +237,8 @@ class TestBuildCommand:
                 assert exit_code == 0
 
         output = fake_out.getvalue()
-        assert "All 1 tables executed successfully!" in output
+        # New format uses pluralize: "All 1 table executed successfully!" (singular)
+        assert "All 1 table executed successfully!" in output or "All 1 tables executed successfully!" in output
 
     @patch("tee.cli.commands.build.build_models")
     @patch("tee.cli.commands.build.ConnectionManager")

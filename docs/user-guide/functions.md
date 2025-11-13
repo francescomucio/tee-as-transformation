@@ -81,6 +81,28 @@ metadata = {
 }
 ```
 
+## Function Execution
+
+Functions are automatically executed before models during both `t4t run` and `t4t build` commands:
+
+1. **Function Discovery**: Functions are discovered from the `functions/` directory
+2. **Dependency Resolution**: Function dependencies are resolved (functions can depend on other functions or tables)
+3. **Execution Order**: Functions are executed in dependency order before any models
+4. **Test Execution**: During `t4t build`, function tests are executed immediately after each function is created
+5. **Model Execution**: Models are executed after all functions are created
+
+**Example Output:**
+```
+📦 Executing 1 function(s) before models...
+  ✅ Executed 1 function(s)
+    - my_schema.calculate_percentage
+  🧪 Running tests for my_schema.calculate_percentage...
+  ✅ Tests: 2 passed
+
+📦 Executing: my_schema.my_first_table
+  ✅ Model executed: 3 rows
+```
+
 ## Function Organization
 
 Functions are organized by schema, similar to models:
