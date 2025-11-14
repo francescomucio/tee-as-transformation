@@ -24,18 +24,28 @@ The implementation should follow this flow:
 Add `on_schema_change` to the incremental config types:
 
 ```python
-# Add new type for on_schema_change values
-OnSchemaChange = Literal["ignore", "append_new_columns", "sync_all_columns", "fail"]
+# Add new type for on_schema_change values (matches OTS 0.2.1)
+OnSchemaChange = Literal[
+    "fail",                    # Default - fail on schema changes
+    "ignore",                  # Ignore schema differences, proceed anyway
+    "append_new_columns",      # Add new columns only
+    "sync_all_columns",         # Add new, remove missing columns
+    "full_refresh",            # Drop and recreate with full query
+    "full_incremental_refresh", # Drop, recreate, then run incremental in chunks
+    "recreate_empty"           # Drop and recreate as empty table
+]
 
 # Update IncrementalConfig
 class IncrementalConfig(TypedDict):
     """Configuration for incremental materialization strategies."""
     strategy: IncrementalStrategy
-    on_schema_change: NotRequired[OnSchemaChange]  # NEW
+    on_schema_change: NotRequired[OnSchemaChange]  # NEW - default: "fail"
     append: NotRequired[IncrementalAppendConfig | None]
     merge: NotRequired[IncrementalMergeConfig | None]
     delete_insert: NotRequired[IncrementalDeleteInsertConfig | None]
 ```
+
+**Note**: Default value is `"fail"` if not specified. The `"ignore"` option is available for backward compatibility and manual schema management.
 
 ### Step 2: Create Schema Comparison Module
 
@@ -162,16 +172,16 @@ class SchemaChangeHandler:
             logger.debug(f"No schema changes detected for {table_name}")
             return
         
-        if on_schema_change == "ignore":
-            logger.info(f"Ignoring schema changes for {table_name}")
-            return
-        
         if on_schema_change == "fail":
             raise ValueError(
                 f"Schema changes detected for {table_name} but on_schema_change='fail'. "
                 f"New columns: {differences['new_columns']}, "
                 f"Missing columns: {differences['missing_columns']}"
             )
+        
+        if on_schema_change == "ignore":
+            logger.info(f"Ignoring schema changes for {table_name}")
+            return
         
         if on_schema_change == "append_new_columns":
             self._append_new_columns(table_name, differences["new_columns"])
@@ -182,6 +192,15 @@ class SchemaChangeHandler:
                 differences["new_columns"],
                 differences["missing_columns"]
             )
+        
+        elif on_schema_change == "full_refresh":
+            self._full_refresh(table_name, sql_query)
+        
+        elif on_schema_change == "full_incremental_refresh":
+            self._full_incremental_refresh(table_name, sql_query, config)
+        
+        elif on_schema_change == "recreate_empty":
+            self._recreate_empty(table_name, query_schema)
     
     def _append_new_columns(
         self, 
@@ -258,11 +277,15 @@ def execute_append_strategy(
     adapter: DatabaseAdapter,
     table_name: str,
     variables: dict[str, Any] | None = None,
-    on_schema_change: OnSchemaChange | None = None,  # NEW
+    on_schema_change: OnSchemaChange | None = "fail",  # NEW - default: "fail"
 ) -> None:
     """Execute append-only incremental strategy."""
     
     # NEW: Handle schema changes if table exists
+    # Default to "fail" if not specified
+    if on_schema_change is None:
+        on_schema_change = "fail"
+    
     if adapter.table_exists(table_name) and on_schema_change:
         from .schema_change_handler import SchemaChangeHandler
         from .schema_comparator import SchemaComparator
@@ -299,8 +322,8 @@ def _execute_incremental_materialization(
     """Execute incremental materialization using the universal state manager."""
     # ... existing code ...
     
-    # Extract on_schema_change
-    on_schema_change = incremental_config.get("on_schema_change", "ignore")
+    # Extract on_schema_change (default: "fail" per OTS 0.2.1)
+    on_schema_change = incremental_config.get("on_schema_change", "fail")
     
     # ... existing strategy execution ...
     
@@ -459,4 +482,5 @@ def orders():
 - Some databases may not support all operations (e.g., dropping columns)
 - Type changes may need separate handling or manual intervention
 - Consider performance implications of schema comparison queries
+
 

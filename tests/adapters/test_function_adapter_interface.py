@@ -50,6 +50,15 @@ class TestFunctionAdapterInterface:
             def get_table_info(self, table_name: str):
                 return {}
 
+            def describe_query_schema(self, sql_query: str):
+                return []
+
+            def add_column(self, table_name: str, column: dict):
+                pass
+
+            def drop_column(self, table_name: str, column_name: str):
+                pass
+
         # Should raise TypeError because abstract methods aren't implemented
         with pytest.raises(TypeError):
             IncompleteAdapter({"type": "test"})
@@ -248,6 +257,15 @@ class TestFunctionAdapterDefaultImplementation:
 
             def get_table_info(self, table_name: str):
                 return {}
+
+            def describe_query_schema(self, sql_query: str):
+                return []
+
+            def add_column(self, table_name: str, column: dict):
+                pass
+
+            def drop_column(self, table_name: str, column_name: str):
+                pass
 
             def create_function(self, function_name: str, function_sql: str, metadata=None):
                 pass

@@ -8,6 +8,7 @@ This adapter provides Snowflake-specific functionality including:
 - Materialization support including external tables
 """
 
+import uuid
 from typing import Any
 
 try:
@@ -188,15 +189,33 @@ class SnowflakeAdapter(DatabaseAdapter):
         self.view_handler.create(view_name, query, metadata)
 
     def table_exists(self, table_name: str) -> bool:
-        """Check if a table exists in the database."""
+        """Check if a table or view exists in the database."""
         if not self.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
 
         try:
+            # Extract schema and table name for the query
+            if "." in table_name:
+                parts = table_name.split(".", 1)
+                schema_name = parts[0]
+                table_name_only = parts[1]
+            else:
+                schema_name = self.config.schema or "PUBLIC"
+                table_name_only = table_name
+
+            # Check both tables and views (Snowflake stores views separately)
             # Snowflake connector uses %s parameter style
             result = self._execute_with_cursor(
-                "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = %s",
-                (table_name,),
+                """
+                SELECT COUNT(*) FROM (
+                    SELECT table_name FROM information_schema.tables 
+                    WHERE table_schema = %s AND table_name = %s
+                    UNION ALL
+                    SELECT table_name FROM information_schema.views 
+                    WHERE table_schema = %s AND table_name = %s
+                )
+                """,
+                (schema_name.upper(), table_name_only.upper(), schema_name.upper(), table_name_only.upper()),
             )
             return result[0][0] > 0
         except Exception:
@@ -211,20 +230,23 @@ class SnowflakeAdapter(DatabaseAdapter):
             # Use 3-part naming for Snowflake (DATABASE.SCHEMA.TABLE)
             qualified_table_name = self._qualify_object_name(table_name)
 
-            # Get table schema - extract just the table name for the query
+            # Extract schema and table name for the query
             if "." in table_name:
-                _, table_name_only = table_name.split(".", 1)
+                parts = table_name.split(".", 1)
+                schema_name = parts[0]
+                table_name_only = parts[1]
             else:
+                schema_name = self.config.schema or "PUBLIC"
                 table_name_only = table_name
 
             schema_result = self._execute_with_cursor(
                 """
                 SELECT column_name, data_type 
                 FROM information_schema.columns 
-                WHERE table_name = %s
+                WHERE table_schema = %s AND table_name = %s
                 ORDER BY ordinal_position
             """,
-                (table_name_only,),
+                (schema_name.upper(), table_name_only.upper()),
             )
 
             # Get row count
@@ -236,6 +258,89 @@ class SnowflakeAdapter(DatabaseAdapter):
             }
         except Exception as e:
             self.logger.error(f"Error getting table info for {table_name}: {e}")
+            raise
+
+    def describe_query_schema(self, sql_query: str) -> list[dict[str, Any]]:
+        """Infer schema from SQL query output using Snowflake DESCRIBE."""
+        if not self.connection:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+
+        try:
+            # Snowflake approach: Create a temporary view, describe it, then drop it
+            # Use a unique name to avoid conflicts
+            temp_view_name = f"TEMP_SCHEMA_INFER_{uuid.uuid4().hex[:8].upper()}"
+            qualified_temp_view = self._qualify_object_name(temp_view_name)
+
+            cursor = self.connection.cursor()
+            try:
+                # Create temporary view with LIMIT 0 to avoid data processing
+                create_view_sql = f"CREATE OR REPLACE TEMPORARY VIEW {qualified_temp_view} AS {sql_query} LIMIT 0"
+                cursor.execute(create_view_sql)
+
+                # Describe the view to get schema
+                describe_sql = f"DESCRIBE {qualified_temp_view}"
+                cursor.execute(describe_sql)
+                result = cursor.fetchall()
+
+                # Convert to standard format: [{"name": "...", "type": "..."}]
+                schema = []
+                for row in result:
+                    # DESCRIBE returns: name, type, kind, null?, default, primary key?, unique key?, check, expression, comment
+                    schema.append({"name": row[0], "type": row[1]})
+
+                # Drop the temporary view
+                cursor.execute(f"DROP VIEW IF EXISTS {qualified_temp_view}")
+
+                return schema
+            finally:
+                cursor.close()
+        except Exception as e:
+            self.logger.error(f"Error describing query schema: {e}")
+            raise
+
+    def add_column(self, table_name: str, column: dict[str, Any]) -> None:
+        """Add a column to an existing table."""
+        if not self.connection:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+
+        column_name = column["name"]
+        column_type = column.get("type", "VARCHAR")
+
+        try:
+            # Use 3-part naming for Snowflake
+            qualified_table_name = self._qualify_object_name(table_name)
+
+            # Snowflake ALTER TABLE ADD COLUMN syntax
+            ddl = f"ALTER TABLE {qualified_table_name} ADD COLUMN {column_name} {column_type}"
+            cursor = self.connection.cursor()
+            try:
+                cursor.execute(ddl)
+                self.logger.info(f"Added column {column_name} to {table_name}")
+            finally:
+                cursor.close()
+        except Exception as e:
+            self.logger.error(f"Error adding column {column_name} to {table_name}: {e}")
+            raise
+
+    def drop_column(self, table_name: str, column_name: str) -> None:
+        """Drop a column from an existing table."""
+        if not self.connection:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+
+        try:
+            # Use 3-part naming for Snowflake
+            qualified_table_name = self._qualify_object_name(table_name)
+
+            # Snowflake ALTER TABLE DROP COLUMN syntax
+            ddl = f"ALTER TABLE {qualified_table_name} DROP COLUMN {column_name}"
+            cursor = self.connection.cursor()
+            try:
+                cursor.execute(ddl)
+                self.logger.info(f"Dropped column {column_name} from {table_name}")
+            finally:
+                cursor.close()
+        except Exception as e:
+            self.logger.error(f"Error dropping column {column_name} from {table_name}: {e}")
             raise
 
     def create_function(

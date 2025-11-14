@@ -171,6 +171,42 @@ class DatabaseAdapter(ABC, SQLProcessor, MetadataHandler, TestQueryGenerator):
         """Get information about a table."""
         pass
 
+    # Schema change handling methods (OTS 0.2.1)
+    @abstractmethod
+    def describe_query_schema(self, sql_query: str) -> list[dict[str, Any]]:
+        """Infer schema from SQL query output using database-specific methods.
+
+        This method should use database-specific DESCRIBE or similar commands
+        to get the schema without executing the full query.
+
+        Args:
+            sql_query: SQL query to analyze
+
+        Returns:
+            List of column definitions: [{"name": "col1", "type": "VARCHAR"}, ...]
+        """
+        pass
+
+    @abstractmethod
+    def add_column(self, table_name: str, column: dict[str, Any]) -> None:
+        """Add a column to an existing table.
+
+        Args:
+            table_name: Name of the table
+            column: Column definition with "name" and "type" keys
+        """
+        pass
+
+    @abstractmethod
+    def drop_column(self, table_name: str, column_name: str) -> None:
+        """Drop a column from an existing table.
+
+        Args:
+            table_name: Name of the table
+            column_name: Name of the column to drop
+        """
+        pass
+
     # Function management methods
     @abstractmethod
     def create_function(

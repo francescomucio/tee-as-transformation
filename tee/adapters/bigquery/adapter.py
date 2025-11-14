@@ -306,6 +306,21 @@ class BigQueryAdapter(DatabaseAdapter):
             self.logger.error(f"Error getting table info for {table_name}: {e}")
             raise
 
+    def describe_query_schema(self, sql_query: str) -> list[dict[str, Any]]:
+        """Infer schema from SQL query output using BigQuery dry run."""
+        # TODO: Implement BigQuery-specific schema inference
+        raise NotImplementedError("describe_query_schema not yet implemented for BigQuery")
+
+    def add_column(self, table_name: str, column: dict[str, Any]) -> None:
+        """Add a column to an existing table."""
+        # TODO: Implement BigQuery-specific column addition
+        raise NotImplementedError("add_column not yet implemented for BigQuery")
+
+    def drop_column(self, table_name: str, column_name: str) -> None:
+        """Drop a column from an existing table."""
+        # TODO: Implement BigQuery-specific column dropping
+        raise NotImplementedError("drop_column not yet implemented for BigQuery")
+
     def create_function(
         self,
         function_name: str,

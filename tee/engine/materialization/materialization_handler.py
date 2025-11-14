@@ -126,6 +126,14 @@ class MaterializationHandler:
                 self.adapter.create_table(table_name, sql_query, metadata)
                 return
 
+            # Extract on_schema_change from incremental config (default: "fail")
+            on_schema_change = incremental_config.get("on_schema_change", "fail")
+
+            # Extract full_incremental_refresh config from metadata (transformation level, OTS 0.2.1)
+            full_incremental_refresh_config = (
+                metadata.get("full_incremental_refresh") if metadata else None
+            )
+
             # Check if we should run incrementally
             should_run_incremental = executor.should_run_incremental(
                 table_name, sql_query, incremental_config
@@ -152,6 +160,8 @@ class MaterializationHandler:
                         self.adapter,
                         table_name,
                         self.variables,
+                        on_schema_change=on_schema_change,
+                        full_incremental_refresh_config=full_incremental_refresh_config,
                     )
 
                 elif strategy == "merge":
@@ -166,6 +176,8 @@ class MaterializationHandler:
                         self.adapter,
                         table_name,
                         self.variables,
+                        on_schema_change=on_schema_change,
+                        full_incremental_refresh_config=full_incremental_refresh_config,
                     )
 
                 elif strategy == "delete_insert":
@@ -180,6 +192,8 @@ class MaterializationHandler:
                         self.adapter,
                         table_name,
                         self.variables,
+                        on_schema_change=on_schema_change,
+                        full_incremental_refresh_config=full_incremental_refresh_config,
                     )
 
                 else:

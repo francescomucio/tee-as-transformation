@@ -25,6 +25,17 @@ MaterializationType = Literal["table", "view", "incremental", "scd2"]
 # Incremental strategy types
 IncrementalStrategy = Literal["append", "merge", "delete_insert"]
 
+# on_schema_change options (OTS 0.2.1)
+OnSchemaChange = Literal[
+    "fail",                    # Default - fail on schema changes
+    "ignore",                  # Ignore schema differences, proceed anyway
+    "append_new_columns",      # Add new columns only
+    "sync_all_columns",         # Add new, remove missing columns
+    "full_refresh",            # Drop and recreate with full query
+    "full_incremental_refresh", # Drop, recreate, then run incremental in chunks
+    "recreate_empty"           # Drop and recreate as empty table
+]
+
 # Function types
 FunctionType = Literal["scalar", "aggregate", "table"]
 
@@ -80,10 +91,26 @@ class IncrementalDeleteInsertConfig(TypedDict):
     lookback: NotRequired[str | None]  # e.g., "7 days", "1 week"
 
 
+class FullIncrementalRefreshParameter(TypedDict):
+    """Parameter configuration for full_incremental_refresh chunking (OTS 0.2.1)."""
+
+    name: str  # Parameter name (matches placeholder in query, e.g., "@start_date", "@end_date")
+    start_value: str  # Initial value for the parameter
+    end_value: str  # End condition: hardcoded value (e.g., "2025-12-31") or expression evaluated against source table (e.g., "max(event_date)")
+    step: str  # Increment step: SQL interval (e.g., "INTERVAL 1 DAY") or numeric value
+
+
+class FullIncrementalRefreshConfig(TypedDict):
+    """Configuration for full_incremental_refresh on_schema_change behavior (OTS 0.2.1)."""
+
+    parameters: list[FullIncrementalRefreshParameter]
+
+
 class IncrementalConfig(TypedDict):
     """Configuration for incremental materialization strategies."""
 
     strategy: IncrementalStrategy
+    on_schema_change: NotRequired[OnSchemaChange]  # Default: "fail" (OTS 0.2.1)
     append: NotRequired[IncrementalAppendConfig | None]
     merge: NotRequired[IncrementalMergeConfig | None]
     delete_insert: NotRequired[IncrementalDeleteInsertConfig | None]
@@ -105,6 +132,7 @@ class ModelMetadata(TypedDict):
     incremental: NotRequired[IncrementalConfig | None]
     scd2_details: NotRequired[dict[str, Any] | None]  # For SCD2 materialization
     indexes: NotRequired[list[dict[str, Any]] | None]  # Explicit index definitions
+    full_incremental_refresh: NotRequired[FullIncrementalRefreshConfig | None]  # For full_incremental_refresh on_schema_change (OTS 0.2.1)
 
 
 # Function-specific types

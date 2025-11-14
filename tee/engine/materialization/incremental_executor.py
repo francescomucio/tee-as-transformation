@@ -25,6 +25,7 @@ from tee.typing.metadata import (
     IncrementalConfig,
     IncrementalDeleteInsertConfig,
     IncrementalMergeConfig,
+    OnSchemaChange,
 )
 
 from ..model_state import ModelStateManager
@@ -265,9 +266,34 @@ class IncrementalExecutor:
         adapter: DatabaseAdapter,
         table_name: str,
         variables: dict[str, Any] | None = None,
+        on_schema_change: OnSchemaChange | None = None,
+        full_incremental_refresh_config: dict[str, Any] | None = None,
     ) -> None:
         """Execute append-only incremental strategy."""
-        # Executing append strategy
+        # Default to "fail" if not specified
+        if on_schema_change is None:
+            on_schema_change = "fail"
+
+        # Handle schema changes if table exists (OTS 0.2.1)
+        if adapter.table_exists(table_name):
+            from .schema_change_handler import SchemaChangeHandler
+            from .schema_comparator import SchemaComparator
+
+            handler = SchemaChangeHandler(adapter)
+            comparator = SchemaComparator(adapter)
+
+            query_schema = comparator.infer_query_schema(sql_query)
+            table_schema = comparator.get_table_schema(table_name)
+
+            handler.handle_schema_changes(
+                table_name,
+                query_schema,
+                table_schema,
+                on_schema_change,
+                sql_query=sql_query,
+                full_incremental_refresh_config=full_incremental_refresh_config,
+                incremental_config={"strategy": "append", "append": config},
+            )
 
         # Get current state
         state = self.state_manager.get_model_state(model_name)
@@ -305,9 +331,34 @@ class IncrementalExecutor:
         adapter: DatabaseAdapter,
         table_name: str,
         variables: dict[str, Any] | None = None,
+        on_schema_change: OnSchemaChange | None = None,
+        full_incremental_refresh_config: dict[str, Any] | None = None,
     ) -> None:
         """Execute merge incremental strategy."""
-        # Executing merge strategy
+        # Default to "fail" if not specified
+        if on_schema_change is None:
+            on_schema_change = "fail"
+
+        # Handle schema changes if table exists (OTS 0.2.1)
+        if adapter.table_exists(table_name):
+            from .schema_change_handler import SchemaChangeHandler
+            from .schema_comparator import SchemaComparator
+
+            handler = SchemaChangeHandler(adapter)
+            comparator = SchemaComparator(adapter)
+
+            query_schema = comparator.infer_query_schema(sql_query)
+            table_schema = comparator.get_table_schema(table_name)
+
+            handler.handle_schema_changes(
+                table_name,
+                query_schema,
+                table_schema,
+                on_schema_change,
+                sql_query=sql_query,
+                full_incremental_refresh_config=full_incremental_refresh_config,
+                incremental_config={"strategy": "merge", "merge": config},
+            )
 
         # Get current state
         state = self.state_manager.get_model_state(model_name)
@@ -343,9 +394,34 @@ class IncrementalExecutor:
         adapter: DatabaseAdapter,
         table_name: str,
         variables: dict[str, Any] | None = None,
+        on_schema_change: OnSchemaChange | None = None,
+        full_incremental_refresh_config: dict[str, Any] | None = None,
     ) -> None:
         """Execute delete+insert incremental strategy."""
-        # Executing delete+insert strategy
+        # Default to "fail" if not specified
+        if on_schema_change is None:
+            on_schema_change = "fail"
+
+        # Handle schema changes if table exists (OTS 0.2.1)
+        if adapter.table_exists(table_name):
+            from .schema_change_handler import SchemaChangeHandler
+            from .schema_comparator import SchemaComparator
+
+            handler = SchemaChangeHandler(adapter)
+            comparator = SchemaComparator(adapter)
+
+            query_schema = comparator.infer_query_schema(sql_query)
+            table_schema = comparator.get_table_schema(table_name)
+
+            handler.handle_schema_changes(
+                table_name,
+                query_schema,
+                table_schema,
+                on_schema_change,
+                sql_query=sql_query,
+                full_incremental_refresh_config=full_incremental_refresh_config,
+                incremental_config={"strategy": "delete_insert", "delete_insert": config},
+            )
 
         # Get current state
         state = self.state_manager.get_model_state(model_name)

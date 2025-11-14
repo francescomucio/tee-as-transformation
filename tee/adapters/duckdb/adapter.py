@@ -238,6 +238,55 @@ class DuckDBAdapter(DatabaseAdapter):
             self.logger.error(f"Error getting table info for {table_name}: {e}")
             raise
 
+    def describe_query_schema(self, sql_query: str) -> list[dict[str, Any]]:
+        """Infer schema from SQL query output using DuckDB DESCRIBE."""
+        if not self.connection:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+
+        try:
+            # DuckDB supports DESCRIBE on queries
+            describe_query = f"DESCRIBE SELECT * FROM ({sql_query}) LIMIT 0"
+            result = self.connection.execute(describe_query).fetchall()
+
+            # Convert to standard format: [{"name": "...", "type": "..."}]
+            schema = []
+            for row in result:
+                schema.append({"name": row[0], "type": row[1]})
+
+            return schema
+        except Exception as e:
+            self.logger.error(f"Error describing query schema: {e}")
+            raise
+
+    def add_column(self, table_name: str, column: dict[str, Any]) -> None:
+        """Add a column to an existing table."""
+        if not self.connection:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+
+        column_name = column["name"]
+        column_type = column.get("type", "VARCHAR")
+
+        try:
+            ddl = f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}"
+            self.utils.execute_query(ddl)
+            self.logger.info(f"Added column {column_name} to {table_name}")
+        except Exception as e:
+            self.logger.error(f"Error adding column {column_name} to {table_name}: {e}")
+            raise
+
+    def drop_column(self, table_name: str, column_name: str) -> None:
+        """Drop a column from an existing table."""
+        if not self.connection:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+
+        try:
+            ddl = f"ALTER TABLE {table_name} DROP COLUMN {column_name}"
+            self.utils.execute_query(ddl)
+            self.logger.info(f"Dropped column {column_name} from {table_name}")
+        except Exception as e:
+            self.logger.error(f"Error dropping column {column_name} from {table_name}: {e}")
+            raise
+
     def create_function(
         self,
         function_name: str,

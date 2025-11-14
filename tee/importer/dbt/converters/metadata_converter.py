@@ -299,13 +299,10 @@ class MetadataConverter:
                 "time_column": config.get("incremental_key", "updated_at"),
             }
 
-        # Warn about unsupported config options
+        # Convert on_schema_change (OTS 0.2.1)
         if on_schema_change:
-            warnings.append(
-                f"on_schema_change config ({on_schema_change}) is not supported in t4t. "
-                "Schema changes will need to be handled manually. "
-                "See https://github.com/francescomucio/open-transformation-specification/issues/2"
-            )
+            # dbt uses same values as OTS 0.2.1, so we can pass through directly
+            result["on_schema_change"] = on_schema_change
 
         return result, warnings
 
