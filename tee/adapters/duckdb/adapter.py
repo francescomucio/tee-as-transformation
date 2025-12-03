@@ -55,12 +55,53 @@ class DuckDBAdapter(DatabaseAdapter):
             MaterializationType.INCREMENTAL,
         ]
 
+    def _extract_motherduck_path(self, db_path: str) -> str:
+        """
+        Extract MotherDuck path from potentially resolved absolute path.
+        
+        Args:
+            db_path: Database path (may be "md:db" or "/path/to/md:db")
+            
+        Returns:
+            Clean MotherDuck path (e.g., "md:db") or original path if not MotherDuck
+        """
+        # Check if this is a MotherDuck connection
+        is_motherduck = (
+            db_path.startswith("md:") 
+            or db_path.startswith("motherduck:")
+            or "/md:" in db_path 
+            or "/motherduck:" in db_path
+        )
+        
+        if not is_motherduck:
+            return db_path
+        
+        # Extract the md:database_name part if path was resolved to absolute
+        if "/" in db_path and ("md:" in db_path or "motherduck:" in db_path):
+            # Path was resolved, extract the md: part
+            parts = db_path.split("/")
+            md_part = next((p for p in parts if p.startswith("md:") or p.startswith("motherduck:")), None)
+            if md_part:
+                return md_part
+        
+        return db_path
+
+    def _is_motherduck_path(self, db_path: str) -> bool:
+        """Check if path indicates a MotherDuck connection."""
+        return (
+            db_path.startswith("md:") 
+            or db_path.startswith("motherduck:")
+            or "/md:" in db_path 
+            or "/motherduck:" in db_path
+        )
+
     def connect(self) -> None:
         """Establish connection to DuckDB database or MotherDuck."""
         db_path = self.config.path or ":memory:"
+        db_path = self._extract_motherduck_path(db_path)
         
         # Check if this is a MotherDuck connection
-        if db_path.startswith("md:") or db_path.startswith("motherduck:"):
+        if self._is_motherduck_path(db_path):
             # Extract database name from path (e.g., "md:my_db" -> "my_db")
             # Remove prefix and query parameters
             clean_path = db_path.split("?")[0]
@@ -160,7 +201,9 @@ class DuckDBAdapter(DatabaseAdapter):
             self.connection.close()
             self.connection = None
             db_path = self.config.path or ":memory:"
-            if db_path.startswith("md:") or db_path.startswith("motherduck:"):
+            db_path = self._extract_motherduck_path(db_path)
+            
+            if self._is_motherduck_path(db_path):
                 safe_path = db_path.split("?")[0] if "?" in db_path else db_path
                 self.logger.info(f"Disconnected from MotherDuck database: {safe_path}")
             else:

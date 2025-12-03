@@ -190,3 +190,87 @@ class TestMotherDuckConnection:
         assert connection_md.startswith("md:")
         assert connection_motherduck.startswith("motherduck:")
 
+
+class TestMotherDuckPathExtraction:
+    """Test MotherDuck path extraction helper methods."""
+
+    def test_extract_motherduck_path_direct_md(self):
+        """Test extracting MotherDuck path from direct md: path."""
+        adapter = DuckDBAdapter({"type": "duckdb", "path": "md:test_db"})
+        result = adapter._extract_motherduck_path("md:test_db")
+        assert result == "md:test_db"
+
+    def test_extract_motherduck_path_direct_motherduck(self):
+        """Test extracting MotherDuck path from direct motherduck: path."""
+        adapter = DuckDBAdapter({"type": "duckdb", "path": "motherduck:test_db"})
+        result = adapter._extract_motherduck_path("motherduck:test_db")
+        assert result == "motherduck:test_db"
+
+    def test_extract_motherduck_path_resolved_absolute(self):
+        """Test extracting MotherDuck path from resolved absolute path."""
+        adapter = DuckDBAdapter({"type": "duckdb", "path": "md:test_db"})
+        resolved_path = "/home/user/project/md:test_db"
+        result = adapter._extract_motherduck_path(resolved_path)
+        assert result == "md:test_db"
+
+    def test_extract_motherduck_path_resolved_with_query(self):
+        """Test extracting MotherDuck path from resolved path with query parameters."""
+        adapter = DuckDBAdapter({"type": "duckdb", "path": "md:test_db"})
+        resolved_path = "/home/user/project/md:test_db?motherduck_token=abc123"
+        result = adapter._extract_motherduck_path(resolved_path)
+        assert result == "md:test_db?motherduck_token=abc123"
+
+    def test_extract_motherduck_path_non_motherduck(self):
+        """Test that non-MotherDuck paths are returned unchanged."""
+        adapter = DuckDBAdapter({"type": "duckdb", "path": "data/test.db"})
+        result = adapter._extract_motherduck_path("data/test.db")
+        assert result == "data/test.db"
+
+    def test_extract_motherduck_path_memory(self):
+        """Test that :memory: path is returned unchanged."""
+        adapter = DuckDBAdapter({"type": "duckdb", "path": ":memory:"})
+        result = adapter._extract_motherduck_path(":memory:")
+        assert result == ":memory:"
+
+    def test_extract_motherduck_path_resolved_motherduck_prefix(self):
+        """Test extracting MotherDuck path with motherduck: prefix in resolved path."""
+        adapter = DuckDBAdapter({"type": "duckdb", "path": "motherduck:test_db"})
+        resolved_path = "/home/user/project/motherduck:test_db"
+        result = adapter._extract_motherduck_path(resolved_path)
+        assert result == "motherduck:test_db"
+
+    def test_is_motherduck_path_direct_md(self):
+        """Test detecting MotherDuck path with direct md: prefix."""
+        adapter = DuckDBAdapter({"type": "duckdb", "path": "md:test_db"})
+        assert adapter._is_motherduck_path("md:test_db") is True
+
+    def test_is_motherduck_path_direct_motherduck(self):
+        """Test detecting MotherDuck path with direct motherduck: prefix."""
+        adapter = DuckDBAdapter({"type": "duckdb", "path": "motherduck:test_db"})
+        assert adapter._is_motherduck_path("motherduck:test_db") is True
+
+    def test_is_motherduck_path_resolved_absolute(self):
+        """Test detecting MotherDuck path in resolved absolute path."""
+        adapter = DuckDBAdapter({"type": "duckdb", "path": "md:test_db"})
+        assert adapter._is_motherduck_path("/home/user/project/md:test_db") is True
+
+    def test_is_motherduck_path_resolved_motherduck_prefix(self):
+        """Test detecting MotherDuck path with motherduck: in resolved path."""
+        adapter = DuckDBAdapter({"type": "duckdb", "path": "motherduck:test_db"})
+        assert adapter._is_motherduck_path("/home/user/project/motherduck:test_db") is True
+
+    def test_is_motherduck_path_false_for_regular_path(self):
+        """Test that regular file paths return False."""
+        adapter = DuckDBAdapter({"type": "duckdb", "path": "data/test.db"})
+        assert adapter._is_motherduck_path("data/test.db") is False
+
+    def test_is_motherduck_path_false_for_memory(self):
+        """Test that :memory: path returns False."""
+        adapter = DuckDBAdapter({"type": "duckdb", "path": ":memory:"})
+        assert adapter._is_motherduck_path(":memory:") is False
+
+    def test_is_motherduck_path_false_for_absolute_file_path(self):
+        """Test that absolute file paths return False."""
+        adapter = DuckDBAdapter({"type": "duckdb", "path": "/home/user/data.db"})
+        assert adapter._is_motherduck_path("/home/user/data.db") is False
+
