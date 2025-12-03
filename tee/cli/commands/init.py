@@ -3,13 +3,14 @@ Init command implementation.
 """
 
 import shutil
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Literal
 
 import typer
 
 # Type alias for database type
-DatabaseType = Literal["duckdb", "snowflake", "postgresql", "bigquery"]
+DatabaseType = Literal["duckdb", "snowflake", "postgresql", "bigquery", "motherduck"]
 
 
 def _get_default_connection_config(db_type: str, project_name: str) -> dict[str, Any]:
@@ -25,13 +26,13 @@ def _get_default_connection_config(db_type: str, project_name: str) -> dict[str,
     """
     db_type_lower = db_type.lower()
 
-    if db_type_lower == "duckdb":
-        return {
+    # Database type configuration factory functions
+    config_factories: dict[str, Callable[[str], dict[str, Any]]] = {
+        "duckdb": lambda name: {
             "type": "duckdb",
-            "path": f"data/{project_name}.duckdb",
-        }
-    elif db_type_lower == "snowflake":
-        return {
+            "path": f"data/{name}.duckdb",
+        },
+        "snowflake": lambda _: {
             "type": "snowflake",
             "host": "YOUR_ACCOUNT.snowflakecomputing.com",
             "user": "YOUR_USERNAME",
@@ -39,27 +40,36 @@ def _get_default_connection_config(db_type: str, project_name: str) -> dict[str,
             "role": "YOUR_ROLE",
             "warehouse": "YOUR_WAREHOUSE",
             "database": "YOUR_DATABASE",
-        }
-    elif db_type_lower == "postgresql":
-        return {
+        },
+        "postgresql": lambda name: {
             "type": "postgresql",
             "host": "localhost",
             "port": 5432,
-            "database": project_name,
+            "database": name,
             "user": "postgres",
             "password": "postgres",
-        }
-    elif db_type_lower == "bigquery":
-        return {
+        },
+        "bigquery": lambda name: {
             "type": "bigquery",
             "project": "YOUR_PROJECT_ID",
-            "database": project_name,  # dataset name
-        }
-    else:
-        # Generic fallback
-        return {
-            "type": db_type_lower,
-        }
+            "database": name,  # dataset name
+        },
+        "motherduck": lambda name: {
+            "type": "duckdb",
+            "path": f"md:{name}",
+            "database": name,
+            "schema": "main",
+        },
+    }
+
+    factory = config_factories.get(db_type_lower)
+    if factory:
+        return factory(project_name)
+
+    # Generic fallback
+    return {
+        "type": db_type_lower,
+    }
 
 
 def _generate_project_toml(project_name: str, db_type: str) -> str:
@@ -89,7 +99,18 @@ def _generate_project_toml(project_name: str, db_type: str) -> str:
     toml_content = f'''project_folder = "{project_name}"
 
 [connection]
-{connection_section}
+{connection_section}'''
+
+    # Add extra section for motherduck token
+    if db_type.lower() == "motherduck":
+        toml_content += '''
+
+[connection.extra]
+# MotherDuck access token (recommended: use MOTHERDUCK_TOKEN environment variable instead)
+# motherduck_token = "your_motherduck_access_token_here"
+'''
+
+    toml_content += '''
 
 [flags]
 materialization_change_behavior = "warn"  # Options: "warn", "error", "ignore"

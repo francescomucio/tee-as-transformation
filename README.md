@@ -90,6 +90,7 @@ uv run t4t init my_project
 uv run t4t init my_project -d snowflake
 uv run t4t init my_project -d postgresql
 uv run t4t init my_project -d bigquery
+uv run t4t init my_project -d motherduck
 ```
 
 The `init` command creates:
@@ -108,6 +109,7 @@ project_folder = "my_project"
 # For Snowflake: type, host, user, password, role, warehouse, database
 # For PostgreSQL: type, host, port, database, user, password
 # For BigQuery: type, project, database
+# For MotherDuck: type, path (md:database_name), database, schema
 
 [flags]
 materialization_change_behavior = "warn"  # Options: "warn", "error", "ignore"

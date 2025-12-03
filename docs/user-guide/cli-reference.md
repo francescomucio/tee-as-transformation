@@ -55,7 +55,7 @@ t4t init <project_name> [--database-type <type>]
 
 **Options:**
 - `-d, --database-type <type>` - Database type (default: `duckdb`)
-  - Supported: `duckdb`, `snowflake`, `postgresql`, `bigquery`
+  - Supported: `duckdb`, `snowflake`, `postgresql`, `bigquery`, `motherduck`
 
 **Examples:**
 ```bash
@@ -70,6 +70,9 @@ t4t init my_project -d postgresql
 
 # Initialize with BigQuery
 t4t init my_project -d bigquery
+
+# Initialize with MotherDuck
+t4t init my_project -d motherduck
 ```
 
 **What it creates:**
@@ -77,6 +80,27 @@ t4t init my_project -d bigquery
 - `project.toml` configuration file with database connection template
 - Default directories: `models/`, `tests/`, `seeds/`
 - `data/` directory (for DuckDB projects only)
+
+**MotherDuck Configuration:**
+When using `-d motherduck`, the generated `project.toml` includes:
+```toml
+project_folder = "my_project"
+
+[connection]
+type = "duckdb"
+path = "md:my_project"
+database = "my_project"
+schema = "main"
+
+[connection.extra]
+# MotherDuck access token (recommended: use MOTHERDUCK_TOKEN environment variable instead)
+# motherduck_token = "your_motherduck_access_token_here"
+
+[flags]
+materialization_change_behavior = "warn"
+```
+
+**Note:** For MotherDuck authentication, set the `MOTHERDUCK_TOKEN` environment variable (recommended) or uncomment and set `motherduck_token` in the `[connection.extra]` section.
 
 **Generated `project.toml` structure:**
 ```toml

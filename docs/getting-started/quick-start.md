@@ -10,6 +10,9 @@ uv run t4t init my_tee_project
 
 # Or specify a database type
 uv run t4t init my_tee_project -d snowflake
+
+# Initialize with MotherDuck (cloud DuckDB)
+uv run t4t init my_tee_project -d motherduck
 ```
 
 This creates the project structure with:
@@ -76,6 +79,24 @@ password = "postgres"
 type = "bigquery"
 project = "YOUR_PROJECT_ID"
 database = "my_tee_project"  # dataset name
+```
+
+**MotherDuck:**
+```toml
+[connection]
+type = "duckdb"
+path = "md:my_tee_project"
+database = "my_tee_project"
+schema = "main"
+
+[connection.extra]
+# MotherDuck access token (recommended: use MOTHERDUCK_TOKEN environment variable instead)
+# motherduck_token = "your_motherduck_access_token_here"
+```
+
+**Note:** For MotherDuck, set your access token via the `MOTHERDUCK_TOKEN` environment variable:
+```bash
+export MOTHERDUCK_TOKEN='your_access_token_here'
 ```
 
 ## 3. Create Your First Model

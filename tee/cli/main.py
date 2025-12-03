@@ -25,7 +25,7 @@ from tee.cli.commands import ots as ots_commands
 
 # Type aliases for better type safety and IDE support
 OutputFormat = Literal["json", "yaml"]
-DatabaseType = Literal["duckdb", "snowflake", "postgresql", "bigquery"]
+DatabaseType = Literal["duckdb", "snowflake", "postgresql", "bigquery", "motherduck"]
 
 
 class AlphabeticalOrderGroup(typer.core.TyperGroup):
@@ -48,12 +48,15 @@ def validate_format(value: str) -> OutputFormat:
 def validate_database_type(value: str) -> DatabaseType:
     """Validate database type option."""
     db_type = value.lower()
+    # MotherDuck uses the duckdb adapter, so we need to handle it specially
+    if db_type == "motherduck":
+        return db_type  # type: ignore[return-value]
     if not is_adapter_supported(db_type):
         available = ", ".join(sorted(list_available_adapters()))
         raise typer.BadParameter(
             typer.style("Error: ", fg=typer.colors.RED, bold=True)
             + f"Unsupported database type '{db_type}'. "
-            f"Supported: {available}"
+            f"Supported: {available}, motherduck"
         )
     return db_type  # type: ignore[return-value]
 
@@ -198,7 +201,7 @@ def init(
         "duckdb",
         "-d",
         "--database-type",
-        help="Database type (duckdb, snowflake, postgresql, bigquery)",
+        help="Database type (duckdb, snowflake, postgresql, bigquery, motherduck)",
         callback=validate_database_type,
     ),
 ) -> None:
