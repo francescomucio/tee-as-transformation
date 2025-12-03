@@ -8,7 +8,13 @@ This module provides PostgreSQL-specific functionality including:
 - Materialization support
 """
 
+import uuid
 from typing import Any
+
+try:
+    import psycopg2.extensions
+except ImportError:
+    psycopg2 = None
 
 from tee.adapters.base import AdapterConfig, DatabaseAdapter, MaterializationType
 from tee.adapters.registry import register_adapter
@@ -220,19 +226,37 @@ class PostgreSQLAdapter(DatabaseAdapter):
             raise
 
     def table_exists(self, table_name: str) -> bool:
-        """Check if a table exists in the database."""
+        """Check if a table or view exists in the database."""
         if not self.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
 
         try:
+            # Extract schema and table name
+            if "." in table_name:
+                parts = table_name.split(".", 1)
+                schema_name = parts[0]
+                table_name_only = parts[1]
+            else:
+                schema_name = self.config.schema or "public"
+                table_name_only = table_name
+
             cursor = self.connection.cursor()
+            # Check both tables and views (like Snowflake)
             cursor.execute(
-                "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = %s)",
-                [table_name],
+                """
+                SELECT COUNT(*) FROM (
+                    SELECT table_name FROM information_schema.tables 
+                    WHERE table_schema = %s AND table_name = %s
+                    UNION ALL
+                    SELECT table_name FROM information_schema.views 
+                    WHERE table_schema = %s AND table_name = %s
+                )
+                """,
+                (schema_name, table_name_only, schema_name, table_name_only),
             )
             result = cursor.fetchone()
             cursor.close()
-            return result[0] if result else False
+            return result[0] > 0 if result else False
         except Exception:
             return False
 
@@ -257,17 +281,26 @@ class PostgreSQLAdapter(DatabaseAdapter):
             raise RuntimeError("Not connected to database. Call connect() first.")
 
         try:
+            # Extract schema and table name
+            if "." in table_name:
+                parts = table_name.split(".", 1)
+                schema_name = parts[0]
+                table_name_only = parts[1]
+            else:
+                schema_name = self.config.schema or "public"
+                table_name_only = table_name
+
             cursor = self.connection.cursor()
 
-            # Get table schema
+            # Get table schema (filter by schema like Snowflake)
             cursor.execute(
                 """
                 SELECT column_name, data_type 
                 FROM information_schema.columns 
-                WHERE table_name = %s
+                WHERE table_schema = %s AND table_name = %s
                 ORDER BY ordinal_position
             """,
-                [table_name],
+                (schema_name, table_name_only),
             )
             schema_result = cursor.fetchall()
 
@@ -286,19 +319,91 @@ class PostgreSQLAdapter(DatabaseAdapter):
             raise
 
     def describe_query_schema(self, sql_query: str) -> list[dict[str, Any]]:
-        """Infer schema from SQL query output using PostgreSQL EXPLAIN."""
-        # TODO: Implement PostgreSQL-specific schema inference
-        raise NotImplementedError("describe_query_schema not yet implemented for PostgreSQL")
+        """Infer schema from SQL query output using PostgreSQL temporary table."""
+        if not self.connection:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+
+        import uuid
+
+        # Use temporary table approach for accurate type information (similar to Snowflake)
+        temp_table_name = f"temp_schema_infer_{uuid.uuid4().hex[:8]}"
+
+        try:
+            cursor = self.connection.cursor()
+            # Create temporary table with LIMIT 0 to get schema without data
+            create_temp_sql = f"CREATE TEMP TABLE {temp_table_name} AS {sql_query} LIMIT 0"
+            cursor.execute(create_temp_sql)
+
+            # Query information_schema to get column types
+            cursor.execute(
+                """
+                SELECT column_name, data_type 
+                FROM information_schema.columns 
+                WHERE table_name = %s
+                ORDER BY ordinal_position
+                """,
+                (temp_table_name,),
+            )
+            result = cursor.fetchall()
+
+            # Convert to standard format: [{"name": "...", "type": "..."}]
+            schema = []
+            for row in result:
+                schema.append({"name": row[0], "type": row[1]})
+
+            # Drop temporary table
+            cursor.execute(f"DROP TABLE IF EXISTS {temp_table_name}")
+            self.connection.commit()
+            cursor.close()
+
+            return schema
+        except Exception as e:
+            # Cleanup on error
+            try:
+                if self.connection:
+                    cursor = self.connection.cursor()
+                    cursor.execute(f"DROP TABLE IF EXISTS {temp_table_name}")
+                    self.connection.commit()
+                    cursor.close()
+            except Exception:
+                pass
+            self.logger.error(f"Error describing query schema: {e}")
+            raise
 
     def add_column(self, table_name: str, column: dict[str, Any]) -> None:
         """Add a column to an existing table."""
-        # TODO: Implement PostgreSQL-specific column addition
-        raise NotImplementedError("add_column not yet implemented for PostgreSQL")
+        if not self.connection:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+
+        column_name = column["name"]
+        column_type = column.get("type", "VARCHAR")
+
+        try:
+            ddl = f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}"
+            cursor = self.connection.cursor()
+            cursor.execute(ddl)
+            self.connection.commit()
+            cursor.close()
+            self.logger.info(f"Added column {column_name} to {table_name}")
+        except Exception as e:
+            self.logger.error(f"Error adding column {column_name} to {table_name}: {e}")
+            raise
 
     def drop_column(self, table_name: str, column_name: str) -> None:
         """Drop a column from an existing table."""
-        # TODO: Implement PostgreSQL-specific column dropping
-        raise NotImplementedError("drop_column not yet implemented for PostgreSQL")
+        if not self.connection:
+            raise RuntimeError("Not connected to database. Call connect() first.")
+
+        try:
+            ddl = f"ALTER TABLE {table_name} DROP COLUMN {column_name}"
+            cursor = self.connection.cursor()
+            cursor.execute(ddl)
+            self.connection.commit()
+            cursor.close()
+            self.logger.info(f"Dropped column {column_name} from {table_name}")
+        except Exception as e:
+            self.logger.error(f"Error dropping column {column_name} from {table_name}: {e}")
+            raise
 
     def create_function(
         self,

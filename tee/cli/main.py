@@ -13,6 +13,7 @@ from tee.cli.commands import (
     cmd_build,
     cmd_compile,
     cmd_debug,
+    cmd_docs,
     cmd_help,
     cmd_import,
     cmd_init,
@@ -226,6 +227,26 @@ def compile(
         vars=vars,
         verbose=verbose,
         format=format,
+    )
+
+
+@app.command()
+def docs(
+    ctx: typer.Context,
+    project_folder: str | None = PROJECT_FOLDER_ARG,
+    vars: str | None = VARS_OPTION,
+    verbose: bool = VERBOSE_OPTION,
+    output_dir: str | None = typer.Option(
+        None, "-o", "--output-dir", help="Output directory for docs (default: output/docs)"
+    ),
+) -> None:
+    """Generate static documentation site with dependency graph."""
+    _check_required_argument(ctx, "project_folder", project_folder)
+    cmd_docs(
+        project_folder=project_folder,
+        vars=vars,
+        verbose=verbose,
+        output_dir=output_dir,
     )
 
 

@@ -487,6 +487,73 @@ t4t compile ./my_project --vars '{"env": "prod"}'
 
 ---
 
+### `docs` - Generate Documentation Site
+
+Generate an interactive static HTML documentation site with dependency graph visualization, similar to dbt docs.
+
+**Usage:**
+```bash
+t4t docs <project_folder> [options]
+```
+
+**Arguments:**
+- `project_folder` (required) - Path to the project folder containing `project.toml`
+
+**Options:**
+- `-v, --verbose` - Enable verbose output
+- `--vars <JSON>` - Variables to pass to models (JSON format)
+- `-o, --output-dir <path>` - Output directory for docs (default: `output/docs`)
+
+**Examples:**
+```bash
+# Generate docs in default location (output/docs)
+t4t docs ./my_project
+
+# Generate docs in custom location
+t4t docs ./my_project --output-dir ./documentation
+
+# Generate docs with variables
+t4t docs ./my_project --vars '{"env": "prod"}'
+```
+
+**What it does:**
+1. Parses all SQL/Python models in the `models/` directory
+2. Discovers and parses functions (UDFs)
+3. Builds dependency graph showing relationships between models, functions, and tests
+4. Generates static HTML documentation site with:
+   - Interactive dependency graph visualization
+   - Sidebar navigation tree
+   - Model detail pages with SQL code (original and compiled)
+   - Clickable dependencies and dependents
+   - Test information
+   - Schema definitions
+
+**Output:**
+- Static HTML files in `output/docs/` (or custom output directory)
+- `index.html` - Main interactive documentation page
+- `model_*.html` - Individual model detail pages
+- `graph_data.json` - Graph data for interactive features
+
+**Features:**
+- **Interactive Graph**: Click nodes to filter, double-click to navigate to detail pages
+- **Sidebar Navigation**: Collapsible tree view organized by schema
+- **Filtering**: Filter by model name, schema, or type using dbt-style patterns
+- **Legend Toggle**: Show/hide different object types (tables, views, functions, tests)
+- **Highlighting**: Selected nodes and their dependencies/dependents are highlighted
+- **Responsive Design**: Works on different screen sizes
+
+**Opening the Documentation:**
+```bash
+# After generation, open in browser
+open output/docs/index.html  # macOS
+xdg-open output/docs/index.html  # Linux
+start output/docs/index.html  # Windows
+```
+
+**Note:** The documentation site is completely static and can be served from any web server or opened directly in a browser. No server-side processing is required.
+
+---
+
 ### `ots` - OTS Module Commands
 
 Commands for working with Open Transformation Specification (OTS) modules.

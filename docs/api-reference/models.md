@@ -113,18 +113,80 @@ create_model(
 )
 ```
 
+## SqlModelMetadata (Auto-Instantiation)
+
+### Automatic Model Creation from Metadata
+
+For Python files that define a `metadata` variable and have a companion `.sql` file, t4t can automatically instantiate `SqlModelMetadata` without requiring explicit instantiation.
+
+**Usage:**
+
+```python
+# models/my_schema/my_view.py
+from tee.typing.metadata import ModelMetadata
+
+metadata: ModelMetadata = {
+    "materialization": "view",
+    "schema": [
+        {"name": "id", "datatype": "number", "description": "ID column"}
+    ]
+}
+
+# No explicit 'model = SqlModelMetadata(metadata)' needed!
+# t4t will automatically detect and instantiate it
+```
+
+**Companion SQL file:**
+```sql
+-- models/my_schema/my_view.sql
+SELECT id, name FROM my_schema.my_first_table
+```
+
+**How it works:**
+1. The parser detects a `metadata` variable in the Python file
+2. Checks if a companion `.sql` file exists (same name, different extension)
+3. If both conditions are met and no model was already registered from this file, automatically instantiates `SqlModelMetadata`
+4. The model is registered and ready to use
+
+**Error Handling:**
+- **Model conflicts**: If a model with the same name already exists from a different file, a warning is logged
+- **SQL parsing errors**: If the companion SQL file has invalid syntax, a warning is logged
+- **Other errors**: Logged at debug level (expected in some cases)
+
+**When to use:**
+- You have companion `.py` and `.sql` files
+- You want the simplest possible syntax (just define `metadata`)
+- You prefer separating SQL code from Python metadata
+
+**Explicit instantiation still works:**
+If you prefer explicit control, you can still use:
+```python
+from tee.parser.processing.model_builder import SqlModelMetadata
+
+metadata: ModelMetadata = {...}
+model = SqlModelMetadata(metadata)  # Explicit instantiation
+```
+
 ## When to Use Each
 
 ### Use `@model` decorator when:
 - Each model has unique logic or complex transformations
 - You need fine-grained control over individual models
 - Models have different patterns or structures
+- SQL is generated dynamically in Python
 
 ### Use `create_model()` when:
 - You have many similar models that follow a pattern
 - You want to reduce code repetition
 - Models can be generated from a list or configuration
 - You're creating staging or intermediate tables with similar structures
+- SQL is embedded in Python code
+
+### Use `SqlModelMetadata` (auto-instantiation) when:
+- You have companion `.py` and `.sql` files
+- You want the simplest syntax (just define `metadata`)
+- You prefer separating SQL code from Python metadata
+- SQL is in a separate `.sql` file
 
 ## Model Metadata
 

@@ -1,0 +1,135 @@
+{% extends "interactive_base.html" %}
+
+{% block title %}{{ model_name }} - t4t Documentation{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto; padding: 32px; background: #f8f9fa; min-height: 100vh;">
+    <div style="margin-bottom: 24px;">
+        <a href="index.html" style="color: #2563eb; text-decoration: none; font-size: 14px;">← Back to Documentation</a>
+    </div>
+
+    <h1 style="font-size: 32px; font-weight: 600; color: #1f2937; margin-bottom: 24px;">{{ model_name }}</h1>
+
+    <div style="margin-bottom: 24px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+        <span style="display: inline-block; padding: 6px 12px; border-radius: 6px; font-size: 14px; font-weight: 500; background: #3b82f6; color: white;">{{ materialization }}</span>
+        <span style="color: #6b7280; font-size: 14px; font-family: 'JetBrains Mono', monospace;">{{ file_path }}</span>
+    </div>
+
+    <div style="background: #ffffff; padding: 16px; border-left: 4px solid #3b82f6; margin-bottom: 32px; border-radius: 6px;">
+        <p style="color: #1f2937; margin: 0;">{{ description }}</p>
+    </div>
+
+    {% if original_sql or resolved_sql %}
+    <h3 style="font-size: 20px; font-weight: 600; color: #1f2937; margin-top: 32px; margin-bottom: 16px;">SQL Code</h3>
+    
+    {% if original_sql %}
+    <div style="margin-bottom: 24px;">
+        <h4 style="font-size: 18px; font-weight: 500; color: #1f2937; margin-bottom: 8px;">Original SQL</h4>
+        <pre style="background: #f1f5f9; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 14px; line-height: 1.5; color: #0f172a;"><code>{{ original_sql }}</code></pre>
+    </div>
+    {% endif %}
+    
+    {% if resolved_sql and resolved_sql != original_sql %}
+    <div style="margin-bottom: 24px;">
+        <h4 style="font-size: 18px; font-weight: 500; color: #1f2937; margin-bottom: 8px;">Compiled SQL</h4>
+        <pre style="background: #f1f5f9; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 14px; line-height: 1.5; color: #0f172a;"><code>{{ resolved_sql }}</code></pre>
+    </div>
+    {% elif resolved_sql %}
+    <div style="margin-bottom: 24px;">
+        <h4 style="font-size: 18px; font-weight: 500; color: #1f2937; margin-bottom: 8px;">SQL</h4>
+        <pre style="background: #f1f5f9; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 14px; line-height: 1.5; color: #0f172a;"><code>{{ resolved_sql }}</code></pre>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if schema %}
+    <h3 style="font-size: 20px; font-weight: 600; color: #1f2937; margin-top: 32px; margin-bottom: 16px;">Schema</h3>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 16px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+        <thead>
+            <tr style="background: #f8f9fa;">
+                <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #1f2937; border-bottom: 1px solid #e5e7eb;">Column</th>
+                <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #1f2937; border-bottom: 1px solid #e5e7eb;">Type</th>
+                <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #1f2937; border-bottom: 1px solid #e5e7eb;">Description</th>
+                <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #1f2937; border-bottom: 1px solid #e5e7eb;">Tests</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for col in schema %}
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 12px 16px; color: #1f2937;"><strong>{{ col.name }}</strong></td>
+                <td style="padding: 12px 16px; color: #1f2937;"><code style="background: #f1f5f9; padding: 2px 6px; border-radius: 3px; font-family: 'JetBrains Mono', monospace; font-size: 14px;">{{ col.datatype }}</code></td>
+                <td style="padding: 12px 16px; color: #6b7280;">{% if col.description %}{{ col.description }}{% else %}<em>No description</em>{% endif %}</td>
+                <td style="padding: 12px 16px;">
+                    {% for test in col.tests %}
+                    <span style="display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; background: #6b7280; color: white; margin-right: 4px;">{{ test }}</span>
+                    {% endfor %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if dependencies %}
+    <h3 style="font-size: 20px; font-weight: 600; color: #1f2937; margin-top: 32px; margin-bottom: 16px;">Dependencies (Ancestors)</h3>
+    <ul style="list-style: none; padding-left: 0; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+        {% for dep in dependencies %}
+        <li style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; {% if loop.last %}border-bottom: none;{% endif %}">
+            {% if dep.is_model %}
+            <a href="model_{{ dep.safe_name }}.html" style="color: #2563eb; text-decoration: none; font-weight: 500;">{{ dep.name }}</a>
+            {% else %}
+            <span style="color: #1f2937;">{{ dep.name }}</span>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if dependents %}
+    <h3 style="font-size: 20px; font-weight: 600; color: #1f2937; margin-top: 32px; margin-bottom: 16px;">Dependents (Descendants)</h3>
+    <ul style="list-style: none; padding-left: 0; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+        {% for dep in dependents %}
+        <li style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; {% if loop.last %}border-bottom: none;{% endif %}">
+            {% if dep.is_model %}
+            <a href="model_{{ dep.safe_name }}.html" style="color: #2563eb; text-decoration: none; font-weight: 500;">{{ dep.name }}</a>
+            {% else %}
+            <span style="color: #1f2937;">{{ dep.name }}</span>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if tests %}
+    <h3 style="font-size: 20px; font-weight: 600; color: #1f2937; margin-top: 32px; margin-bottom: 16px;">Tests</h3>
+    <ul style="list-style: none; padding-left: 0; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+        {% for test in tests %}
+        <li style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; {% if loop.last %}border-bottom: none;{% endif %}">
+            {% set test_safe_name = test.name.replace(':', '_').replace('.', '_') %}
+            <a href="model_{{ test_safe_name }}.html" style="color: #2563eb; text-decoration: none;">
+                <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 3px; font-family: 'JetBrains Mono', monospace; font-size: 14px;">{{ test.name }}</code>
+            </a>
+            {% if test.params %}<span style="color: #6b7280; font-size: 14px;">({{ test.params_json }})</span>{% endif %}
+            <span style="display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; background: #6b7280; color: white; margin-left: 8px;">{{ test.severity }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if incremental %}
+    <h3 style="font-size: 20px; font-weight: 600; color: #1f2937; margin-top: 32px; margin-bottom: 16px;">Incremental Configuration</h3>
+    <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px;">
+        <ul style="list-style: none; padding-left: 0; margin: 0;">
+            <li style="padding: 8px 0; color: #1f2937;"><strong>Strategy:</strong> <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 3px; font-family: 'JetBrains Mono', monospace;">{{ incremental.strategy }}</code></li>
+            {% if incremental.unique_key %}
+            <li style="padding: 8px 0; color: #1f2937;"><strong>Unique Key:</strong> {{ incremental.unique_key | join(", ") }}</li>
+            {% endif %}
+            {% if incremental.merge_key %}
+            <li style="padding: 8px 0; color: #1f2937;"><strong>Merge Key:</strong> {{ incremental.merge_key | join(", ") }}</li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

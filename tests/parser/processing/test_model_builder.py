@@ -793,3 +793,261 @@ with open(result_file, 'w') as f:
         assert "spaces" in results.get("table_name", "") or "model" in results.get("table_name", "")
         assert results["caller_file"] != "None"
 
+    def test_auto_instantiation_of_metadata_variable(self, tmp_path):
+        """Test that PythonParser auto-instantiates SqlModelMetadata when metadata variable exists."""
+        from tee.parser.parsers.python_parser import PythonParser
+        from tee.parser.shared.registry import ModelRegistry
+
+        py_file = tmp_path / "auto_metadata.py"
+        sql_file = tmp_path / "auto_metadata.sql"
+
+        sql_file.write_text("SELECT 1 as id, 'test' as name")
+
+        # Create Python file with ONLY metadata variable (no explicit SqlModelMetadata instantiation)
+        py_content = """
+from tee.typing.metadata import ModelMetadata
+
+metadata: ModelMetadata = {
+    "schema": [
+        {"name": "id", "datatype": "number", "description": "ID column"},
+        {"name": "name", "datatype": "string", "description": "Name column"}
+    ],
+    "materialization": "table"
+}
+
+# Note: No explicit 'model = SqlModelMetadata(metadata)' line
+# PythonParser should auto-instantiate it
+"""
+
+        py_file.write_text(py_content)
+
+        # Parse using PythonParser
+        parser = PythonParser()
+        file_path_abs = str(py_file.absolute())
+        parsed_models = parser.parse(py_content, file_path=file_path_abs)
+
+        # Verify that the model was auto-registered
+        all_registered = ModelRegistry.get_all()
+        assert len(all_registered) > 0, "No models registered after auto-instantiation"
+        
+        # Find the model registered from our file
+        registered_model = None
+        for table_name, model_data in all_registered.items():
+            if table_name == "auto_metadata":
+                registered_model = model_data
+                break
+        
+        assert registered_model is not None, \
+            f"Model 'auto_metadata' not found in registry. Available: {list(all_registered.keys())}"
+
+        # Verify the model structure
+        assert registered_model["model_metadata"]["table_name"] == "auto_metadata"
+        
+        # Verify metadata is preserved
+        metadata = registered_model["model_metadata"].get("metadata", {})
+        assert metadata.get("materialization") == "table"
+        assert len(metadata.get("schema", [])) == 2
+
+        # Verify PythonParser returns the model
+        assert len(parsed_models) > 0, "PythonParser should return the auto-registered model"
+        assert "auto_metadata" in parsed_models, "Model should be in parsed_models dict"
+
+    def test_auto_instantiation_skips_if_already_registered(self, tmp_path):
+        """Test that auto-instantiation doesn't double-register if user explicitly instantiates."""
+        from tee.parser.parsers.python_parser import PythonParser
+        from tee.parser.shared.registry import ModelRegistry
+
+        py_file = tmp_path / "explicit_instantiation.py"
+        sql_file = tmp_path / "explicit_instantiation.sql"
+
+        sql_file.write_text("SELECT 1 as id")
+
+        # Create Python file with BOTH metadata variable AND explicit SqlModelMetadata instantiation
+        py_content = """
+from tee.parser.processing.model_builder import SqlModelMetadata
+from tee.typing.metadata import ModelMetadata
+
+metadata: ModelMetadata = {
+    "schema": [{"name": "id", "datatype": "number"}]
+}
+
+# User explicitly instantiates - auto-instantiation should skip
+model = SqlModelMetadata(metadata)
+"""
+
+        py_file.write_text(py_content)
+
+        # Parse using PythonParser
+        parser = PythonParser()
+        file_path_abs = str(py_file.absolute())
+        parsed_models = parser.parse(py_content, file_path=file_path_abs)
+
+        # Verify that only ONE model was registered (not double-registered)
+        all_registered = ModelRegistry.get_all()
+        explicit_models = [
+            name for name, data in all_registered.items()
+            if data.get("model_metadata", {}).get("table_name") == "explicit_instantiation"
+        ]
+        
+        assert len(explicit_models) == 1, \
+            f"Expected exactly 1 model, but found {len(explicit_models)}: {explicit_models}"
+
+    def test_auto_instantiation_requires_companion_sql_file(self, tmp_path):
+        """Test that auto-instantiation only works when companion SQL file exists."""
+        from tee.parser.parsers.python_parser import PythonParser
+        from tee.parser.shared.registry import ModelRegistry
+
+        py_file = tmp_path / "no_sql_companion.py"
+        # Intentionally don't create the SQL file
+
+        py_content = """
+from tee.typing.metadata import ModelMetadata
+
+metadata: ModelMetadata = {
+    "schema": [{"name": "id", "datatype": "number"}]
+}
+"""
+
+        py_file.write_text(py_content)
+
+        # Parse using PythonParser
+        parser = PythonParser()
+        file_path_abs = str(py_file.absolute())
+        parsed_models = parser.parse(py_content, file_path=file_path_abs)
+
+        # Verify that NO model was registered (no SQL file = no auto-instantiation)
+        all_registered = ModelRegistry.get_all()
+        no_sql_models = [
+            name for name, data in all_registered.items()
+            if data.get("model_metadata", {}).get("table_name") == "no_sql_companion"
+        ]
+        
+        assert len(no_sql_models) == 0, \
+            f"Expected no model to be registered without SQL file, but found: {no_sql_models}"
+
+    def test_auto_instantiation_with_view_materialization(self, tmp_path):
+        """Test that auto-instantiation works with view materialization."""
+        from tee.parser.parsers.python_parser import PythonParser
+        from tee.parser.shared.registry import ModelRegistry
+
+        py_file = tmp_path / "auto_view.py"
+        sql_file = tmp_path / "auto_view.sql"
+
+        sql_file.write_text("SELECT 1 as id FROM my_schema.my_first_table")
+
+        py_content = """
+from tee.typing.metadata import ModelMetadata
+
+metadata: ModelMetadata = {
+    "materialization": "view"
+}
+"""
+
+        py_file.write_text(py_content)
+
+        # Parse using PythonParser
+        parser = PythonParser()
+        file_path_abs = str(py_file.absolute())
+        parsed_models = parser.parse(py_content, file_path=file_path_abs)
+
+        # Verify that the model was auto-registered
+        all_registered = ModelRegistry.get_all()
+        registered_model = all_registered.get("auto_view")
+        
+        assert registered_model is not None, "Model should be auto-registered"
+        
+        # Verify materialization is preserved
+        metadata = registered_model["model_metadata"].get("metadata", {})
+        assert metadata.get("materialization") == "view"
+
+    def test_auto_instantiation_handles_model_conflict_error(self, tmp_path, caplog):
+        """Test that auto-instantiation logs ModelConflictError as warning."""
+        from tee.parser.parsers.python_parser import PythonParser
+        from tee.parser.shared.registry import ModelRegistry
+
+        # First, register a model with a specific name
+        # Use a shared table name to ensure conflict
+        py_file1 = tmp_path / "conflict_model.py"
+        sql_file1 = tmp_path / "conflict_model.sql"
+        sql_file1.write_text("SELECT 1 as id")
+        
+        py_content1 = """
+from tee.parser.processing.model_builder import SqlModelMetadata
+from tee.typing.metadata import ModelMetadata
+
+metadata: ModelMetadata = {
+    "schema": [{"name": "id", "datatype": "number"}]
+}
+
+model = SqlModelMetadata(metadata)
+"""
+        py_file1.write_text(py_content1)
+        
+        # Register the first model
+        parser1 = PythonParser()
+        file_path_abs1 = str(py_file1.absolute())
+        parser1.parse(py_content1, file_path=file_path_abs1)
+        
+        # Verify first model was registered
+        all_registered = ModelRegistry.get_all()
+        assert "conflict_model" in all_registered, "First model should be registered"
+        
+        # Now create a second file with the SAME filename (same table name) but different path
+        # This will cause a conflict because table name is derived from filename
+        subdir = tmp_path / "subdir"
+        subdir.mkdir()
+        py_file2 = subdir / "conflict_model.py"  # Same filename = same table name
+        sql_file2 = subdir / "conflict_model.sql"
+        sql_file2.write_text("SELECT 2 as id")
+        
+        py_content2 = """
+from tee.typing.metadata import ModelMetadata
+
+metadata: ModelMetadata = {
+    "schema": [{"name": "id", "datatype": "number"}]
+}
+"""
+        py_file2.write_text(py_content2)
+        
+        # Parse the second file - should trigger auto-instantiation with conflict
+        parser2 = PythonParser()
+        file_path_abs2 = str(py_file2.absolute())
+        with caplog.at_level("WARNING"):
+            caplog.clear()
+            parser2.parse(py_content2, file_path=file_path_abs2)
+        
+        # Verify that a warning was logged about the conflict
+        warning_logs = [record.message for record in caplog.records if record.levelname == "WARNING"]
+        conflict_warnings = [msg for msg in warning_logs if "Model conflict" in msg or "conflict" in msg.lower()]
+        assert len(conflict_warnings) > 0, f"Expected warning about model conflict, but got: {warning_logs}"
+
+    def test_auto_instantiation_handles_sql_parsing_error(self, tmp_path, caplog):
+        """Test that auto-instantiation logs SQLParsingError as warning."""
+        from tee.parser.parsers.python_parser import PythonParser
+
+        py_file = tmp_path / "invalid_sql.py"
+        sql_file = tmp_path / "invalid_sql.sql"
+        
+        # Write invalid SQL that will cause parsing error
+        sql_file.write_text("SELECT FROM WHERE INVALID SQL SYNTAX")
+        
+        py_content = """
+from tee.typing.metadata import ModelMetadata
+
+metadata: ModelMetadata = {
+    "schema": [{"name": "id", "datatype": "number"}]
+}
+"""
+        py_file.write_text(py_content)
+        
+        # Parse the file - should trigger auto-instantiation with SQL parsing error
+        parser = PythonParser()
+        file_path_abs = str(py_file.absolute())
+        with caplog.at_level("WARNING"):
+            parser.parse(py_content, file_path=file_path_abs)
+        
+        # Verify that a warning was logged about the SQL parsing error
+        warning_logs = [record.message for record in caplog.records if record.levelname == "WARNING"]
+        sql_error_warnings = [msg for msg in warning_logs if "SQL parsing" in msg or "parsing error" in msg.lower()]
+        assert len(sql_error_warnings) > 0, f"Expected warning about SQL parsing error, but got: {warning_logs}"
+

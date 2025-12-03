@@ -12,6 +12,29 @@ class ModelRegistry:
     """Registry for models discovered from Python files."""
 
     _models: dict[str, dict[str, Any]] = {}
+    _skip_registration: bool = False  # Flag to skip registration during evaluation
+
+    @classmethod
+    def set_skip_registration(cls, skip: bool) -> None:
+        """
+        Set flag to skip model registration.
+
+        Used during evaluation phase to prevent re-registration of models.
+
+        Args:
+            skip: If True, skip registration; if False, allow registration
+        """
+        cls._skip_registration = skip
+
+    @classmethod
+    def should_skip_registration(cls) -> bool:
+        """
+        Check if registration should be skipped.
+
+        Returns:
+            True if registration should be skipped, False otherwise
+        """
+        return cls._skip_registration
 
     @classmethod
     def register(cls, model_data: dict[str, Any]) -> None:
@@ -58,6 +81,42 @@ class ModelRegistry:
         return cls._models.copy()
 
     @classmethod
+    def get_models_by_file_path(cls, file_path: str) -> list[dict[str, Any]]:
+        """
+        Get all models registered from a specific file path.
+
+        Args:
+            file_path: Absolute file path to search for
+
+        Returns:
+            List of model data dictionaries registered from the given file
+        """
+        return [
+            model_data
+            for model_data in cls._models.values()
+            if model_data.get("model_metadata", {}).get("file_path") == file_path
+        ]
+
+    @classmethod
+    def has_models_from_file(cls, file_path: str) -> bool:
+        """
+        Check if any models are registered from a specific file path.
+
+        This is more efficient than get_models_by_file_path() when you only need
+        to check existence, as it uses a generator and stops at the first match.
+
+        Args:
+            file_path: Absolute file path to check
+
+        Returns:
+            True if any models are registered from the file, False otherwise
+        """
+        return any(
+            model_data.get("model_metadata", {}).get("file_path") == file_path
+            for model_data in cls._models.values()
+        )
+
+    @classmethod
     def clear(cls) -> None:
         """
         Clear all registered models (mainly for testing).
@@ -69,6 +128,29 @@ class FunctionRegistry:
     """Registry for functions discovered from Python files."""
 
     _functions: dict[str, dict[str, Any]] = {}
+    _skip_registration: bool = False  # Flag to skip registration during evaluation
+
+    @classmethod
+    def set_skip_registration(cls, skip: bool) -> None:
+        """
+        Set flag to skip function registration.
+
+        Used during evaluation phase to prevent re-registration of functions.
+
+        Args:
+            skip: If True, skip registration; if False, allow registration
+        """
+        cls._skip_registration = skip
+
+    @classmethod
+    def should_skip_registration(cls) -> bool:
+        """
+        Check if registration should be skipped.
+
+        Returns:
+            True if registration should be skipped, False otherwise
+        """
+        return cls._skip_registration
 
     @classmethod
     def register(cls, function_data: dict[str, Any]) -> None:
@@ -120,4 +202,3 @@ class FunctionRegistry:
         Clear all registered functions (mainly for testing).
         """
         cls._functions.clear()
-

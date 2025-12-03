@@ -108,15 +108,14 @@ class TestDiscovery:
                         companion_py = py_file
                         break
 
-                if companion_py:
-                    # Check if .py file registered a test with the same name (via SqlTestMetadata)
-                    # If yes, skip SQL file (already registered)
-                    # If no, process SQL file (Python file didn't register anything)
-                    if sql_file_stem in discovered:
-                        logger.debug(
-                            f"Skipping {sql_file} - companion Python file {companion_py} already registered test '{sql_file_stem}'"
-                        )
-                        continue
+                # Check if .py file registered a test with the same name (via SqlTestMetadata)
+                # If yes, skip SQL file (already registered)
+                # If no, process SQL file (Python file didn't register anything)
+                if companion_py and sql_file_stem in discovered:
+                    logger.debug(
+                        f"Skipping {sql_file} - companion Python file {companion_py} already registered test '{sql_file_stem}'"
+                    )
+                    continue
 
             # No companion .py or .py is metadata-only: create SqlTest
             try:

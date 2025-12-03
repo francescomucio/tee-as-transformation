@@ -207,6 +207,21 @@ create_model(
 - SQL extracted directly from AST (no execution needed)
 - Supports loops with variable substitution
 
+**Type 3: SqlModelMetadata Auto-Instantiation**
+```python
+# models/my_schema/my_table.py
+metadata: ModelMetadata = {
+    "materialization": "table",
+    "schema": [...]
+}
+# Companion file: models/my_schema/my_table.sql
+```
+- Detected after Python file execution (checks for `metadata` variable)
+- Requires companion `.sql` file (same name, different extension)
+- Automatically instantiates `SqlModelMetadata` if conditions are met
+- Skips auto-instantiation if model already registered from this file
+- Handles errors gracefully (warnings for conflicts/parsing errors, debug for others)
+
 ---
 
 ## Code Locations

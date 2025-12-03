@@ -186,6 +186,13 @@ def model(
                 is_python_model=True,
             )
 
+            # Skip registration if we're in evaluation mode
+            if ModelRegistry.should_skip_registration():
+                logger.debug(
+                    f"Skipping registration of {final_table_name} (evaluation mode)"
+                )
+                return func
+
             # Check for conflicts (only if from a different file)
             # Allow re-registration from the same file (e.g., when evaluating functions)
             existing_model = ModelRegistry.get(final_table_name)
@@ -261,6 +268,12 @@ def create_model(
     # Validate table name
     if not table_name or not table_name.replace(".", "").replace("_", "").isalnum():
         raise ModelFactoryError(f"Invalid table name: {table_name}")
+
+    # Skip registration early if we're in evaluation/metadata parsing mode
+    # This prevents unnecessary work and avoids conflicts
+    if ModelRegistry.should_skip_registration():
+        logger.debug(f"Skipping registration of {table_name} via create_model() (evaluation mode)")
+        return
 
     # Get caller file path
     # First try to get from __tee_file_path__ (injected by parser for executed modules)
@@ -363,14 +376,25 @@ def create_model(
     )
 
     # Check for conflicts (only if from a different file)
+    # Allow re-registration from the same file (e.g., when file is executed multiple times)
     existing_model = ModelRegistry.get(table_name)
     if existing_model:
         existing_file = existing_model.get("model_metadata", {}).get("file_path")
-        if existing_file and existing_file != caller_file:
+        # Normalize paths for comparison
+        if existing_file and caller_file:
+            existing_file_abs = os.path.abspath(existing_file)
+            caller_file_abs = os.path.abspath(caller_file)
+            if existing_file_abs != caller_file_abs:
+                raise ModelFactoryError(
+                    f"Model name conflict: '{table_name}' is already registered from another file. "
+                    f"Use a different table_name to avoid conflicts."
+                )
+        elif existing_file:  # existing_file exists but caller_file doesn't
             raise ModelFactoryError(
                 f"Model name conflict: '{table_name}' is already registered from another file. "
                 f"Use a different table_name to avoid conflicts."
             )
+        # If both are None or paths match, allow re-registration (same file)
 
     ModelRegistry.register(standardized_model)
     logger.debug(f"Registered model via create_model(): {table_name}")

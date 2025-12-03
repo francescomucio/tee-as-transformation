@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}t4t Documentation{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
+    <script src="https://unpkg.com/dagre-d3@0.6.4/dist/dagre-d3.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-size: 16px;
+            font-weight: 400;
+            line-height: 1.6;
+            color: #1f2937;
+            background: #f8f9fa;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: #1e293b;
+            border-right: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: width 0.3s ease;
+            min-width: 0;
+        }
+
+        .sidebar.collapsed {
+            width: 40px !important;
+            border-right: 1px solid #e5e7eb;
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            padding: 10px;
+            justify-content: center;
+        }
+
+        .sidebar.collapsed .sidebar-header-content {
+            display: none;
+        }
+
+        .sidebar.collapsed .tree-container {
+            display: none;
+        }
+
+        .sidebar.collapsed .sidebar-toggle {
+            margin: 0;
+            padding: 8px;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            min-width: 0;
+        }
+
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            color: #64748b;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background 0.2s;
+            flex-shrink: 0;
+            display: block;
+        }
+
+        .sidebar-toggle:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        .sidebar-toggle:focus {
+            outline: 2px solid #3b82f6;
+            outline-offset: 2px;
+        }
+
+        .sidebar-header-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .sidebar-header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 16px;
+        }
+
+        .tree-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        .tree-node {
+            padding: 8px 12px;
+            cursor: pointer;
+            user-select: none;
+            border-radius: 6px;
+            margin: 2px 0;
+            color: #ffffff;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            transition: background 0.2s;
+        }
+
+        .tree-node:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .tree-node.selected {
+            background: #3b82f6;
+            font-weight: 500;
+            color: #ffffff;
+        }
+
+        .tree-node:focus {
+            outline: 2px solid #3b82f6;
+            outline-offset: 2px;
+        }
+
+        .tree-node-icon {
+            display: inline-block;
+            width: 16px;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+
+        .tree-node-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .tree-node-toggle {
+            display: inline-block;
+            width: 16px;
+            margin-right: 4px;
+            cursor: pointer;
+            text-align: center;
+            user-select: none;
+            flex-shrink: 0;
+        }
+
+        .tree-node-toggle::before {
+            content: '▶';
+            font-size: 10px;
+            color: #64748b;
+        }
+
+        .tree-node.expanded > .tree-node-toggle::before {
+            content: '▼';
+        }
+
+        .tree-children {
+            margin-left: 20px;
+            display: none;
+        }
+
+        .tree-node.expanded ~ .tree-children,
+        .tree-node.expanded[data-children-id] + .tree-children {
+            display: block;
+        }
+
+        /* Main content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .toolbar {
+            padding: 16px 24px;
+            background: #ffffff;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .filter-input {
+            flex: 1;
+            padding: 8px 16px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 16px;
+            font-family: 'Inter', sans-serif;
+            background: #ffffff;
+            color: #1f2937;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .filter-input::placeholder {
+            color: #6b7280;
+        }
+
+        .graph-container {
+            flex: 1;
+            background: #f8f9fa;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #graph-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node rect {
+            stroke-width: 2px;
+            rx: 4;
+            ry: 4;
+        }
+
+        .node.table rect {
+            fill: #3b82f6;
+            stroke: #2563eb;
+        }
+
+        .node.view rect {
+            fill: #93c5fd;
+            stroke: #60a5fa;
+        }
+
+        .node.function rect {
+            fill: #64748b;
+            stroke: #475569;
+        }
+
+        .node.test rect {
+            fill: #f59e0b;
+            stroke: #d97706;
+        }
+
+        .node.selected rect {
+            stroke-width: 4px;
+            stroke: #3b82f6;
+            filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.4));
+        }
+
+        .node.highlighted rect {
+            stroke-width: 3px;
+            stroke: #3b82f6;
+            filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.3));
+        }
+
+        .node.hidden {
+            opacity: 0;
+            pointer-events: none;
+            visibility: hidden;
+        }
+
+        .edgePath {
+            fill: none;
+            stroke: #64748b;
+            stroke-width: 2px;
+            opacity: 0.6;
+        }
+
+        .edgePath.hidden {
+            opacity: 0.15;
+        }
+
+        .edgePath.highlighted {
+            stroke: #3b82f6;
+            stroke-width: 3px;
+            opacity: 1;
+        }
+
+        .edgeLabel {
+            background-color: #f8f9fa;
+            padding: 4px 8px;
+            border-radius: 6px;
+            color: #1f2937;
+            border: 1px solid #e5e7eb;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+        }
+
+        .node-label {
+            font-size: 14px;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            pointer-events: none;
+            text-anchor: middle;
+            fill: #ffffff;
+            font-weight: 500;
+        }
+
+        .node-label.hidden {
+            opacity: 0.2;
+        }
+
+        /* Ensure foreignObject labels (used by dagre-d3) show full text */
+        .node foreignObject {
+            overflow: visible;
+        }
+
+        .node foreignObject div {
+            white-space: nowrap;
+            overflow: visible;
+            text-overflow: clip;
+            width: auto !important;
+            max-width: none !important;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 40px;
+            min-height: 40px;
+            line-height: 40px;
+            margin: 0;
+            padding: 0;
+        }
+
+        .node-icon {
+            font-size: 14px;
+            text-anchor: middle;
+            dominant-baseline: central;
+        }
+
+        .legend {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0 16px;
+            border-left: 1px solid #e5e7eb;
+            border-right: 1px solid #e5e7eb;
+        }
+
+        .legend-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #1f2937;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            user-select: none;
+        }
+
+        .legend-item:hover {
+            background-color: #f1f5f9;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            flex-shrink: 0;
+            transition: opacity 0.2s;
+        }
+
+        .legend-label {
+            font-size: 13px;
+            color: #64748b;
+            white-space: nowrap;
+            transition: text-decoration 0.2s, opacity 0.2s;
+        }
+
+        .legend-item[data-enabled="false"] .legend-label {
+            text-decoration: line-through;
+            opacity: 0.5;
+        }
+
+        .legend-item[data-enabled="false"] .legend-color {
+            opacity: 0.4;
+        }
+
+        .stats {
+            display: flex;
+            gap: 16px;
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .sidebar .stats {
+            color: #64748b;
+        }
+
+        .stat-item {
+            display: flex;
+            gap: 4px;
+        }
+
+        .stat-label {
+            color: #6b7280;
+        }
+
+        .sidebar .stat-label {
+            color: #94a3b8;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: #3b82f6;
+        }
+
+        .sidebar .stat-value {
+            color: #ffffff;
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-header-content">
+                <h1>t4t Docs</h1>
+                <div class="stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Models:</span>
+                        <span class="stat-value" id="model-count">{{ models_count }}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Nodes:</span>
+                        <span class="stat-value" id="node-count">{{ nodes_count }}</span>
+                    </div>
+                </div>
+            </div>
+            <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle sidebar">◀</button>
+        </div>
+        <div class="tree-container" id="tree-container"></div>
+    </div>
+
+    <div class="main-content">
+        <div class="toolbar">
+            <input 
+                type="text" 
+                class="filter-input" 
+                id="filter-input" 
+                placeholder="Filter objects (e.g., +my_schema.users_summary, schema.*, *table*)"
+            >
+            <div class="legend" id="legend">
+                <div class="legend-title">Legend:</div>
+                <div class="legend-item" data-type="table" data-enabled="true">
+                    <span class="legend-color" style="background: #3b82f6; border: 2px solid #2563eb;"></span>
+                    <span class="legend-label">Tables</span>
+                </div>
+                <div class="legend-item" data-type="view" data-enabled="true">
+                    <span class="legend-color" style="background: #60a5fa; border: 2px solid #3b82f6;"></span>
+                    <span class="legend-label">Views</span>
+                </div>
+                <div class="legend-item" data-type="function" data-enabled="true">
+                    <span class="legend-color" style="background: #64748b; border: 2px solid #475569;"></span>
+                    <span class="legend-label">Functions</span>
+                </div>
+                <div class="legend-item" data-type="test" data-enabled="true">
+                    <span class="legend-color" style="background: #f59e0b; border: 2px solid #d97706;"></span>
+                    <span class="legend-label">Tests</span>
+                </div>
+            </div>
+            <div class="stats">
+                <div class="stat-item">
+                    <span class="stat-label">Visible:</span>
+                    <span class="stat-value" id="visible-count">{{ nodes_count }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="graph-container">
+            <svg id="graph-svg"></svg>
+        </div>
+    </div>
+
+    <script>
+        // Graph data from JSON
+        const graphData = {{ graph_data_json | safe }};
+        const modelsData = {{ models_data_json | safe }};
+        
+        // Initialize the interactive graph
+        let selectedNode = null;
+        let highlightedNodes = new Set();
+        
+        // Parse filter string (dbt-style selector)
+        function parseFilter(filterText) {
+            if (!filterText.trim()) return null;
+            
+            const patterns = filterText.split(',').map(s => s.trim()).filter(s => s);
+            return patterns.map(pattern => {
+                // Handle +pattern+ (exact match)
+                if (pattern.startsWith('+') && pattern.endsWith('+')) {
+                    return { type: 'exact', value: pattern.slice(1, -1) };
+                }
+                // Handle *pattern* (contains)
+                if (pattern.includes('*')) {
+                    const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+                    return { type: 'regex', value: regex };
+                }
+                // Handle pattern (starts with)
+                return { type: 'prefix', value: pattern };
+            });
+        }
+        
+        // Check if node matches filter
+        function nodeMatchesFilter(nodeName, filters) {
+            if (!filters) return true;
+            
+            return filters.some(filter => {
+                if (filter.type === 'exact') {
+                    return nodeName === filter.value;
+                } else if (filter.type === 'regex') {
+                    return filter.value.test(nodeName);
+                } else if (filter.type === 'prefix') {
+                    return nodeName.startsWith(filter.value);
+                }
+                return false;
+            });
+        }
+        
+        // Get node type
+        function getNodeType(nodeName) {
+            if (nodeName.startsWith('test:')) return 'test';
+            // Check if it's a function first
+            const functionNames = new Set(Object.keys(graphData.functions || {}));
+            if (functionNames.has(nodeName)) return 'function';
+            // For models, check materialization
+            if (modelsData[nodeName]) {
+                const materialization = modelsData[nodeName].materialization || 'table';
+                // Treat table, incremental, scd2 as 'table', everything else as 'view'
+                if (materialization === 'table' || materialization === 'incremental' || materialization === 'scd2') {
+                    return 'table';
+                }
+                return 'view';
+            }
+            // Default: if it's in the graph and not a test/function, treat as table
+            // But log a warning if we can't find it in modelsData (only for non-test nodes)
+            if (!nodeName.startsWith('test:')) {
+                console.warn(`Node ${nodeName} not found in modelsData, defaulting to 'table'`);
+            }
+            return 'table';
+        }
+        
+        // Build tree structure
+        function buildTree() {
+            const tree = { name: 'data', children: {} };
+            
+            graphData.nodes.forEach(nodeName => {
+                if (nodeName.startsWith('test:')) {
+                    // Tests go under their parent table
+                    const parts = nodeName.replace('test:', '').split('.');
+                    if (parts.length >= 2) {
+                        const schema = parts[0];
+                        const table = parts.slice(0, 2).join('.');
+                        if (!tree.children[schema]) {
+                            tree.children[schema] = { name: schema, type: 'schema', children: {} };
+                        }
+                        // Ensure models group exists
+                        if (!tree.children[schema].children._models) {
+                            tree.children[schema].children._models = { 
+                                name: 'models', 
+                                type: 'model-group', 
+                                children: {} 
+                            };
+                        }
+                        // Get the correct node type using the full nodeName (for tests, the table name is in the test name)
+                        // Extract table name from test name: "test:my_schema.my_first_table.id.unique" -> "my_schema.my_first_table"
+                        let tableFullName = nodeName.replace(/^test:/, '');
+                        const testTableParts = tableFullName.split('.');
+                        if (testTableParts.length >= 2) {
+                            // Reconstruct table name: schema.table
+                            tableFullName = testTableParts[0] + '.' + testTableParts[1];
+                        }
+                        const correctTableType = getNodeType(tableFullName);
+                        if (!tree.children[schema].children._models.children[table]) {
+                            tree.children[schema].children._models.children[table] = { 
+                                name: table, 
+                                type: correctTableType,
+                                fullName: tableFullName,
+                                children: {}
+                            };
+                        } else {
+                            // Update type if it was set incorrectly
+                            tree.children[schema].children._models.children[table].type = correctTableType;
+                            if (!tree.children[schema].children._models.children[table].fullName) {
+                                tree.children[schema].children._models.children[table].fullName = tableFullName;
+                            }
+                        }
+                        // Ensure children exists
+                        if (!tree.children[schema].children._models.children[table].children) {
+                            tree.children[schema].children._models.children[table].children = {};
+                        }
+                        if (!tree.children[schema].children._models.children[table].children.tests) {
+                            tree.children[schema].children._models.children[table].children.tests = {
+                                name: 'tests',
+                                type: 'test-group',
+                                children: {}
+                            };
+                        }
+                        // Extract test name without "test:" prefix and schema
+                        let testDisplayName = nodeName.replace(/^test:/, '');
+                        const testParts = testDisplayName.split('.');
+                        if (testParts.length > 1) {
+                            testDisplayName = testParts.slice(1).join('.');
+                        }
+                        tree.children[schema].children._models.children[table].children.tests.children[nodeName] = {
+                            name: testDisplayName,
+                            type: 'test',
+                            fullName: nodeName
+                        };
+                    }
+                } else {
+                    const parts = nodeName.split('.');
+                    if (parts.length >= 2) {
+                        const schema = parts[0];
+                        const table = nodeName;
+                        const nodeType = getNodeType(nodeName);
+                        
+                        if (!tree.children[schema]) {
+                            tree.children[schema] = { name: schema, type: 'schema', children: {} };
+                        }
+                        
+                        // Separate functions and models into different groups
+                        if (nodeType === 'function') {
+                            // Functions go into _functions group
+                            if (!tree.children[schema].children._functions) {
+                                tree.children[schema].children._functions = { 
+                                    name: 'functions', 
+                                    type: 'function-group', 
+                                    children: {} 
+                                };
+                            }
+                            // Extract function name without schema prefix
+                            const funcParts = nodeName.split('.');
+                            const funcDisplayName = funcParts.length > 1 ? funcParts.slice(1).join('.') : nodeName;
+                            if (!tree.children[schema].children._functions.children[table]) {
+                                tree.children[schema].children._functions.children[table] = {
+                                    name: funcDisplayName,
+                                    type: 'function',
+                                    fullName: nodeName,
+                                    children: {}
+                                };
+                            }
+                        } else {
+                            // Models (tables/views) go into _models group
+                            if (!tree.children[schema].children._models) {
+                                tree.children[schema].children._models = { 
+                                    name: 'models', 
+                                    type: 'model-group', 
+                                    children: {} 
+                                };
+                            }
+                            // Extract model name without schema prefix
+                            const modelParts = nodeName.split('.');
+                            const modelDisplayName = modelParts.length > 1 ? modelParts.slice(1).join('.') : nodeName;
+                            // Get the correct node type using the full nodeName (not just table)
+                            const correctNodeType = getNodeType(nodeName);
+                            // Only create if it doesn't exist, or ensure it has children if it does
+                            if (!tree.children[schema].children._models.children[table]) {
+                                tree.children[schema].children._models.children[table] = {
+                                    name: modelDisplayName,
+                                    type: correctNodeType,
+                                    fullName: nodeName,
+                                    children: {}
+                                };
+                            } else {
+                                // If it exists (maybe created for a test), ensure it has fullName, type, and children
+                                if (!tree.children[schema].children._models.children[table].fullName) {
+                                    tree.children[schema].children._models.children[table].fullName = nodeName;
+                                }
+                                // Always update type to ensure it's correct (in case it was set incorrectly before)
+                                tree.children[schema].children._models.children[table].type = correctNodeType;
+                                if (!tree.children[schema].children._models.children[table].children) {
+                                    tree.children[schema].children._models.children[table].children = {};
+                                }
+                                // Update display name if it wasn't set correctly
+                                if (tree.children[schema].children._models.children[table].name === table || 
+                                    tree.children[schema].children._models.children[table].name.includes('.')) {
+                                    tree.children[schema].children._models.children[table].name = modelDisplayName;
+                                }
+                            }
+                        }
+                    } else {
+                        // Root-level function (no schema)
+                        if (!tree.children._functions) {
+                            tree.children._functions = { name: 'functions', type: 'function-group', children: {} };
+                        }
+                        tree.children._functions.children[nodeName] = {
+                            name: nodeName,
+                            type: 'function',
+                            fullName: nodeName
+                        };
+                    }
+                }
+            });
+            
+            return tree;
+        }
+        
+        // Render tree
+        function renderTree(tree, container, level = 0) {
+            let keys = Object.keys(tree.children || {});
+            
+            // Sort keys with special handling for group folders
+            keys = keys.sort((a, b) => {
+                // Special groups should come first (models, then functions)
+                const groupOrder = { '_models': 1, '_functions': 2 };
+                const aOrder = groupOrder[a] || 3;
+                const bOrder = groupOrder[b] || 3;
+                if (aOrder !== bOrder) return aOrder - bOrder;
+                // Otherwise alphabetical
+                return a.localeCompare(b);
+            });
+            
+            keys.forEach(key => {
+                const node = tree.children[key];
+                const hasChildren = node.children && Object.keys(node.children).length > 0;
+                
+                const div = document.createElement('div');
+                div.className = 'tree-node';
+                div.dataset.nodeName = node.fullName || node.name;
+                div.dataset.nodeType = node.type;
+                
+                // Consistent icons for each type
+                // For model nodes, check the actual type from fullName if available
+                let actualType = node.type;
+                if ((node.type === 'table' || node.type === 'view' || !node.type) && node.fullName) {
+                    // Re-check the type using the full name to ensure accuracy
+                    const recalculatedType = getNodeType(node.fullName);
+                    if (recalculatedType !== actualType) {
+                        console.log(`Sidebar icon: ${node.name} - stored type: ${actualType}, recalculated: ${recalculatedType}, using: ${recalculatedType}`);
+                        actualType = recalculatedType;
+                    }
+                }
+                
+                const icon = actualType === 'schema' ? '🗃️' : 
+                           actualType === 'table' ? '📅' :
+                           actualType === 'view' ? '🏞️' :
+                           actualType === 'function' ? '🧩' :
+                           actualType === 'test' ? '🧪' :
+                           node.type === 'test-group' ? '🧪' :
+                           node.type === 'model-group' ? '📅' :
+                           node.type === 'function-group' ? '🧩' : '📂';
+                
+                // Extract display name: remove schema prefix and "test:" prefix
+                let displayName = node.name;
+                if (node.fullName) {
+                    // For nodes with fullName, extract just the name part
+                    const fullName = node.fullName;
+                    if (fullName.startsWith('test:')) {
+                        // Remove "test:" prefix
+                        displayName = fullName.replace(/^test:/, '');
+                        // Remove schema prefix (e.g., "my_schema.my_first_table" -> "my_first_table")
+                        const parts = displayName.split('.');
+                        if (parts.length > 1) {
+                            displayName = parts.slice(1).join('.');
+                        }
+                    } else {
+                        // Remove schema prefix for regular nodes
+                        const parts = fullName.split('.');
+                        if (parts.length > 1) {
+                            displayName = parts.slice(1).join('.');
+                        } else {
+                            displayName = fullName;
+                        }
+                    }
+                } else {
+                    // For schema and group nodes, use name as-is
+                    displayName = node.name;
+                }
+                
+                // Add toggle button if has children
+                const toggleHtml = hasChildren ? '<span class="tree-node-toggle"></span>' : '<span class="tree-node-toggle" style="visibility: hidden;"></span>';
+                div.innerHTML = `${toggleHtml}<span class="tree-node-icon">${icon}</span><span class="tree-node-text">${displayName}</span>`;
+                
+                container.appendChild(div);
+                
+                if (hasChildren) {
+                    const childrenDiv = document.createElement('div');
+                    childrenDiv.className = 'tree-children';
+                    // Store reference to children div on the parent node
+                    const childrenId = `children-${Date.now()}-${Math.random()}`;
+                    div.dataset.childrenId = childrenId;
+                    childrenDiv.id = childrenId;
+                    container.appendChild(childrenDiv);
+                    renderTree(node, childrenDiv, level + 1);
+                    // Initially collapsed - hide children
+                    childrenDiv.style.display = 'none';
+                    
+                    // Toggle expand/collapse
+                    const toggle = div.querySelector('.tree-node-toggle');
+                    toggle.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        div.classList.toggle('expanded');
+                        // Manually toggle children visibility
+                        childrenDiv.style.display = div.classList.contains('expanded') ? 'block' : 'none';
+                    });
+                }
+                
+                // Click on node itself
+                div.addEventListener('click', (e) => {
+                    // Don't trigger if clicking toggle
+                    if (e.target.classList.contains('tree-node-toggle')) return;
+                    e.stopPropagation();
+                    if (node.fullName) {
+                        selectNode(node.fullName);
+                        updateFilter(`+${node.fullName}+`);
+                    }
+                });
+                
+                // Double-click to navigate to detail page
+                div.addEventListener('dblclick', (e) => {
+                    e.stopPropagation();
+                    if (node.fullName) {
+                        const safeName = node.fullName.replace(/[^a-zA-Z0-9_]/g, '_');
+                        window.location.href = `model_${safeName}.html`;
+                    }
+                });
+            });
+        }
+        
+        // Initialize Dagre hierarchical graph (like dbt docs)
+        function initGraph() {
+            console.log('initGraph() called');
+            const width = document.querySelector('.graph-container').clientWidth;
+            const height = document.querySelector('.graph-container').clientHeight;
+            
+            const svg = d3.select('#graph-svg')
+                .attr('width', width)
+                .attr('height', height);
+            
+            // Clear previous content completely
+            svg.selectAll('*').remove();
+            // Also clear any zoom transforms
+            svg.on('.zoom', null);
+            
+            // Create a new directed graph
+            const g = new dagre.graphlib.Graph()
+                .setDefaultEdgeLabel(() => ({}))
+                .setGraph({ 
+                    rankdir: 'LR',  // Left to right layout (like dbt docs)
+                    nodesep: 50,
+                    ranksep: 80,
+                    marginx: 50,
+                    marginy: 50
+                });
+            
+            // Define consistent colors and icons for each type
+            const typeConfig = {
+                'table': { 
+                    fill: '#3b82f6', 
+                    stroke: '#2563eb', 
+                    icon: '📊' 
+                },
+                'view': { 
+                    fill: '#93c5fd', 
+                    stroke: '#60a5fa', 
+                    icon: '👁️' 
+                },
+                'function': { 
+                    fill: '#64748b', 
+                    stroke: '#475569', 
+                    icon: '⚙️' 
+                },
+                'test': { 
+                    fill: '#f59e0b', 
+                    stroke: '#d97706', 
+                    icon: '✓' 
+                }
+            };
+            
+            // Filter nodes based on type toggles and text filter
+            const filterText = document.getElementById('filter-input')?.value || '';
+            const filters = parseFilter(filterText);
+            const visibleNodeIds = new Set();
+            
+            // First, filter by type toggles and text filter
+            graphData.nodes.forEach(nodeId => {
+                const nodeType = getNodeType(nodeId);
+                const typeEnabled = isTypeEnabled(nodeType);
+                const matchesFilter = nodeMatchesFilter(nodeId, filters);
+                
+                if (typeEnabled && matchesFilter) {
+                    visibleNodeIds.add(nodeId);
+                }
+            });
+            
+            // Debug: log filtering results
+            console.log('Graph filtering:', {
+                totalNodes: graphData.nodes.length,
+                visibleNodes: visibleNodeIds.size,
+                testEnabled: isTypeEnabled('test'),
+                functionEnabled: isTypeEnabled('function'),
+                tableEnabled: isTypeEnabled('table'),
+                viewEnabled: isTypeEnabled('view')
+            });
+            
+            // Add only visible nodes
+            graphData.nodes.forEach(nodeId => {
+                if (!visibleNodeIds.has(nodeId)) return;
+                
+                const nodeType = getNodeType(nodeId);
+                const parts = nodeId.split('.');
+                const displayName = parts[parts.length - 1];
+                
+                // Get consistent config for this type
+                const config = typeConfig[nodeType] || { 
+                    fill: '#6a737d', 
+                    stroke: '#586069', 
+                    icon: '📄' 
+                };
+                
+                // Calculate width based on full node name to prevent truncation
+                // Use a more generous estimate: ~9-10px per character for 14px Inter font
+                // Account for variable-width characters (dots, underscores are narrower)
+                const charWidth = 9.5; // Adjusted for larger font
+                const textWidth = nodeId.length * charWidth;
+                
+                // Add generous padding: 32px on each side (total 64px)
+                // Ensure minimum width but allow for very long names
+                const nodeWidth = Math.max(textWidth + 64, 150);
+                
+                // Create display name for label - remove "test:" prefix if present
+                let labelText = nodeId;
+                if (nodeId.startsWith('test:')) {
+                    labelText = nodeId.replace(/^test:/, '');
+                }
+                
+                // Create HTML label with proper styling - bigger font, centered vertically
+                const labelHtml = `<div style="white-space: nowrap; overflow: visible; text-overflow: clip; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; font-weight: 500; color: #ffffff; padding: 0; margin: 0; line-height: 40px; display: flex; align-items: center; justify-content: center; height: 40px; min-height: 40px;">${labelText}</div>`;
+                
+                g.setNode(nodeId, {
+                    label: labelHtml,
+                    labelType: 'html',
+                    style: `fill: ${config.fill}; stroke: ${config.stroke}; stroke-width: 2px;`,
+                    class: `node ${nodeType}`,
+                    width: nodeWidth,
+                    height: 40,
+                    labelStyle: 'white-space: nowrap; overflow: visible;'
+                });
+            });
+            
+            // Add edges - only for visible nodes
+            // Double-check: ensure no edges connect to/from hidden nodes
+            let edgesAdded = 0;
+            let edgesSkipped = 0;
+            graphData.edges.forEach(edge => {
+                const source = Array.isArray(edge) ? edge[0] : edge.source;
+                const target = Array.isArray(edge) ? edge[1] : edge.target;
+                
+                // Only add edge if both source and target are visible
+                const sourceVisible = visibleNodeIds.has(source);
+                const targetVisible = visibleNodeIds.has(target);
+                
+                if (sourceVisible && targetVisible) {
+                    // Additional safety check: verify node types are enabled
+                    const sourceType = getNodeType(source);
+                    const targetType = getNodeType(target);
+                    const sourceTypeEnabled = isTypeEnabled(sourceType);
+                    const targetTypeEnabled = isTypeEnabled(targetType);
+                    
+                    if (sourceTypeEnabled && targetTypeEnabled) {
+                        g.setEdge(source, target, {
+                            arrowhead: 'vee',
+                            style: 'stroke: #999; stroke-width: 2px; fill: none;',
+                            class: 'edge'
+                        });
+                        edgesAdded++;
+                    } else {
+                        edgesSkipped++;
+                        console.log(`Skipped edge ${source} -> ${target}: sourceType=${sourceType}(${sourceTypeEnabled}), targetType=${targetType}(${targetTypeEnabled})`);
+                    }
+                } else {
+                    edgesSkipped++;
+                    if (source.startsWith('test:') || target.startsWith('test:')) {
+                        console.log(`Skipped test edge: ${source} -> ${target}`);
+                    }
+                }
+            });
+            console.log(`Edges: ${edgesAdded} added, ${edgesSkipped} skipped (total: ${graphData.edges.length})`);
+            
+            // Calculate layout
+            dagre.layout(g);
+            
+            // Debug: verify graph state before rendering
+            const graphNodes = g.nodes();
+            const graphEdges = g.edges();
+            console.log(`Graph before render: ${graphNodes.length} nodes, ${graphEdges.length} edges`);
+            if (!isTypeEnabled('test')) {
+                const testNodesInGraph = graphNodes.filter(n => n && n.startsWith && n.startsWith('test:'));
+                if (testNodesInGraph.length > 0) {
+                    console.error(`ERROR: ${testNodesInGraph.length} test nodes still in graph!`, testNodesInGraph);
+                }
+                const testEdgesInGraph = graphEdges.filter(e => {
+                    const source = e.v;
+                    const target = e.w;
+                    return (source && source.startsWith && source.startsWith('test:')) || 
+                           (target && target.startsWith && target.startsWith('test:'));
+                });
+                if (testEdgesInGraph.length > 0) {
+                    console.error(`ERROR: ${testEdgesInGraph.length} test edges still in graph!`, testEdgesInGraph);
+                }
+            }
+            
+            // Create renderer
+            const render = new dagreD3.render();
+            
+            // Set up zoom behavior
+            const zoom = d3.zoom()
+                .scaleExtent([0.1, 3])
+                .on('zoom', (event) => {
+                    inner.attr('transform', event.transform);
+                });
+            
+            svg.call(zoom);
+            
+            const inner = svg.append('g');
+            
+            // Render the graph
+            render(inner, g);
+            
+            // Dagre-D3 automatically creates labels, but we need to ensure they show full names
+            // Remove any duplicate labels and ensure the main label shows the full name
+            inner.selectAll('g.node').each(function(d) {
+                const node = d3.select(this);
+                // Dagre-D3 creates labels in a foreignObject or as text elements
+                // Find all text elements and keep only the main one
+                const texts = node.selectAll('text');
+                if (texts.size() > 1) {
+                    // Keep the first one (main label), remove duplicates
+                    texts.filter(function(_, i) { return i > 0; }).remove();
+                }
+                // Update the main label text to ensure it shows the full name
+                // Also check foreignObject > div structure that dagre-d3 uses for HTML labels
+                const foreignObject = node.select('foreignObject');
+                if (!foreignObject.empty()) {
+                    // Get the rect to know the actual node dimensions
+                    const rect = node.select('rect');
+                    const rectNode = rect.node();
+                    if (rectNode) {
+                        const rectBBox = rectNode.getBBox();
+                        const rectWidth = rectBBox.width;
+                        const rectHeight = rectBBox.height;
+                        
+                        // Get current foreignObject position (Dagre-D3 sets this)
+                        const currentX = parseFloat(foreignObject.attr('x')) || 0;
+                        const currentY = parseFloat(foreignObject.attr('y')) || 0;
+                        const currentWidth = parseFloat(foreignObject.attr('width')) || rectWidth;
+                        
+                        // Center the foreignObject horizontally if width changed
+                        const newWidth = rectWidth;
+                        const xOffset = (newWidth - currentWidth) / 2;
+                        const newX = currentX - xOffset;
+                        
+                        // Center vertically - node height is 40, foreignObject should be at y=0
+                        foreignObject.attr('x', newX);
+                        foreignObject.attr('y', 0);
+                        foreignObject.attr('width', newWidth);
+                        foreignObject.attr('height', 40);
+                        foreignObject.style('overflow', 'visible');
+                    }
+                    
+                    const div = foreignObject.select('div');
+                    if (!div.empty()) {
+                        // Remove "test:" prefix from display text
+                        let displayText = d;
+                        if (d.startsWith('test:')) {
+                            displayText = d.replace(/^test:/, '');
+                        }
+                        div.text(displayText);
+                        div.style('white-space', 'nowrap');
+                        div.style('overflow', 'visible');
+                        div.style('text-overflow', 'clip');
+                        div.style('width', '100%');
+                        div.style('max-width', 'none');
+                        div.style('text-align', 'center');
+                        div.style('display', 'flex');
+                        div.style('align-items', 'center');
+                        div.style('justify-content', 'center');
+                        div.style('height', '40px');
+                        div.style('min-height', '40px');
+                        div.style('line-height', '40px');
+                        div.style('font-family', "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif");
+                        div.style('font-size', '14px');
+                        div.style('font-weight', '500');
+                        div.style('margin', '0');
+                        div.style('padding', '0');
+                    }
+                }
+                // Get the first text element (select already returns the first match)
+                const mainText = node.select('text');
+                if (!mainText.empty()) {
+                    mainText.text(d);
+                }
+            });
+            
+            // Add interactivity to nodes - attach to both the group and the rect
+            inner.selectAll('g.node')
+                .style('cursor', 'pointer')
+                .on('click', function(event, d) {
+                    event.stopPropagation();
+                    const nodeId = d;
+                    selectNode(nodeId);
+                    updateFilter(`+${nodeId}+`);
+                })
+                .on('dblclick', function(event, d) {
+                    event.stopPropagation();
+                    event.preventDefault();
+                    const nodeId = d;
+                    const safeName = nodeId.replace(/[^a-zA-Z0-9_]/g, '_');
+                    window.location.href = `model_${safeName}.html`;
+                });
+            
+            // Also attach double-click to rect elements to ensure it works on the entire box
+            inner.selectAll('g.node rect')
+                .style('cursor', 'pointer')
+                .on('dblclick', function(event, d) {
+                    event.stopPropagation();
+                    event.preventDefault();
+                    // Get the node ID from the parent group
+                    const nodeId = d3.select(this.parentNode).datum();
+                    const safeName = nodeId.replace(/[^a-zA-Z0-9_]/g, '_');
+                    window.location.href = `model_${safeName}.html`;
+                });
+            
+            // Center the graph
+            const graphWidth = g.graph().width;
+            const graphHeight = g.graph().height;
+            const centerX = (width - graphWidth) / 2;
+            const centerY = (height - graphHeight) / 2;
+            
+            const initialTransform = d3.zoomIdentity
+                .translate(centerX, centerY)
+                .scale(0.8);
+            
+            svg.call(zoom.transform, initialTransform);
+            
+            // Store references for filtering
+            window.graphG = g;
+            window.graphInner = inner;
+            window.graphSvg = svg;
+        }
+        
+        // Select node and highlight ancestors/descendants
+        function selectNode(nodeName) {
+            selectedNode = nodeName;
+            
+            // Clear previous highlights
+            highlightedNodes.clear();
+            highlightedNodes.add(nodeName);
+            
+            // Add ancestors (dependencies)
+            const deps = graphData.dependencies[nodeName] || [];
+            deps.forEach(dep => highlightedNodes.add(dep));
+            
+            // Add descendants (dependents)
+            const dependents = graphData.dependents[nodeName] || [];
+            dependents.forEach(dep => highlightedNodes.add(dep));
+            
+            updateGraphHighlight();
+            updateTreeSelection();
+        }
+        
+        // Update graph highlighting
+        function updateGraphHighlight() {
+            if (!window.graphInner) return;
+            
+            window.graphInner.selectAll('g.node')
+                .each(function(d) {
+                    const node = d3.select(this);
+                    const nodeId = d;
+                    node.classed('selected', nodeId === selectedNode);
+                    node.classed('highlighted', highlightedNodes.has(nodeId) && nodeId !== selectedNode);
+                    node.classed('hidden', false);
+                });
+            
+            window.graphInner.selectAll('g.edgePath')
+                .each(function(d) {
+                    const edge = d3.select(this);
+                    const sourceId = d.v;
+                    const targetId = d.w;
+                    const isHighlighted = highlightedNodes.has(sourceId) && highlightedNodes.has(targetId);
+                    edge.classed('highlighted', isHighlighted);
+                    edge.classed('hidden', false);
+                });
+        }
+        
+        // Update tree selection
+        function updateTreeSelection() {
+            document.querySelectorAll('.tree-node').forEach(node => {
+                node.classList.toggle('selected', node.dataset.nodeName === selectedNode);
+            });
+        }
+        
+        // Update filter
+        function updateFilter(filterText) {
+            document.getElementById('filter-input').value = filterText;
+            // Redraw graph with new filter
+            initGraph();
+            updateVisibleCount();
+        }
+        
+        // Get type toggle state
+        function isTypeEnabled(type) {
+            const legendItem = document.querySelector(`.legend-item[data-type="${type}"]`);
+            return legendItem ? legendItem.getAttribute('data-enabled') === 'true' : true;
+        }
+
+        // Toggle type visibility
+        function toggleType(type) {
+            const legendItem = document.querySelector(`.legend-item[data-type="${type}"]`);
+            if (!legendItem) {
+                console.warn(`Legend item not found for type: ${type}`);
+                return;
+            }
+            
+            const isEnabled = legendItem.getAttribute('data-enabled') === 'true';
+            const newState = (!isEnabled).toString();
+            legendItem.setAttribute('data-enabled', newState);
+            console.log(`Toggled ${type} to ${newState}`);
+            console.log('Calling initGraph() to redraw graph...');
+            // Redraw the graph with filtered nodes (not just hide them)
+            try {
+                initGraph();
+                console.log('initGraph() completed successfully');
+            } catch (error) {
+                console.error('Error calling initGraph():', error);
+                console.error(error.stack);
+            }
+            // Also update the visible count
+            updateVisibleCount();
+        }
+
+        // Apply filter
+        function applyFilter() {
+            const filterText = document.getElementById('filter-input').value;
+            const filters = parseFilter(filterText);
+            
+            if (!window.graphInner) return;
+            
+            let visibleCount = 0;
+            
+            // Get all nodes from the graph
+            const allNodeIds = graphData.nodes;
+            const visibleNodeIds = new Set();
+            
+            // Check which nodes match the filter AND are enabled by type toggle
+            allNodeIds.forEach(nodeId => {
+                const nodeType = getNodeType(nodeId);
+                const typeEnabled = isTypeEnabled(nodeType);
+                const matchesFilter = nodeMatchesFilter(nodeId, filters);
+                
+                if (matchesFilter && typeEnabled) {
+                    visibleNodeIds.add(nodeId);
+                    visibleCount++;
+                }
+            });
+            
+            // Update node visibility
+            if (window.graphInner) {
+                window.graphInner.selectAll('g.node')
+                    .each(function(d) {
+                        const nodeId = d;
+                        const matches = visibleNodeIds.has(nodeId);
+                        const node = d3.select(this);
+                        node.classed('hidden', !matches);
+                        // Also hide rect and foreignObject
+                        node.select('rect').classed('hidden', !matches);
+                        node.select('foreignObject').classed('hidden', !matches);
+                    });
+                
+                // Update edge visibility - only show if both source and target are visible
+                window.graphInner.selectAll('g.edgePath')
+                    .each(function(d) {
+                        const sourceId = d.v;
+                        const targetId = d.w;
+                        const matches = visibleNodeIds.has(sourceId) && visibleNodeIds.has(targetId);
+                        d3.select(this).classed('hidden', !matches);
+                    });
+            } else {
+                console.warn('graphInner not available');
+            }
+            
+            // Update edge visibility - only show if both source and target are visible
+            window.graphInner.selectAll('g.edgePath')
+                .each(function(d) {
+                    const sourceId = d.v;
+                    const targetId = d.w;
+                    const matches = visibleNodeIds.has(sourceId) && visibleNodeIds.has(targetId);
+                    d3.select(this).classed('hidden', !matches);
+                });
+            
+            document.getElementById('visible-count').textContent = visibleCount;
+        }
+        
+        // Update visible count based on current filters and toggles
+        function updateVisibleCount() {
+            const filterText = document.getElementById('filter-input')?.value || '';
+            const filters = parseFilter(filterText);
+            let visibleCount = 0;
+            
+            graphData.nodes.forEach(nodeId => {
+                const nodeType = getNodeType(nodeId);
+                const typeEnabled = isTypeEnabled(nodeType);
+                const matchesFilter = nodeMatchesFilter(nodeId, filters);
+                
+                if (typeEnabled && matchesFilter) {
+                    visibleCount++;
+                }
+            });
+            
+            const visibleCountEl = document.getElementById('visible-count');
+            if (visibleCountEl) {
+                visibleCountEl.textContent = visibleCount;
+            }
+        }
+        
+        // Calculate optimal sidebar width based on longest model name
+        function calculateSidebarWidth() {
+            let maxWidth = 0;
+            const tempDiv = document.createElement('div');
+            tempDiv.style.position = 'absolute';
+            tempDiv.style.visibility = 'hidden';
+            tempDiv.style.whiteSpace = 'nowrap';
+            tempDiv.style.fontSize = '14px';
+            tempDiv.style.fontFamily = getComputedStyle(document.body).fontFamily;
+            tempDiv.style.padding = '4px 8px';
+            document.body.appendChild(tempDiv);
+            
+            // Check all node names (including nested paths for tree structure)
+            graphData.nodes.forEach(nodeName => {
+                // Calculate width for the full path (schema.table format)
+                tempDiv.textContent = nodeName;
+                const width = tempDiv.offsetWidth;
+                if (width > maxWidth) {
+                    maxWidth = width;
+                }
+                
+                // Also check for nested paths (e.g., schema.table.test_name)
+                const parts = nodeName.split('.');
+                if (parts.length > 2) {
+                    // For nested items, add indentation (20px per level)
+                    const indent = (parts.length - 2) * 20;
+                    if (width + indent > maxWidth) {
+                        maxWidth = width + indent;
+                    }
+                }
+            });
+            
+            document.body.removeChild(tempDiv);
+            
+            // Add padding for icons, toggle, and margins
+            // Toggle (16px) + margin (4px) + icon (16px) + margin (4px) + padding (16px each side) + extra margin (20px)
+            const padding = 16 + 4 + 16 + 4 + 32 + 20;
+            const minWidth = 200;
+            const maxAllowedWidth = 450;
+            
+            return Math.max(minWidth, Math.min(maxWidth + padding, maxAllowedWidth));
+        }
+        
+        // Toggle sidebar collapse
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const toggle = document.getElementById('sidebar-toggle');
+            const isCollapsed = sidebar.classList.contains('collapsed');
+            
+            if (isCollapsed) {
+                sidebar.classList.remove('collapsed');
+                toggle.textContent = '◀';
+                toggle.title = 'Collapse sidebar';
+            } else {
+                sidebar.classList.add('collapsed');
+                toggle.textContent = '▶';
+                toggle.title = 'Expand sidebar';
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                console.log('Initializing t4t docs...');
+                console.log('Graph data nodes:', graphData.nodes.length);
+                console.log('Models data:', Object.keys(modelsData).length);
+                
+                // Calculate and set sidebar width
+                const optimalWidth = calculateSidebarWidth();
+                document.getElementById('sidebar').style.width = optimalWidth + 'px';
+                console.log('Sidebar width set to:', optimalWidth + 'px');
+                
+                // Setup sidebar toggle
+                document.getElementById('sidebar-toggle').addEventListener('click', toggleSidebar);
+                
+                const tree = buildTree();
+                console.log('Tree built:', tree);
+                
+                const treeContainer = document.getElementById('tree-container');
+                if (!treeContainer) {
+                    console.error('Tree container not found!');
+                    return;
+                }
+                renderTree(tree, treeContainer);
+                console.log('Tree rendered');
+                
+                initGraph();
+                console.log('Graph initialized');
+                
+                const filterInput = document.getElementById('filter-input');
+                if (filterInput) {
+                    filterInput.addEventListener('input', () => {
+                        // Redraw graph when filter changes
+                        initGraph();
+                        updateVisibleCount();
+                    });
+                }
+                
+                // Setup legend toggle handlers
+                const legendItems = document.querySelectorAll('.legend-item');
+                console.log(`Found ${legendItems.length} legend items`);
+                legendItems.forEach(item => {
+                    const type = item.getAttribute('data-type');
+                    console.log(`Setting up toggle for type: ${type}`);
+                    item.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        const type = this.getAttribute('data-type');
+                        console.log(`Legend item clicked: ${type}`);
+                        toggleType(type);
+                    });
+                    // Make it clear it's clickable
+                    item.style.cursor = 'pointer';
+                });
+                
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    const width = document.querySelector('.graph-container').clientWidth;
+                    const height = document.querySelector('.graph-container').clientHeight;
+                    d3.select('#graph-svg').attr('width', width).attr('height', height);
+                    // Re-center the graph
+                    if (window.graphG && window.graphSvg) {
+                        const graphWidth = window.graphG.graph().width;
+                        const graphHeight = window.graphG.graph().height;
+                        const centerX = (width - graphWidth) / 2;
+                        const centerY = (height - graphHeight) / 2;
+                        const transform = d3.zoomIdentity.translate(centerX, centerY).scale(0.8);
+                        window.graphSvg.call(d3.zoom().transform, transform);
+                    }
+                });
+            } catch (error) {
+                console.error('Error initializing docs:', error);
+                console.error(error.stack);
+            }
+        });
+    </script>
+    {% block content %}{% endblock %}
+</body>
+</html>
+

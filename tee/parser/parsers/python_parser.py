@@ -13,7 +13,11 @@ from typing import Any
 
 import sqlglot
 
-from tee.parser.shared.exceptions import PythonParsingError
+from tee.parser.shared.exceptions import (
+    ModelConflictError,
+    PythonParsingError,
+    SQLParsingError,
+)
 from tee.parser.shared.model_utils import standardize_parsed_model
 from tee.parser.shared.registry import ModelRegistry
 from tee.parser.shared.types import FilePath, ParsedModel, Variables
@@ -161,13 +165,13 @@ class PythonParser(BaseParser):
             # Get table name for qualified SQL generation
             # Use full_table_name if provided (with schema), otherwise fall back to metadata table_name
             table_name = (
-                full_table_name
-                if full_table_name
-                else model_data["model_metadata"]["table_name"]
+                full_table_name if full_table_name else model_data["model_metadata"]["table_name"]
             )
 
             # Parse the SQL string using the SQL parser
-            parsed_data = self._sql_parser.parse(sql_string, file_path=file_path, table_name=table_name)
+            parsed_data = self._sql_parser.parse(
+                sql_string, file_path=file_path, table_name=table_name
+            )
 
             # Update model data with code data while maintaining standardized structure
             updated_model_data = model_data.copy()
@@ -285,7 +289,14 @@ class PythonParser(BaseParser):
         Raises:
             PythonModelError: If function execution fails or returns invalid type
         """
+        from tee.parser.shared.registry import FunctionRegistry, ModelRegistry
+
         module_name = f"temp_module_{hash(file_path)}_{function_name}"
+
+        # Set flag to skip registration during evaluation
+        # This prevents decorators from re-registering models when we're just executing functions
+        ModelRegistry.set_skip_registration(True)
+        FunctionRegistry.set_skip_registration(True)
 
         try:
             # Create a module spec
@@ -364,9 +375,7 @@ class PythonParser(BaseParser):
 
             # Validate SQL string is not empty
             if not result or not result.strip():
-                raise PythonModelError(
-                    f"Function {function_name} returned an empty SQL string"
-                )
+                raise PythonModelError(f"Function {function_name} returned an empty SQL string")
 
             return result.strip()
 
@@ -376,6 +385,10 @@ class PythonParser(BaseParser):
             raise PythonModelError(
                 f"Error executing function {function_name} in {file_path}: {str(e)}"
             ) from e
+        finally:
+            # Always reset the flag, even if an error occurred
+            ModelRegistry.set_skip_registration(False)
+            FunctionRegistry.set_skip_registration(False)
 
     def _execute_python_file(self, content: str, file_path: Path) -> None:
         """
@@ -457,6 +470,57 @@ class PythonParser(BaseParser):
             # Execute the file content
             # This will trigger auto-registration of models via decorators/factory functions
             exec(content, module.__dict__)
+
+            # Auto-magically detect and instantiate SqlModelMetadata if metadata exists
+            # This makes it easier for users - they just need to define metadata
+            if "metadata" in module.__dict__:
+                metadata_value = module.__dict__["metadata"]
+                # Check if metadata is a dict (ModelMetadata is a TypedDict, which is a dict)
+                if isinstance(metadata_value, dict):
+                    # Check if there's a companion .sql file
+                    sql_file_path = file_path.with_suffix(".sql")
+                    if sql_file_path.exists():
+                        # Check if a model was already registered from this file
+                        # (to avoid double registration if user explicitly instantiated SqlModelMetadata)
+                        file_path_abs = str(file_path.absolute())
+                        # Use efficient existence check that stops at first match
+                        if not ModelRegistry.has_models_from_file(file_path_abs):
+                            try:
+                                logger.debug(f"Auto-instantiating SqlModelMetadata for {file_path}")
+                                # Create SqlModelMetadata instance using __new__() to bypass normal __init__
+                                # This is necessary because:
+                                # 1. Frame inspection (get_caller_file_and_main) doesn't work when called
+                                #    from within _execute_python_file due to the execution context
+                                # 2. We need to manually set _caller_file before __post_init__ runs
+                                # 3. __post_init__ checks if _caller_file is already set and skips
+                                #    frame inspection if it is, allowing our manual value to be used
+                                instance = SqlModelMetadata.__new__(SqlModelMetadata)
+                                instance.metadata = metadata_value
+                                instance._caller_file = file_path_abs
+                                instance._caller_main = False
+                                # Now call __post_init__ manually to trigger model creation
+                                instance.__post_init__()
+                                # If for some reason the model wasn't created, log a warning
+                                if not instance.model:
+                                    logger.warning(
+                                        f"Auto-instantiated SqlModelMetadata for {file_path} but model was not created"
+                                    )
+                            except ModelConflictError as e:
+                                # Model conflict is a real problem - log as warning so user knows
+                                logger.warning(
+                                    f"Model conflict detected during auto-instantiation for {file_path}: {e}"
+                                )
+                            except SQLParsingError as e:
+                                # SQL parsing error indicates invalid SQL - log as warning so user knows
+                                logger.warning(
+                                    f"SQL parsing error during auto-instantiation for {file_path}: {e}"
+                                )
+                            except Exception as e:
+                                # Other errors - log as debug (expected in some cases, e.g., user might
+                                # have intentionally not instantiated it or there might be other issues)
+                                logger.debug(
+                                    f"Auto-instantiation of SqlModelMetadata failed for {file_path}: {e}"
+                                )
 
             logger.debug(f"Executed Python file: {file_path}")
 

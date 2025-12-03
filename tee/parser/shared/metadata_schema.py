@@ -237,8 +237,20 @@ def parse_metadata_from_python_file(file_path: str) -> dict[str, Any] | None:
                 }
             )
 
-            # Execute the file
-            exec(content, namespace)
+            # Set flag to skip registration during metadata parsing
+            # This prevents decorators from re-registering models when we're just parsing metadata
+            from tee.parser.shared.registry import ModelRegistry, FunctionRegistry
+            
+            ModelRegistry.set_skip_registration(True)
+            FunctionRegistry.set_skip_registration(True)
+            
+            try:
+                # Execute the file
+                exec(content, namespace)
+            finally:
+                # Always reset the flag, even if an error occurred
+                ModelRegistry.set_skip_registration(False)
+                FunctionRegistry.set_skip_registration(False)
 
             # Look for metadata in the namespace
             if "metadata" in namespace:

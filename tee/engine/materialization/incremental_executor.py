@@ -433,6 +433,28 @@ class IncrementalExecutor:
         )
         filtered_sql = self._add_where_clause(sql_query, time_filter)
 
+        # If table doesn't exist, create it as a full load first
+        if not adapter.table_exists(table_name):
+            logger.info(f"Table {table_name} doesn't exist yet, creating it as a full load")
+            adapter.create_table(table_name, sql_query, metadata=None)
+            # Update state after full load to enable incremental runs
+            current_time = datetime.now(UTC).isoformat()
+            self.state_manager.update_processed_value(
+                model_name, current_time, strategy="delete_insert"
+            )
+            return
+
+        # If table doesn't exist, create it as a full load first
+        if not adapter.table_exists(table_name):
+            logger.info(f"Table {table_name} doesn't exist yet, creating it as a full load")
+            adapter.create_table(table_name, sql_query, metadata=None)
+            # Update state after full load to enable incremental runs
+            current_time = datetime.now(UTC).isoformat()
+            self.state_manager.update_processed_value(
+                model_name, current_time, strategy="delete_insert"
+            )
+            return
+
         # Generate DELETE + INSERT statements
         where_condition = config["where_condition"]
         # Resolve variables in where_condition

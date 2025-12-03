@@ -72,7 +72,9 @@ class SqlModelMetadata:
 
         # SQL Query Section - read original SQL file to preserve formatting
         output.append("  📝 SQL Query:")
-        sql_file_path = os.path.splitext(self._caller_file)[0] + ".sql" if self._caller_file else None
+        sql_file_path = (
+            os.path.splitext(self._caller_file)[0] + ".sql" if self._caller_file else None
+        )
         if sql_file_path and os.path.exists(sql_file_path):
             with open(sql_file_path, encoding="utf-8") as f:
                 sql_content = f.read().strip()
@@ -146,7 +148,9 @@ class SqlModelMetadata:
                 output.append(f"     Indexes: {', '.join(index_strs)}")
 
         if metadata.get("tests"):
-            test_strs = [str(t) if isinstance(t, str) else t.get("name", str(t)) for t in metadata["tests"]]
+            test_strs = [
+                str(t) if isinstance(t, str) else t.get("name", str(t)) for t in metadata["tests"]
+            ]
             output.append(f"     Tests: {', '.join(test_strs)}")
 
         if metadata.get("partitions"):
@@ -163,7 +167,10 @@ class SqlModelMetadata:
     def __post_init__(self) -> None:
         """Post-initialization: find SQL file, read it, and create model."""
         # Get caller file path and whether it's being run as __main__
-        self._caller_file, self._caller_main = get_caller_file_and_main()
+        # Only call get_caller_file_and_main() if _caller_file is not already set
+        # This allows manual setting of _caller_file (e.g., for auto-instantiation)
+        if self._caller_file is None:
+            self._caller_file, self._caller_main = get_caller_file_and_main()
 
         # Use build_model_from_file which handles SQL file discovery and model creation
         if self._caller_file:
@@ -192,4 +199,3 @@ class SqlModelMetadata:
                 # Print if called from __main__
                 if self._caller_main:
                     self._print_model()
-

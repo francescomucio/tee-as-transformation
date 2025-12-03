@@ -2,14 +2,15 @@
 Unit tests for Python test discovery functionality.
 """
 
-import pytest
 import tempfile
 from pathlib import Path
 
-from tee.testing.test_discovery import TestDiscovery, TestDiscoveryError
+import pytest
+
 from tee.testing.base import TestRegistry
 from tee.testing.python_test import PythonTest
 from tee.testing.sql_test import SqlTest
+from tee.testing.test_discovery import TestDiscovery, TestDiscoveryError
 
 
 class TestPythonTestDiscovery:

@@ -13,6 +13,7 @@ venv/
 # IDE
 .idea/
 .vscode/
+.cursor/
 
 # OS
 .DS_Store
@@ -27,7 +28,7 @@ packages.lock
 # Development/Test projects
 # Note: examples/ is committed - it contains example projects for users
 # Only ignore generated output directories within examples
-examples/*/output/
+examples/*/output/    # OTS modules, compilation output, and documentation (from t4t compile/docs)
 # Ignore imported/generated projects (output of t4t import)
 examples/*-t4t/
 examples/*-imported/
