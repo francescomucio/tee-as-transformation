@@ -60,9 +60,16 @@ def initialize_build_executors(
     project_folder: str,
     connection_config: dict[str, Any] | AdapterConfig,
     variables: dict[str, Any] | None,
+    load_seeds: bool = True,
 ) -> tuple[ModelExecutor, TestExecutor]:
     """
     Initialize model and test executors and connect to database.
+
+    Args:
+        project_folder: Path to project folder
+        connection_config: Database connection configuration
+        variables: Optional variables for SQL substitution
+        load_seeds: Whether to load seeds (default: True). Set to False if seeds were already loaded.
 
     Returns:
         Tuple of (model_executor, test_executor)
@@ -77,8 +84,9 @@ def initialize_build_executors(
 
     model_executor.execution_engine.connect()
 
-    # Load seeds before executing models
-    _load_seeds_for_build(model_executor, project_folder)
+    # Load seeds before executing models (unless already loaded)
+    if load_seeds:
+        _load_seeds_for_build(model_executor, project_folder)
 
     test_executor = TestExecutor(
         model_executor.execution_engine.adapter, project_folder=project_folder
@@ -87,8 +95,13 @@ def initialize_build_executors(
     return model_executor, test_executor
 
 
-def _load_seeds_for_build(model_executor: ModelExecutor, project_folder: str) -> None:
-    """Load seed files from the seeds folder into database tables."""
+def _load_seeds_for_build(model_executor: ModelExecutor, project_folder: str) -> dict[str, Any]:
+    """
+    Load seed files from the seeds folder into database tables.
+    
+    Returns:
+        Dictionary with seed loading results (loaded_tables, failed_tables, total_seeds)
+    """
     seeds_folder = Path(project_folder) / "seeds"
 
     # Discover seed files
@@ -96,7 +109,7 @@ def _load_seeds_for_build(model_executor: ModelExecutor, project_folder: str) ->
     seed_files = seed_discovery.discover_seed_files()
 
     if not seed_files:
-        return
+        return {"loaded_tables": [], "failed_tables": [], "total_seeds": 0}
 
     print(f"\nLoading {len(seed_files)} seed file(s)...")
 
@@ -108,12 +121,20 @@ def _load_seeds_for_build(model_executor: ModelExecutor, project_folder: str) ->
     if seed_results["loaded_tables"]:
         print(f"  ✅ Loaded {len(seed_results['loaded_tables'])} seed(s)")
         for table in seed_results["loaded_tables"]:
-            print(f"    - {table}")
+            # Get table info to show row count
+            try:
+                table_info = model_executor.execution_engine.adapter.get_table_info(table)
+                row_count = table_info.get("row_count", 0)
+                print(f"    - {table}: {row_count} rows")
+            except Exception as e:
+                print(f"    - {table} (could not get row count: {e})")
 
     if seed_results["failed_tables"]:
         print(f"  ⚠️  Failed to load {len(seed_results['failed_tables'])} seed(s)")
         for failure in seed_results["failed_tables"]:
             print(f"    - {failure['file']}: {failure['error']}")
+
+    return seed_results
 
 
 def should_skip_model(
@@ -287,6 +308,7 @@ def compile_build_results(
     graph: dict[str, Any],
     parsed_functions: dict[str, list[str]] | None = None,
     function_results: dict[str, list[str] | list[dict[str, str]]] | None = None,
+    seed_results: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Compile final build results."""
     parsed_functions = parsed_functions or {}
@@ -331,12 +353,149 @@ def compile_build_results(
         "executed_functions": function_results.get("executed_functions", []),
         "failed_functions": function_results.get("failed_functions", []),
         "test_results": test_results_summary,
+        "seed_results": seed_results or {"loaded_tables": [], "failed_tables": [], "total_seeds": 0},
         "analysis": {
             "total_models": len(parsed_models),
             "execution_order": execution_order,
             "dependency_graph": graph,
         },
     }
+
+
+def execute_functions_in_build(
+    parser: ProjectParser,
+    model_executor: ModelExecutor,
+    test_executor: TestExecutor,
+    execution_order: list[str],
+    failed_models: set[str],
+    skipped_models: set[str],
+    all_test_results: list[Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """
+    Execute functions before models in build workflow.
+
+    Returns:
+        Tuple of (parsed_functions, function_results)
+    """
+    parsed_functions = {}
+    function_results = {"executed_functions": [], "failed_functions": []}
+    try:
+        parsed_functions = parser.orchestrator.discover_and_parse_functions()
+        if parsed_functions:
+            print(f"\n📦 Executing {len(parsed_functions)} function(s) before models...")
+            function_results = model_executor.execution_engine.execute_functions(
+                parsed_functions, execution_order
+            )
+            if function_results.get("executed_functions"):
+                print(
+                    f"  ✅ Executed {len(function_results['executed_functions'])} function(s)"
+                )
+                for func_name in function_results["executed_functions"]:
+                    print(f"    - {func_name}")
+
+                    # Execute tests for this function
+                    func_test_results = execute_tests_for_function(
+                        func_name, parsed_functions, model_executor, test_executor
+                    )
+                    if func_test_results:
+                        # Handle test results (raises SystemExit on ERROR failures)
+                        handle_test_results(
+                            func_name, func_test_results, failed_models, parser, skipped_models
+                        )
+                        all_test_results.extend(func_test_results)
+
+            if function_results.get("failed_functions"):
+                print(
+                    f"  ⚠️  Failed to execute {len(function_results['failed_functions'])} function(s)"
+                )
+                for failure in function_results["failed_functions"]:
+                    print(f"    - {failure['function']}: {failure['error']}")
+                # Continue with models even if some functions failed
+                # Individual function failures are logged but don't stop the build
+    except Exception as e:
+        # If function discovery/parsing fails, log warning but continue
+        # This allows builds to work even if function parsing has issues
+        import logging
+
+        logger = logging.getLogger(__name__)
+        from tee.parser.shared.exceptions import ParserError
+
+        if isinstance(e, ParserError):
+            logger.warning(
+                f"Function parsing error: {e}. Continuing with model execution."
+            )
+        else:
+            logger.warning(
+                f"Could not discover/parse functions: {e}. Continuing with model execution."
+            )
+
+    return parsed_functions, function_results
+
+
+def execute_models_with_tests(
+    execution_order: list[str],
+    parsed_models: dict[str, Any],
+    parsed_functions: dict[str, Any],
+    graph: dict[str, Any],
+    model_executor: ModelExecutor,
+    test_executor: TestExecutor,
+    parser: ProjectParser,
+    failed_models: set[str],
+    skipped_models: set[str],
+    all_test_results: list[Any],
+) -> None:
+    """
+    Execute models and tests interleaved in build workflow.
+    """
+    for node_name in execution_order:
+        # Skip functions (they were already executed in Step 2.5)
+        # Check if parsed_functions is a dict and contains this node
+        if isinstance(parsed_functions, dict) and node_name in parsed_functions:
+            continue
+
+        if should_skip_model(node_name, skipped_models, failed_models, graph):
+            # Mark as skipped if it depends on a failed model
+            if node_name not in skipped_models and not node_name.startswith(TEST_NODE_PREFIX):
+                node_deps = graph["dependencies"].get(node_name, [])
+                if any(
+                    dep in failed_models for dep in node_deps if not dep.startswith(TEST_NODE_PREFIX)
+                ):
+                    skipped_models.add(node_name)
+            continue
+
+        try:
+            # Execute the model
+            model_results = execute_single_model(
+                node_name, parsed_models, model_executor
+            )
+
+            # Handle model execution result
+            if not handle_model_execution_result(
+                node_name, model_results, failed_models, parser, skipped_models
+            ):
+                continue
+
+            # Execute tests for this model
+            test_results = execute_tests_for_model(
+                node_name, parsed_models, model_executor, test_executor
+            )
+
+            if test_results:
+                # Handle test results (raises SystemExit on ERROR failures)
+                handle_test_results(
+                    node_name, test_results, failed_models, parser, skipped_models
+                )
+                all_test_results.extend(test_results)
+
+        except SystemExit:
+            raise
+        except Exception as e:
+            failed_models.add(node_name)
+            error_msg = str(e)
+            print(f"  ❌ Model execution failed: {error_msg}")
+            mark_dependents_as_skipped(node_name, parser, skipped_models)
+            print(f"\n❌ Build stopped: Model {node_name} failed")
+            raise SystemExit(1) from None
 
 
 def print_build_summary(
@@ -347,10 +506,18 @@ def print_build_summary(
     executed_functions = results.get("executed_functions", [])
     failed_functions = results.get("failed_functions", [])
     test_results = results["test_results"]
+    seed_results = results.get("seed_results", {"loaded_tables": [], "failed_tables": [], "total_seeds": 0})
 
     print("\n" + "=" * 50)
     print("BUILD RESULTS")
     print("=" * 50)
+    
+    # Seed information
+    if seed_results["total_seeds"] > 0:
+        print(f"  Seeds loaded: {len(seed_results['loaded_tables'])}")
+        if seed_results["failed_tables"]:
+            print(f"  Seeds failed: {len(seed_results['failed_tables'])}")
+    
     print(f"  Models executed: {len(executed_tables)}")
     print(f"  Models failed: {len(failed_models)}")
     print(f"  Models skipped: {len(skipped_models)}")

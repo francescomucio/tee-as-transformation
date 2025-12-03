@@ -57,6 +57,9 @@ class StateManager:
         else:
             self.state_database_path = self.project_folder / "data" / "tee_state.db"
 
+        # Ensure parent directory exists
+        self.state_database_path.parent.mkdir(parents=True, exist_ok=True)
+
         self.conn = None
         self._initialize_database()
         logger.info(f"State manager initialized with database: {self.state_database_path}")

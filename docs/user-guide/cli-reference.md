@@ -279,6 +279,9 @@ The run command provides detailed output including:
 
 **Note:** The `run` command does NOT execute tests. Use `t4t test` to run tests separately, or `t4t build` to execute models with interleaved test execution.
 
+**Empty Projects:**
+If your project has no models, the `run` command will compile successfully and return with a message indicating 0 models were executed. This allows you to initialize projects and validate configuration before adding models.
+
 ---
 
 
@@ -422,6 +425,12 @@ seeds/
 ```
 
 **Note:** The `build` command automatically loads seeds before execution. Use `seed` when you want to load seeds independently.
+
+**Empty Projects:**
+If your project has no models, the `build` command will compile successfully and return with a message indicating 0 models were built. This allows you to initialize projects and validate configuration before adding models.
+
+**Error Handling:**
+The build command provides specific error messages for compilation failures (`CompilationError`) and parsing errors (`ParserError`), making it easier to diagnose issues.
 
 ---
 

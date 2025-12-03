@@ -133,13 +133,8 @@ class SeedLoader:
 
         # Read CSV and determine column types
         with open(file_path, encoding="utf-8") as f:
-            # Try to detect delimiter
-            sample = f.read(1024)
-            f.seek(0)
-            sniffer = csv.Sniffer()
-            delimiter = sniffer.sniff(sample).delimiter
-
-            reader = csv.DictReader(f, delimiter=delimiter)
+            # CSV files use comma as delimiter
+            reader = csv.DictReader(f, delimiter=",")
 
             # Get column names from header
             if not reader.fieldnames:
@@ -223,9 +218,10 @@ class SeedLoader:
     def _load_csv_duckdb(self, file_path: Path, table_name: str, columns: list[str]) -> None:
         """Load CSV using DuckDB's read_csv_auto function."""
         # Use DuckDB's read_csv_auto for efficient loading
+        # Explicitly specify comma delimiter for CSV files
         # Escape single quotes in path and convert backslashes to forward slashes
         file_path_str = str(file_path.absolute()).replace("\\", "/").replace("'", "''")
-        query = f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM read_csv_auto('{file_path_str}')"
+        query = f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM read_csv_auto('{file_path_str}', delim=',')"
 
         try:
             self.adapter.execute_query(query)

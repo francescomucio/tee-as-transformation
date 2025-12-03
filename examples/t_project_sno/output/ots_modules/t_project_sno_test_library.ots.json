@@ -1,0 +1,51 @@
+{
+  "ots_version": "0.2.0",
+  "test_library_version": "1.0",
+  "description": "Test library for t_project_sno project",
+  "generic_tests": {
+    "check_name_length": {
+      "type": "sql",
+      "level": "table",
+      "description": "Check that name column values are not too long (max 100 characters)",
+      "sql": "SELECT id, name\nFROM @table_name\nWHERE LENGTH(name) > 100",
+      "parameters": []
+    },
+    "check_no_null_ids": {
+      "type": "sql",
+      "level": "table",
+      "description": "SQL test: check_no_null_ids",
+      "sql": "SELECT id\n    FROM @table_name\n    WHERE id IS NULL",
+      "parameters": []
+    }
+  },
+  "singular_tests": {
+    "check_my_first_table_not_empty": {
+      "type": "sql",
+      "level": "table",
+      "description": "SQL test: check_my_first_table_not_empty",
+      "sql": "SELECT 1 as violation\n        FROM my_schema.my_first_table\n        GROUP BY 1\n        HAVING COUNT(*) = 0",
+      "target_transformation": "my_schema.my_first_table"
+    },
+    "check_my_first_table_id_positive": {
+      "type": "sql",
+      "level": "table",
+      "description": "SQL test: check_my_first_table_id_positive",
+      "sql": "SELECT id\n        FROM my_schema.my_first_table\n        WHERE id <= 0",
+      "target_transformation": "my_schema.my_first_table"
+    },
+    "check_my_second_table_not_empty": {
+      "type": "sql",
+      "level": "table",
+      "description": "SQL test: check_my_second_table_not_empty",
+      "sql": "SELECT 1 as violation\n        FROM my_schema.my_second_table\n        GROUP BY 1\n        HAVING COUNT(*) = 0",
+      "target_transformation": "my_schema.my_second_table"
+    },
+    "check_my_second_table_id_positive": {
+      "type": "sql",
+      "level": "table",
+      "description": "SQL test: check_my_second_table_id_positive",
+      "sql": "SELECT id\n        FROM my_schema.my_second_table\n        WHERE id <= 0",
+      "target_transformation": "my_schema.my_second_table"
+    }
+  }
+}

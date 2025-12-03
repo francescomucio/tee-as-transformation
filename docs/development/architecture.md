@@ -67,12 +67,23 @@ High-level orchestration of the complete workflow:
 - **`executor.py`** - Main execution functions
   - `execute_models()` - Full workflow: compile → execute models
   - `build_models()` - Build with interleaved tests
-- **`executor_helpers/`** - Helper functions for build workflows
+- **`executor_helpers/`** - Helper functions for execution workflows
+  - `shared_helpers.py` - Shared utilities used by both execute and build
+    - `validate_compile_results()` - Validates and extracts compilation results
+    - `create_empty_execution_results()` - Creates empty results structure
+    - `create_empty_build_results()` - Creates empty build results structure
+  - `build_helpers.py` - Build-specific helper functions
+    - `execute_functions_in_build()` - Executes functions before models
+    - `execute_models_with_tests()` - Executes models with interleaved tests
+    - `compile_build_results()` - Compiles final build results
 
 **Design Decisions:**
 - Separates high-level workflow from low-level execution
 - Provides both programmatic and CLI interfaces
 - Handles selection filtering and variable substitution
+- Shared helpers eliminate code duplication between execute and build
+- Specific error handling for `CompilationError` and `ParserError`
+- Graceful handling of empty projects (no models)
 
 ### 3. Parser Layer (`tee/parser/`)
 
@@ -162,18 +173,23 @@ Data quality testing framework:
    ↓
 2. CommandContext (load config, setup logging)
    ↓
-3. ProjectParser (parse SQL files)
+3. executor.execute_models() or executor.build_models()
+   ├─→ compile_project() (compile to OTS modules)
+   ├─→ shared_helpers.validate_compile_results() (validate compilation)
+   └─→ Handle empty projects gracefully
+   ↓
+4. ProjectParser (parse SQL files)
    ├─→ FileDiscovery (find SQL files)
    ├─→ SQLParser (parse SQL)
    ├─→ PythonParser (parse metadata)
    └─→ DependencyGraphBuilder (build graph)
    ↓
-4. ModelExecutor (execute models)
+5. ModelExecutor (execute models)
    ├─→ ExecutionEngine (database operations)
    ├─→ Adapter (database-specific)
    └─→ SQL Dialect Conversion (SQLglot)
    ↓
-5. TestExecutor (run tests)
+6. TestExecutor (run tests) [build only]
    └─→ Standard/Custom Tests
    ↓
 6. Results (return execution results)
@@ -270,6 +286,14 @@ State is tracked in the database:
 
 ## Error Handling
 
+The execution layer uses specific exception handling to provide clear error messages:
+
+- **`CompilationError`** - Raised when project compilation fails
+- **`ParserError`** - Raised when parsing SQL or metadata fails
+- **`RuntimeError`** - Raised for invalid compilation results (missing graph/execution_order)
+
+Both `execute_models()` and `build_models()` catch these specific exceptions and re-raise them, while wrapping unexpected exceptions in `CompilationError` for consistency.
+
 ### Exception Hierarchy
 
 ```
@@ -295,6 +319,16 @@ TestError
 - Detailed error messages
 - Context preservation
 - Cleanup on failure
+- Empty project handling (projects with no models execute successfully)
+
+### Execution Layer Error Handling
+
+The execution layer (`executor.py`) implements specific error handling:
+
+- **Compilation Errors**: Catches `CompilationError` and `ParserError` explicitly
+- **Unexpected Errors**: Wraps unexpected exceptions in `CompilationError` for consistency
+- **Empty Projects**: Gracefully handles projects with no models, returning empty results structures
+- **Validation**: Validates compilation results before proceeding with execution
 
 ## Configuration Management
 
