@@ -194,7 +194,7 @@ $$;
         assert len(imported_code["source_tables"]) > 0 or "source" in str(imported_code["source_tables"])
 
     def test_ots_version_0_2_0_with_functions(self, tmp_path):
-        """Test that OTS version is 0.2.0 when functions are present."""
+        """Test that OTS version is 0.2.1 when functions are present."""
         functions_folder = tmp_path / "functions"
         functions_folder.mkdir()
         schema_folder = functions_folder / "my_schema"
@@ -220,7 +220,7 @@ $$;
         )
 
         module = list(ots_modules.values())[0]
-        assert module["ots_version"] == "0.2.0"
+        assert module["ots_version"] == "0.2.2"
 
     def test_ots_version_0_1_0_without_functions(self, tmp_path):
         """Test that OTS version is 0.1.0 when no functions are present."""
@@ -247,7 +247,7 @@ $$;
         ots_modules = transformer.transform_to_ots_modules(parsed_models)
 
         module = list(ots_modules.values())[0]
-        assert module["ots_version"] == "0.1.0"
+        assert module["ots_version"] == "0.2.2"
 
     def test_function_ots_with_complex_dependencies(self, tmp_path):
         """Test OTS export/import with complex function dependencies."""

@@ -192,7 +192,7 @@ class TestSchemaChangeHandler:
                 }
             ]
         }
-        incremental_config = {"strategy": "append", "append": {"time_column": "event_date"}}
+        incremental_config = {"strategy": "append", "append": {"filter_column": "event_date"}}
 
         # Mock schema inference via adapter
         mock_adapter.execute_query.return_value = Mock()

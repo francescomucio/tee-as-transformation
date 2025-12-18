@@ -125,6 +125,7 @@ Execute SQL models in your project:
 uv run t4t run ./my_project
 
 # Run with variables (JSON format)
+# Note: CLI variables map to SQL placeholders (e.g. @start_date), not to config keys like start_value
 uv run t4t run ./my_project --vars '{"env": "prod", "start_date": "2024-01-01"}'
 ```
 

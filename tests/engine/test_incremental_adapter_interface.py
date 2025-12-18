@@ -35,15 +35,15 @@ class TestIncrementalAdapterInterface:
     @pytest.fixture
     def sample_append_config(self) -> IncrementalAppendConfig:
         """Sample append configuration."""
-        return {"time_column": "created_at", "start_date": "2024-01-01", "lookback": "7 days"}
+        return {"filter_column": "created_at", "start_value": "2024-01-01", "lookback": "7 days"}
 
     @pytest.fixture
     def sample_merge_config(self) -> IncrementalMergeConfig:
         """Sample merge configuration."""
         return {
             "unique_key": ["id"],
-            "time_column": "updated_at",
-            "start_date": "auto",
+            "filter_column": "updated_at",
+            "start_value": "auto",
             "lookback": "3 hours",
         }
 
@@ -52,8 +52,8 @@ class TestIncrementalAdapterInterface:
         """Sample delete+insert configuration."""
         return {
             "where_condition": "updated_at >= @start_date",
-            "time_column": "updated_at",
-            "start_date": "@start_date",
+            "filter_column": "updated_at",
+            "start_value": "@start_date",
         }
 
     def test_adapter_implements_incremental_append(self, mock_adapter, sample_append_config):
@@ -139,8 +139,8 @@ class TestIncrementalAdapterBehavior:
         source_sql = "SELECT * FROM source_table WHERE updated_at > '2024-01-01'"
         config = {
             "unique_key": ["id"],
-            "time_column": "updated_at",
-            "start_date": "auto",
+            "filter_column": "updated_at",
+            "start_value": "auto",
             "lookback": "3 hours",
         }
 
@@ -300,7 +300,7 @@ class TestIncrementalAdapterDataTypes:
         """Test that list parameters are handled correctly."""
         config = {
             "unique_key": ["id", "name"],  # List of strings
-            "time_column": "created_at",
+            "filter_column": "created_at",
         }
 
         mock_adapter.execute_incremental_merge("test_table", "SELECT * FROM source", config)
@@ -395,8 +395,8 @@ class TestIncrementalAdapterIntegration:
         # Step 3: Execute merge strategy
         merge_config = {
             "unique_key": ["id"],
-            "time_column": "updated_at",
-            "start_date": "auto",
+            "filter_column": "updated_at",
+            "start_value": "auto",
             "lookback": "1 hour",
         }
         mock_adapter.execute_incremental_merge(table_name, source_sql, merge_config)

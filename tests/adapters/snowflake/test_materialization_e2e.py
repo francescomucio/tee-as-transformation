@@ -61,8 +61,8 @@ class IncrementalConfig:
     """Helper class for incremental metadata configuration."""
 
     strategy: str = "append"
-    time_column: str = "event_date"
-    start_date: str = "2024-01-01"
+    filter_column: str = "event_date"
+    start_value: str = "2024-01-01"
     on_schema_change: str | None = None
     unique_key: list[str] | None = None
 
@@ -76,14 +76,14 @@ class IncrementalConfig:
 
         if self.strategy == "append":
             metadata["incremental"]["append"] = {
-                "time_column": self.time_column,
-                "start_date": self.start_date,
+                "filter_column": self.filter_column,
+                "start_value": self.start_value,
             }
         elif self.strategy == "merge":
             metadata["incremental"]["merge"] = {
                 "unique_key": self.unique_key or ["event_id"],
-                "time_column": self.time_column,
-                "start_date": self.start_date,
+                "filter_column": self.filter_column,
+                "start_value": self.start_value,
             }
 
         if self.on_schema_change:
@@ -272,18 +272,22 @@ class TestSnowflakeMaterializationEndToEnd:
         """Create initial table with data for testing."""
         schema = snowflake_config.get("schema", "PUBLIC")
         table_name = f"{schema}.source_events"
+        
+        # Use adapter's qualification method to ensure consistent naming
+        qualified_table_name = adapter.utils.qualify_object_name(table_name)
 
-        # Drop table if exists
+        # Drop table if exists (use qualified name)
         try:
-            adapter.execute_query(f"DROP TABLE IF EXISTS {table_name}")
+            adapter.execute_query(f"DROP TABLE IF EXISTS {qualified_table_name}")
         except Exception:
             pass
 
         # Create source table with initial schema and more records
         # Explicitly cast event_id to INTEGER and event_name to VARCHAR to avoid Snowflake type inference issues
+        # Use qualified name for CREATE TABLE
         adapter.execute_query(
             f"""
-            CREATE TABLE {table_name} AS
+            CREATE TABLE {qualified_table_name} AS
             SELECT 
                 1::INTEGER as event_id,
                 'event1'::VARCHAR(50) as event_name,
@@ -293,9 +297,10 @@ class TestSnowflakeMaterializationEndToEnd:
         )
 
         # Insert more data (15 total records)
+        # Use qualified name for INSERT
         adapter.execute_query(
             f"""
-            INSERT INTO {table_name} VALUES
+            INSERT INTO {qualified_table_name} VALUES
             (2::INTEGER, 'event2', '2024-01-02'::DATE, 200::INTEGER),
             (3::INTEGER, 'event3', '2024-01-03'::DATE, 300::INTEGER),
             (4::INTEGER, 'event4', '2024-01-04'::DATE, 400::INTEGER),
@@ -315,9 +320,9 @@ class TestSnowflakeMaterializationEndToEnd:
 
         yield
 
-        # Cleanup
+        # Cleanup - use qualified name
         try:
-            adapter.execute_query(f"DROP TABLE IF EXISTS {table_name}")
+            adapter.execute_query(f"DROP TABLE IF EXISTS {qualified_table_name}")
         except Exception:
             pass
 
@@ -333,9 +338,10 @@ class TestSnowflakeMaterializationEndToEnd:
         table_name = f"{schema}.target_events"
         source_table = f"{schema}.source_events"
 
-        # Cleanup before test
+        # Cleanup before test - use qualified name
+        qualified_table_name = adapter.utils.qualify_object_name(table_name)
         try:
-            adapter.execute_query(f"DROP TABLE IF EXISTS {table_name}")
+            adapter.execute_query(f"DROP TABLE IF EXISTS {qualified_table_name}")
         except Exception:
             pass
 
@@ -372,9 +378,10 @@ class TestSnowflakeMaterializationEndToEnd:
         assert first_row[1] == "event1"
         assert first_row[3] == 100
 
-        # Cleanup
+        # Cleanup - use qualified name
+        qualified_table_name = adapter.utils.qualify_object_name(table_name)
         try:
-            adapter.execute_query(f"DROP TABLE IF EXISTS {table_name}")
+            adapter.execute_query(f"DROP TABLE IF EXISTS {qualified_table_name}")
         except Exception:
             pass
 
@@ -389,17 +396,20 @@ class TestSnowflakeMaterializationEndToEnd:
         schema = snowflake_config.get("schema", "PUBLIC")
         table_name = f"{schema}.target_events_sync"
         source_table = f"{schema}.source_events"
+        
+        # Use qualified name for cleanup and table creation
+        qualified_table_name = adapter.utils.qualify_object_name(table_name)
 
         # Cleanup before test
         try:
-            adapter.execute_query(f"DROP TABLE IF EXISTS {table_name}")
+            adapter.execute_query(f"DROP TABLE IF EXISTS {qualified_table_name}")
         except Exception:
             pass
 
         # Step 1: Create initial table with old schema including 'old_col'
         adapter.execute_query(
             f"""
-            CREATE TABLE {table_name} AS
+            CREATE TABLE {qualified_table_name} AS
             SELECT 
                 1 as event_id,
                 'event1' as event_name,
@@ -565,9 +575,10 @@ class TestSnowflakeMaterializationEndToEnd:
         table_name = f"{schema}.target_events_fail"
         source_table = f"{schema}.source_events"
 
-        # Cleanup before test
+        # Cleanup before test - use qualified name
+        qualified_table_name = adapter.utils.qualify_object_name(table_name)
         try:
-            adapter.execute_query(f"DROP TABLE IF EXISTS {table_name}")
+            adapter.execute_query(f"DROP TABLE IF EXISTS {qualified_table_name}")
         except Exception:
             pass
 
@@ -621,10 +632,13 @@ class TestSnowflakeMaterializationEndToEnd:
         schema = snowflake_config.get("schema", "PUBLIC")
         table_name = f"{schema}.target_events_merge"
         source_table = f"{schema}.source_events"
+        
+        # Use qualified name for cleanup
+        qualified_table_name = adapter.utils.qualify_object_name(table_name)
 
         # Cleanup before test
         try:
-            adapter.execute_query(f"DROP TABLE IF EXISTS {table_name}")
+            adapter.execute_query(f"DROP TABLE IF EXISTS {qualified_table_name}")
         except Exception:
             pass
 
@@ -791,9 +805,10 @@ class TestSnowflakeMaterializationEndToEnd:
         table_name = f"{schema}.target_events_ignore"
         source_table = f"{schema}.source_events"
 
-        # Cleanup before test
+        # Cleanup before test - use qualified name
+        qualified_table_name = adapter.utils.qualify_object_name(table_name)
         try:
-            adapter.execute_query(f"DROP TABLE IF EXISTS {table_name}")
+            adapter.execute_query(f"DROP TABLE IF EXISTS {qualified_table_name}")
         except Exception:
             pass
 
@@ -836,9 +851,10 @@ class TestSnowflakeMaterializationEndToEnd:
         table_name = f"{schema}.target_events_full_inc_refresh"
         source_table = f"{schema}.source_events"
 
-        # Cleanup before test
+        # Cleanup before test - use qualified name
+        qualified_table_name = adapter.utils.qualify_object_name(table_name)
         try:
-            adapter.execute_query(f"DROP TABLE IF EXISTS {table_name}")
+            adapter.execute_query(f"DROP TABLE IF EXISTS {qualified_table_name}")
         except Exception:
             pass
 

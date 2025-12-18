@@ -99,7 +99,7 @@ FROM source_table
         # Verify OTS structure
         assert len(ots_modules) > 0
         module = list(ots_modules.values())[0]
-        assert module["ots_version"] == "0.2.0"  # Should be 0.2.0 with functions
+        assert module["ots_version"] == "0.2.2"  # Should be 0.2.1 with functions
         assert "functions" in module
         assert len(module["functions"]) == 1
         assert module["functions"][0]["function_id"] == "my_schema.calculate_percentage"

@@ -67,7 +67,7 @@ initial_query = "SELECT event_id, event_name, event_date FROM source_events"
 metadata = {
     "incremental": {
         "strategy": "append",
-        "append": {"time_column": "event_date", "start_date": "2024-01-01"},
+        "append": {"filter_column": "event_date", "start_value": "2024-01-01"},
     }
 }
 handler.materialize(table_name, initial_query, "incremental", metadata)

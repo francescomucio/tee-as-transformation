@@ -217,9 +217,9 @@ class TestOTSModule:
         assert "functions" not in module or module.get("functions") is None
 
     def test_ots_module_with_functions(self):
-        """Test OTS module with functions (OTS 0.2.0)."""
+        """Test OTS module with functions (OTS 0.2.1)."""
         module: OTSModule = {
-            "ots_version": "0.2.0",
+            "ots_version": "0.2.1",
             "module_name": "my_project",
             "target": {
                 "database": "duckdb",
@@ -239,7 +239,7 @@ class TestOTSModule:
                 }
             ],
         }
-        assert module["ots_version"] == "0.2.0"
+        assert module["ots_version"] == "0.2.1"  # OTS 0.2.1 is used when functions are present
         assert module["functions"] is not None
         assert len(module["functions"]) == 1
         assert module["functions"][0]["function_id"] == "my_schema.calculate_metric"

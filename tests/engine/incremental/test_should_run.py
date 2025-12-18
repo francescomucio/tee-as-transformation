@@ -91,7 +91,7 @@ class TestShouldRunIncremental(TestIncrementalExecutor):
         """Test that merge strategy with auto start_date runs incrementally."""
         config = {
             "strategy": "merge",
-            "merge": {"unique_key": ["id"], "time_column": "updated_at", "start_date": "auto"},
+            "merge": {"unique_key": ["id"], "filter_column": "updated_at", "start_value": "auto"},
         }
         state = ModelState(
             model_name="test_model",
@@ -116,8 +116,8 @@ class TestShouldRunIncremental(TestIncrementalExecutor):
             "strategy": "merge",
             "merge": {
                 "unique_key": ["id"],
-                "time_column": "updated_at",
-                "start_date": "@start_date",
+                "filter_column": "updated_at",
+                "start_value": "@start_date",
             },
         }
         state = ModelState(
@@ -143,8 +143,8 @@ class TestShouldRunIncremental(TestIncrementalExecutor):
             "strategy": "merge",
             "merge": {
                 "unique_key": ["id"],
-                "time_column": "updated_at",
-                "start_date": "2024-01-01",
+                "filter_column": "updated_at",
+                "start_value": "2024-01-01",
             },
         }
         state = ModelState(

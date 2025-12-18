@@ -197,7 +197,10 @@ class TestDiscovery:
             sys.modules[module_name] = module
 
             # Inject test decorator, create_test, and SqlTestMetadata into the module
-            module.test = test
+            # Mark test as not a pytest test function (it's a decorator)
+            test_func = test
+            test_func.__test__ = False
+            module.test = test_func
             module.create_test = create_test
             module.SqlTestMetadata = SqlTestMetadata
 
@@ -208,7 +211,10 @@ class TestDiscovery:
             if "tee.testing" not in sys.modules:
                 testing_module = types.ModuleType("testing")
                 sys.modules["tee.testing"] = testing_module
-            sys.modules["tee.testing"].test = test
+            # Mark test as not a pytest test function (it's a decorator)
+            test_func = test
+            test_func.__test__ = False
+            sys.modules["tee.testing"].test = test_func
             sys.modules["tee.testing"].create_test = create_test
             sys.modules["tee.testing"].SqlTestMetadata = SqlTestMetadata
 

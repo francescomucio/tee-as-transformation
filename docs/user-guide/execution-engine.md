@@ -98,8 +98,8 @@ Adds new records to existing tables without modifying existing data.
 "incremental": {
     "strategy": "append",
     "append": {
-        "time_column": "created_at",
-        "start_date": "2024-01-01",
+        "filter_column": "created_at",
+        "start_value": "2024-01-01",
         "lookback": "7 days"
     }
 }
@@ -114,8 +114,8 @@ Performs upsert operations, updating existing records and inserting new ones.
     "strategy": "merge",
     "merge": {
         "unique_key": ["id"],
-        "time_column": "updated_at",
-        "start_date": "auto",
+        "filter_column": "updated_at",
+        "start_value": "auto",
         "lookback": "3 hours"
     }
 }
@@ -130,8 +130,8 @@ Removes old data and inserts fresh data for a specific time range.
     "strategy": "delete_insert",
     "delete_insert": {
         "where_condition": "updated_at >= @start_date",
-        "time_column": "updated_at",
-        "start_date": "@start_date"
+        "filter_column": "updated_at",
+        "start_value": "@start_date"
     }
 }
 ```

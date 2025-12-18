@@ -292,11 +292,11 @@ class MetadataConverter:
         if t4t_strategy == "merge" and unique_key:
             result["merge"] = {
                 "unique_key": unique_key if isinstance(unique_key, list) else [unique_key],
-                "time_column": config.get("incremental_key", "updated_at"),
+                "filter_column": config.get("incremental_key", "updated_at"),
             }
         elif t4t_strategy == "append":
             result["append"] = {
-                "time_column": config.get("incremental_key", "updated_at"),
+                "filter_column": config.get("incremental_key", "updated_at"),
             }
 
         # Convert on_schema_change (OTS 0.2.1)

@@ -164,6 +164,10 @@ def test(
     return decorator
 
 
+# Tell pytest this is not a test function (it's a decorator)
+test.__test__ = False
+
+
 def create_test(
     name: str,
     sql: str,

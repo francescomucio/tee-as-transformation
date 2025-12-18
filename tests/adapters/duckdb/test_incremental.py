@@ -124,8 +124,8 @@ class TestDuckDBIncremental:
         """
         config = {
             "unique_key": ["id"],
-            "time_column": "updated_at",
-            "start_date": "auto",
+            "filter_column": "updated_at",
+            "start_value": "auto",
             "lookback": "1 hour",
         }
         duckdb_adapter.execute_incremental_merge("test_schema.target_table", source_sql, config)
@@ -167,8 +167,8 @@ class TestDuckDBIncremental:
         """
         config = {
             "unique_key": ["id"],
-            "time_column": "updated_at",
-            "start_date": "auto",
+            "filter_column": "updated_at",
+            "start_value": "auto",
             "lookback": "1 hour",
         }
         duckdb_adapter.execute_incremental_merge("test_schema.target_table", source_sql, config)
@@ -296,8 +296,8 @@ class TestDuckDBIncremental:
         """
         config = {
             "unique_key": ["id"],
-            "time_column": "updated_at",
-            "start_date": "auto",
+            "filter_column": "updated_at",
+            "start_value": "auto",
             "lookback": "1 hour",
         }
         duckdb_adapter.execute_incremental_merge("test_schema.target_table", source_sql, config)

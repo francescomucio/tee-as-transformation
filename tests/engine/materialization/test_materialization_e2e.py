@@ -27,8 +27,8 @@ class IncrementalConfig:
     """Helper class for incremental metadata configuration."""
 
     strategy: str = "append"
-    time_column: str = "event_date"
-    start_date: str = "2024-01-01"
+    filter_column: str = "event_date"
+    start_value: str = "2024-01-01"
     on_schema_change: str | None = None
     unique_key: list[str] | None = None
 
@@ -42,14 +42,14 @@ class IncrementalConfig:
 
         if self.strategy == "append":
             metadata["incremental"]["append"] = {
-                "time_column": self.time_column,
-                "start_date": self.start_date,
+                "filter_column": self.filter_column,
+                "start_value": self.start_value,
             }
         elif self.strategy == "merge":
             metadata["incremental"]["merge"] = {
                 "unique_key": self.unique_key or ["event_id"],
-                "time_column": self.time_column,
-                "start_date": self.start_date,
+                "filter_column": self.filter_column,
+                "start_value": self.start_value,
             }
 
         if self.on_schema_change:

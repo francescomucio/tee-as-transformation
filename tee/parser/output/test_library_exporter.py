@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 class TestLibraryExporter:
     """Exports discovered SQL tests to OTS test library format."""
 
+    __test__ = False  # Tell pytest this is not a test class
+
     def __init__(self, project_folder: Path, project_name: str):
         """
         Initialize the test library exporter.
@@ -68,7 +70,7 @@ class TestLibraryExporter:
 
             # Build test library structure
             test_library = {
-                "ots_version": "0.2.0",  # Test libraries are part of OTS 0.2.0
+                "ots_version": "0.2.1",  # Test libraries are part of OTS 0.2.1
                 "test_library_version": "1.0",
                 "description": f"Test library for {self.project_name} project",
             }

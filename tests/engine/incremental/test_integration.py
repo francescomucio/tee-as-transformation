@@ -30,6 +30,18 @@ class TestIntegration(TestIncrementalExecutor):
         # Mock adapter
         mock_adapter = Mock()
         mock_adapter.execute_incremental_append = Mock()
+        mock_adapter.table_exists = Mock(return_value=True)
+        mock_adapter.get_table_info = Mock(
+            return_value={
+                "schema": [
+                    {"column": "id", "type": "INTEGER"},
+                    {"column": "created_at", "type": "TIMESTAMP"},
+                    {"column": "value", "type": "VARCHAR"},
+                ]
+            }
+        )
+        mock_adapter.describe_query_schema = Mock(return_value=[])
+        mock_adapter.execute_query = Mock(return_value=[])
 
         # Test should_run_incremental
         should_run = executor.should_run_incremental(
@@ -41,7 +53,12 @@ class TestIntegration(TestIncrementalExecutor):
 
         # Test execution
         executor.execute_append_strategy(
-            "test_model", "SELECT * FROM source", sample_append_config, mock_adapter, "test_table"
+            "test_model",
+            "SELECT * FROM source",
+            sample_append_config,
+            mock_adapter,
+            "test_table",
+            on_schema_change="ignore",
         )
 
         # Verify calls
@@ -54,8 +71,8 @@ class TestIntegration(TestIncrementalExecutor):
             "strategy": "merge",
             "merge": {
                 "unique_key": ["id"],
-                "time_column": "updated_at",
-                "start_date": "auto",
+                "filter_column": "updated_at",
+                "start_value": "auto",
                 "lookback": "1 hour",
             },
         }
@@ -76,6 +93,18 @@ class TestIntegration(TestIncrementalExecutor):
         # Mock adapter
         mock_adapter = Mock()
         mock_adapter.execute_incremental_merge = Mock()
+        mock_adapter.table_exists = Mock(return_value=True)
+        mock_adapter.get_table_info = Mock(
+            return_value={
+                "schema": [
+                    {"column": "id", "type": "INTEGER"},
+                    {"column": "updated_at", "type": "TIMESTAMP"},
+                    {"column": "value", "type": "VARCHAR"},
+                ]
+            }
+        )
+        mock_adapter.describe_query_schema = Mock(return_value=[])
+        mock_adapter.execute_query = Mock(return_value=[])
 
         # Test should_run_incremental
         should_run = executor.should_run_incremental("test_model", "SELECT * FROM source", config)
@@ -83,7 +112,12 @@ class TestIntegration(TestIncrementalExecutor):
 
         # Test execution
         executor.execute_merge_strategy(
-            "test_model", "SELECT * FROM source", config["merge"], mock_adapter, "test_table"
+            "test_model",
+            "SELECT * FROM source",
+            config["merge"],
+            mock_adapter,
+            "test_table",
+            on_schema_change="ignore",
         )
 
         # Verify calls

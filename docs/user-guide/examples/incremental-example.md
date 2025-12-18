@@ -44,8 +44,8 @@ metadata_append: ModelMetadata = {
     "incremental": {
         "strategy": "append",
         "append": {
-            "time_column": "created_at",
-            "start_date": "2024-01-01",
+            "filter_column": "created_at",
+            "start_value": "2024-01-01",
             "lookback": "7 days"
         }
     }
@@ -59,8 +59,8 @@ metadata_merge: ModelMetadata = {
         "strategy": "merge",
         "merge": {
             "unique_key": ["id"],
-            "time_column": "updated_at",
-            "start_date": "auto",
+            "filter_column": "updated_at",
+            "start_value": "auto",
             "lookback": "3 hours"
         }
     }
@@ -74,8 +74,8 @@ metadata_delete_insert: ModelMetadata = {
         "strategy": "delete_insert",
         "delete_insert": {
             "where_condition": "updated_at >= @start_date",
-            "time_column": "updated_at",
-            "start_date": "@start_date"
+            "filter_column": "updated_at",
+            "start_value": "@start_date"
         }
     }
 }
@@ -124,7 +124,7 @@ uv run t4t run ./t_project
 **Output:**
 ```
 INFO - ExecutionEngine - Executing model: my_schema.incremental_example
-INFO - tee.engine.incremental_executor - Running incremental merge for my_schema.incremental_example with auto start_date
+INFO - tee.engine.incremental_executor - Running incremental merge for my_schema.incremental_example with auto start_value
 INFO - DuckDBAdapter - Executed incremental merge
 INFO - ExecutionEngine - Successfully executed my_schema.incremental_example with 256 rows
 ```
@@ -138,7 +138,7 @@ uv run t4t run ./t_project --vars '{"start_date": "2024-01-01"}'
 **Output:**
 ```
 INFO - ExecutionEngine - Executing model: my_schema.incremental_example
-INFO - tee.engine.incremental_executor - Running incremental delete_insert for my_schema.incremental_example with @start_date start_date
+INFO - tee.engine.incremental_executor - Running incremental delete_insert for my_schema.incremental_example with @start_date start_value
 INFO - tee.engine.incremental_executor - Resolved variable @start_date to 2024-01-01
 INFO - DuckDBAdapter - Executed delete for table: my_schema.incremental_example
 INFO - DuckDBAdapter - Executed insert for table: my_schema.incremental_example

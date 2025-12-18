@@ -14,6 +14,10 @@ class TestStrategyExecution(TestIncrementalExecutor):
         """Test append strategy execution."""
         mock_adapter = Mock()
         mock_adapter.execute_incremental_append = Mock()
+        mock_adapter.table_exists = Mock(return_value=True)
+        mock_adapter.get_table_info = Mock(return_value={"schema": []})
+        mock_adapter.describe_query_schema = Mock(return_value=[])
+        mock_adapter.execute_query = Mock(return_value=[])
 
         executor.execute_append_strategy(
             "test_model", "SELECT * FROM source", sample_append_config, mock_adapter, "test_table"
@@ -26,6 +30,10 @@ class TestStrategyExecution(TestIncrementalExecutor):
         """Test merge strategy execution."""
         mock_adapter = Mock()
         mock_adapter.execute_incremental_merge = Mock()
+        mock_adapter.table_exists = Mock(return_value=True)
+        mock_adapter.get_table_info = Mock(return_value={"schema": []})
+        mock_adapter.describe_query_schema = Mock(return_value=[])
+        mock_adapter.execute_query = Mock(return_value=[])
 
         executor.execute_merge_strategy(
             "test_model", "SELECT * FROM source", sample_merge_config, mock_adapter, "test_table"
@@ -38,6 +46,10 @@ class TestStrategyExecution(TestIncrementalExecutor):
         """Test delete+insert strategy execution."""
         mock_adapter = Mock()
         mock_adapter.execute_incremental_delete_insert = Mock()
+        mock_adapter.table_exists = Mock(return_value=True)
+        mock_adapter.get_table_info = Mock(return_value={"schema": []})
+        mock_adapter.describe_query_schema = Mock(return_value=[])
+        mock_adapter.execute_query = Mock(return_value=[])
 
         executor.execute_delete_insert_strategy(
             "test_model",
@@ -45,7 +57,7 @@ class TestStrategyExecution(TestIncrementalExecutor):
             sample_delete_insert_config,
             mock_adapter,
             "test_table",
-            variables={"start_date": "2024-01-01"},
+            variables={"start_value": "2024-01-01"},
         )
 
         mock_adapter.execute_incremental_delete_insert.assert_called_once()
@@ -56,6 +68,7 @@ class TestStrategyExecution(TestIncrementalExecutor):
         mock_adapter = Mock()
         mock_adapter.execute_incremental_append = None  # Not supported
         mock_adapter.create_table = Mock()
+        mock_adapter.table_exists = Mock(return_value=False)  # Table doesn't exist, so create_table will be called
 
         executor.execute_append_strategy(
             "test_model", "SELECT * FROM source", sample_append_config, mock_adapter, "test_table"

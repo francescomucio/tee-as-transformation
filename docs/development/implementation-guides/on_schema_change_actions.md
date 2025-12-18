@@ -114,7 +114,7 @@ def orders():
         "strategy": "append",
         "on_schema_change": "append_new_columns",
         "append": {
-            "time_column": "created_at"
+            "filter_column": "created_at"
         }
     }
 )
@@ -162,7 +162,7 @@ ALTER TABLE orders ADD COLUMN discount_code VARCHAR(50);
         "on_schema_change": "sync_all_columns",
         "merge": {
             "unique_key": ["product_id"],
-            "time_column": "updated_at"
+            "filter_column": "updated_at"
         }
     }
 )

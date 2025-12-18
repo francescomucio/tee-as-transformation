@@ -30,8 +30,8 @@ metadata_append: ModelMetadata = {
     "incremental": {
         "strategy": "append",
         "append": {
-            "time_column": "created_at",
-            "start_date": "2024-01-01",
+            "filter_column": "created_at",
+            "start_value": "2024-01-01",
             "lookback": "7 days"
         }
     }
@@ -45,8 +45,8 @@ metadata_merge: ModelMetadata = {
         "strategy": "merge",
         "merge": {
             "unique_key": ["id"],
-            "time_column": "updated_at",
-            "start_date": "auto",
+            "filter_column": "updated_at",
+            "start_value": "auto",
             "lookback": "3 hours"
         }
     }
@@ -60,8 +60,8 @@ metadata_delete_insert: ModelMetadata = {
         "strategy": "delete_insert",
         "delete_insert": {
             "where_condition": "updated_at >= @start_date",
-            "time_column": "updated_at",
-            "start_date": "@start_date"
+            "filter_column": "updated_at",
+            "start_value": "@start_date"
         }
     }
 }
@@ -74,12 +74,243 @@ metadata = metadata_merge  # Currently using merge strategy
 
 ```sql
 -- models/my_schema/incremental_example.sql
--- metadata: {"materialization": "incremental", "incremental": {"strategy": "append", "append": {"time_column": "created_at", "start_date": "2024-01-01", "lookback": "7 days"}}}
+-- metadata: {"materialization": "incremental", "incremental": {"strategy": "append", "append": {"filter_column": "created_at", "start_value": "2024-01-01", "lookback": "7 days"}}}
 
 SELECT id, name, created_at, updated_at, status 
 FROM t_project.source_table 
 WHERE status = 'active'
 ```
+
+## AutoIncremental Columns
+
+For dimension tables and similar use cases where you need to calculate stable IDs based on existing data in the target table, t4t supports **auto_incremental columns**. When a column is marked as `auto_incremental: True`, the system automatically handles ID calculation logic using `MAX(id) + ROW_NUMBER()`.
+
+### Benefits
+
+- **Stable IDs**: IDs remain consistent across incremental loads
+- **Automatic Handling**: System handles MAX(id) calculation, exclusion of existing records, and ID assignment
+- **Works with All Strategies**: Supports merge, append, and delete+insert strategies
+- **Transparent and Explicit**: Recommended explicit mode makes ID calculation visible in your query
+
+### Configuration
+
+Mark a column as auto_incremental in your schema metadata:
+
+```python
+metadata: ModelMetadata = {
+    "description": "Brand dimension table",
+    "materialization": "incremental",
+    "incremental": {
+        "strategy": "merge",
+        "merge": {
+            "unique_key": ["brand_name"],  # Required for merge strategy
+            "filter_column": "created_date",
+            "start_value": "auto",
+        }
+    },
+    "schema": [
+        {
+            "name": "brand_id",
+            "datatype": "integer",
+            "auto_incremental": True,  # System will calculate IDs automatically
+        },
+        {
+            "name": "brand_name",
+            "datatype": "string",
+        }
+    ]
+}
+```
+
+## Explicit Mode (Recommended) ⭐
+
+**Explicit mode is the recommended approach** because it makes ID calculation transparent and gives you full control over how IDs are assigned. In explicit mode, you include the ID column in your query using `ROW_NUMBER()` or any other expression.
+
+### How Explicit Mode Works
+
+**User Query (Explicit - Includes ID Column):**
+```sql
+SELECT 
+    row_number() over (order by brand) as brand_id, 
+    brand as brand_name
+FROM source_table
+WHERE brand IS NOT NULL
+GROUP BY brand
+```
+
+**For Full Refresh:**
+- Query executes as-is
+- IDs will be 1, 2, 3, ... (sequential)
+
+**For Incremental Runs:**
+- System automatically modifies the `ROW_NUMBER()` expression
+- Changes: `row_number() over (order by brand)` → `(MAX(id) + row_number() over (order by brand))`
+- Only new records (not in target table) get calculated IDs
+- Existing records maintain their original IDs
+
+**Example Transformation:**
+```sql
+-- Original query (full refresh)
+SELECT 
+    row_number() over (order by brand) as brand_id, 
+    brand as brand_name
+FROM source_table
+WHERE brand IS NOT NULL
+GROUP BY brand
+
+-- Incremental run (system automatically modifies)
+WITH source_data AS (
+    SELECT 
+        row_number() over (order by brand) as brand_id, 
+        brand as brand_name
+    FROM source_table
+    WHERE brand IS NOT NULL
+    GROUP BY brand
+),
+existing_data AS (
+    SELECT brand_name FROM dim_brand
+),
+max_id AS (
+    SELECT COALESCE(MAX(brand_id), 0) AS max_id FROM dim_brand
+)
+SELECT DISTINCT
+    (m.max_id + s.brand_id) AS brand_id,  -- MAX(id) added to existing expression
+    s.brand_name
+FROM source_data s
+CROSS JOIN max_id m
+LEFT JOIN existing_data e ON s.brand_name = e.brand_name
+WHERE e.brand_name IS NULL  -- Only new records
+```
+
+### Why Explicit Mode is Better
+
+1. **Transparency**: You can see exactly how IDs are calculated in your query
+2. **Flexibility**: You can use any expression (not just `ROW_NUMBER()`)
+3. **Debugging**: Easier to understand and debug when IDs are visible
+4. **Control**: Full control over ID calculation logic (ordering, partitioning, etc.)
+5. **Standard SQL**: Uses standard SQL patterns (`ROW_NUMBER()`, `GROUP BY`)
+
+## Implicit Mode (Alternative)
+
+Implicit mode is an alternative where you write a simple query without the ID column, and the system fully wraps it with ID calculation logic.
+
+### How Implicit Mode Works
+
+**User Query (Simple - No ID Column):**
+```sql
+SELECT DISTINCT brand AS brand_name
+FROM source_table
+WHERE brand IS NOT NULL
+```
+
+**System Automatically Wraps With:**
+```sql
+WITH source_data AS (
+    SELECT DISTINCT brand AS brand_name
+    FROM source_table
+    WHERE brand IS NOT NULL
+      AND created_date > 'last_value'  -- Time filter if filter_column specified
+),
+existing_data AS (
+    SELECT brand_name FROM dim_brand
+),
+max_id AS (
+    SELECT COALESCE(MAX(brand_id), 0) AS max_id
+    FROM dim_brand
+)
+SELECT DISTINCT
+    m.max_id + ROW_NUMBER() OVER (ORDER BY s.brand_name) AS brand_id,
+    s.brand_name
+FROM source_data s
+CROSS JOIN max_id m
+LEFT JOIN existing_data e ON s.brand_name = e.brand_name
+WHERE e.brand_name IS NULL  -- Only new records
+```
+
+### When to Use Implicit Mode
+
+- Quick prototyping or simple use cases
+- When you prefer the system to handle all ID logic
+- Legacy code that already uses simple queries
+
+### Strategy-Specific Behavior
+
+#### Merge Strategy
+- Uses `unique_key` to exclude existing records via LEFT JOIN
+- Only new records (not matched on `unique_key`) get calculated IDs
+- Existing records are updated via MERGE statement
+
+#### Append Strategy
+- No exclusion logic needed - just calculates IDs based on MAX(id)
+- New records are appended with sequential IDs
+- Simpler than merge - no `unique_key` required
+
+#### Delete+Insert Strategy
+- Optional `unique_key` for exclusion (if provided)
+- If `unique_key` not provided, all records get new IDs
+- DELETE removes old records, INSERT adds new with calculated IDs
+
+### Example: Dimension Table Generation (Explicit Mode - Recommended)
+
+```python
+# generate_dimension_tables.py
+from tee.parser.processing import create_model
+
+dimensions = ["brand", "category"]
+source_table = "my_schema.national_articles"
+
+for dimension in dimensions:
+    # Explicit mode: query includes the ID column
+    # For full refresh: query executes as-is (IDs will be 1, 2, 3, ...)
+    # For incremental: system automatically adds MAX(id) to ROW_NUMBER() expression
+    sql = f"""
+        SELECT 
+            row_number() over (order by {dimension}) as {dimension}_id, 
+            {dimension} as {dimension}_name
+        FROM {source_table}
+        WHERE {dimension} IS NOT NULL
+        GROUP BY {dimension}
+    """
+    
+    metadata = {
+        "description": f"{dimension.capitalize()} dimension table",
+        "materialization": "incremental",
+        "incremental": {
+            "strategy": "merge",
+            "merge": {
+                "unique_key": [f"{dimension}_name"],
+                "filter_column": "created_date",
+                "start_value": "auto",
+            }
+        },
+        "schema": [
+            {
+                "name": f"{dimension}_id",
+                "datatype": "integer",
+                "auto_incremental": True,  # System handles ID calculation!
+            },
+            {
+                "name": f"{dimension}_name",
+                "datatype": "string",
+            }
+        ]
+    }
+    
+    create_model(
+        table_name=f"dim_{dimension}",
+        sql=sql,
+        **metadata
+    )
+```
+
+**Note**: This example uses explicit mode (recommended). The query includes `row_number() over (order by {dimension}) as {dimension}_id`, making the ID calculation transparent. For incremental runs, the system automatically modifies this to `(MAX(id) + row_number() over (order by {dimension}))`.
+
+### Limitations
+
+- **Only one auto_incremental column per table**: Multiple auto_incremental columns are not supported
+- **Merge strategy requires unique_key**: When using merge strategy with auto_incremental, `unique_key` must be specified
+- **First run handling**: On first run (empty table), `COALESCE(MAX(id), 0)` ensures IDs start at 1
+- **Explicit mode expression**: In explicit mode, the system modifies the existing ID expression. Any expression that produces the auto_incremental column will work (not just `ROW_NUMBER()`)
 
 ## Strategies
 
@@ -92,9 +323,10 @@ The append strategy adds new records to existing tables without modifying existi
 "incremental": {
     "strategy": "append",
     "append": {
-        "time_column": "created_at",      # Column to use for time filtering
-        "start_date": "2024-01-01",       # Start date for first run
-        "lookback": "7 days"              # Optional: lookback period
+        "filter_column": "created_at",           # Column to use for time filtering (source table)
+        "destination_filter_column": "created_dt", # Optional: Column name in target table (if different)
+        "start_value": "2024-01-01",              # Start value for first run (or "auto")
+        "lookback": "7 days"                      # Optional: lookback period
     }
 }
 ```
@@ -130,10 +362,11 @@ The merge strategy performs upsert operations, updating existing records and ins
 "incremental": {
     "strategy": "merge",
     "merge": {
-        "unique_key": ["id"],             # Columns that uniquely identify records
-        "time_column": "updated_at",      # Column to use for time filtering
-        "start_date": "auto",             # Use max(time_column) from target table
-        "lookback": "3 hours"             # Optional: lookback period
+        "unique_key": ["id"],                    # Columns that uniquely identify records
+        "filter_column": "updated_at",          # Column to use for time filtering (source table)
+        "destination_filter_column": "updated_dt", # Optional: Column name in target table (if different)
+        "start_value": "auto",                  # Use max(destination_filter_column) from target table
+        "lookback": "3 hours"                   # Optional: lookback period
     }
 }
 ```
@@ -179,8 +412,9 @@ The delete+insert strategy removes old data and inserts fresh data for a specifi
     "strategy": "delete_insert",
     "delete_insert": {
         "where_condition": "updated_at >= @start_date",  # Condition for deletion
-        "time_column": "updated_at",                     # Column for time filtering
-        "start_date": "@start_date"                      # Variable reference
+        "filter_column": "updated_at",                  # Column for time filtering (source table)
+        "destination_filter_column": "updated_dt",      # Optional: Column name in target table (if different)
+        "start_value": "@start_date"                    # Variable reference or literal value
     }
 }
 ```
@@ -211,25 +445,59 @@ AND updated_at >= '2024-01-01'
 
 ## Configuration Options
 
-### Time Column
+### Filter Column
 
-The `time_column` specifies which column to use for time-based filtering:
+The `filter_column` specifies which column to use for time-based filtering:
 
 ```python
-"time_column": "created_at"    # Use created_at column
-"time_column": "updated_at"    # Use updated_at column
+"filter_column": "created_at"    # Use created_at column
+"filter_column": "updated_at"    # Use updated_at column
 ```
 
-### Start Date
+### Destination Filter Column
 
-The `start_date` option controls when to start processing data:
+The `destination_filter_column` option allows you to specify a different column name in the target table for the `MAX()` subquery when using `start_value="auto"`. This is useful when the source and target tables have different column names.
 
 ```python
-"start_date": "2024-01-01"           # Specific date
-"start_date": "auto"                 # Use max(time_column) from target table
-"start_date": "CURRENT_DATE"         # Use current date
-"start_date": "@start_date"          # Use CLI variable
-"start_date": "{{ start_date }}"     # Use CLI variable (alternative syntax)
+"filter_column": "created_date",              # Column in source table
+"destination_filter_column": "created_dt",    # Column in target table (if different)
+"start_value": "auto"                         # Will query MAX(created_dt) from target
+```
+
+**Behavior:**
+- If `destination_filter_column` is provided, it's used in the `MAX()` subquery: `MAX(destination_filter_column)`
+- If `destination_filter_column` is missing, `filter_column` is used: `MAX(filter_column)`
+- The system validates that `destination_filter_column` exists in the target table (raises error if not found)
+
+**Example Use Case:**
+```python
+# Source table has "created_date", target table has "created_dt"
+"incremental": {
+    "strategy": "merge",
+    "merge": {
+        "unique_key": ["brand_name"],
+        "filter_column": "created_date",           # Source column
+        "destination_filter_column": "created_dt", # Target column
+        "start_value": "auto"                      # Queries MAX(created_dt) from target
+    }
+}
+```
+
+**Generated SQL:**
+```sql
+WHERE created_date > (SELECT MAX(created_dt) FROM my_schema.dim_brand)
+```
+
+### Start Value
+
+The `start_value` option controls when to start processing data:
+
+```python
+"start_value": "2024-01-01"           # Specific date
+"start_value": "auto"                 # Use max(filter_column) from target table
+"start_value": "CURRENT_DATE"         # Use current date
+"start_value": "@start_date"          # Use CLI variable
+"start_value": "{{ start_date }}"     # Use CLI variable (alternative syntax)
 ```
 
 ### Lookback
@@ -243,6 +511,9 @@ The `lookback` option adds a buffer period to handle late-arriving data:
 "lookback": "2 weeks"         # 2 weeks
 "lookback": "1 month"         # 1 month (approximate)
 ```
+
+**Important:** `lookback` is intended for **date/timestamp-like** `filter_column`s (columns where subtracting an `INTERVAL` is valid in your SQL dialect).
+If your `start_value` is not a date/timestamp and your dialect cannot apply `- INTERVAL ...`, you should not use `lookback`.
 
 ### CLI Variables
 
@@ -259,7 +530,7 @@ uv run t4t run ./examples/t_project --vars '{"start_date": "2024-01-01"}'
 Variables are resolved in the configuration:
 
 ```python
-"start_date": "@start_date"          # Resolved to 2024-01-01
+"start_value": "@start_date"          # Resolved to 2024-01-01
 "where_condition": "created_at >= @start_date"  # Resolved to "created_at >= 2024-01-01"
 ```
 
@@ -379,8 +650,8 @@ metadata: ModelMetadata = {
         "strategy": "merge",
         "merge": {
             "unique_key": ["user_id", "event_id"],
-            "time_column": "event_timestamp",
-            "start_date": "auto",
+            "filter_column": "event_timestamp",
+            "start_value": "auto",
             "lookback": "1 hour"
         }
     }

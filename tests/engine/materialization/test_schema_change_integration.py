@@ -74,7 +74,7 @@ class TestSchemaChangeIntegration:
         metadata = {
             "incremental": {
                 "strategy": "append",
-                "append": {"time_column": "created_at", "start_date": "2024-01-01"},
+                "append": {"filter_column": "created_at", "start_value": "2024-01-01"},
             }
         }
         handler.materialize(table_name, sql_query, "incremental", metadata)
@@ -133,7 +133,7 @@ class TestSchemaChangeIntegration:
         metadata = {
             "incremental": {
                 "strategy": "append",
-                "append": {"time_column": "created_at", "start_date": "2024-01-01"},
+                "append": {"filter_column": "created_at", "start_value": "2024-01-01"},
             }
         }
         handler.materialize(table_name, sql_query, "incremental", metadata)
@@ -187,7 +187,7 @@ class TestSchemaChangeIntegration:
         metadata = {
             "incremental": {
                 "strategy": "append",
-                "append": {"time_column": "created_at", "start_date": "2024-01-01"},
+                "append": {"filter_column": "created_at", "start_value": "2024-01-01"},
             }
         }
         handler.materialize(table_name, sql_query, "incremental", metadata)
@@ -236,7 +236,7 @@ class TestSchemaChangeIntegration:
         metadata = {
             "incremental": {
                 "strategy": "append",
-                "append": {"time_column": "created_at", "start_date": "2024-01-01"},
+                "append": {"filter_column": "created_at", "start_value": "2024-01-01"},
             }
         }
         handler.materialize(table_name, sql_query, "incremental", metadata)
@@ -264,7 +264,7 @@ class TestSchemaChangeIntegration:
         metadata = {
             "incremental": {
                 "strategy": "append",
-                "append": {"time_column": "created_at", "start_date": "2024-01-01"},
+                "append": {"filter_column": "created_at", "start_value": "2024-01-01"},
             }
         }
         handler.materialize(table_name, sql_query, "incremental", metadata)
@@ -302,7 +302,7 @@ class TestSchemaChangeIntegration:
         metadata = {
             "incremental": {
                 "strategy": "append",
-                "append": {"time_column": "created_at", "start_date": "2024-01-01"},
+                "append": {"filter_column": "created_at", "start_value": "2024-01-01"},
             }
         }
         handler.materialize(table_name, sql_query, "incremental", metadata)
@@ -363,8 +363,8 @@ class TestSchemaChangeIntegration:
                 "strategy": "merge",
                 "merge": {
                     "unique_key": ["id"],
-                    "time_column": "updated_at",
-                    "start_date": "2024-01-01",
+                    "filter_column": "updated_at",
+                    "start_value": "2024-01-01",
                 },
             }
         }
@@ -392,8 +392,8 @@ class TestSchemaChangeIntegration:
                 "strategy": "delete_insert",
                 "delete_insert": {
                     "where_condition": "updated_at >= @start_date",
-                    "time_column": "updated_at",
-                    "start_date": "@start_date",
+                    "filter_column": "updated_at",
+                    "start_value": "@start_date",
                 },
             }
         }
@@ -463,7 +463,7 @@ class TestSchemaChangeIntegration:
         metadata = {
             "incremental": {
                 "strategy": "append",
-                "append": {"time_column": "created_at", "start_date": "2024-01-01"},
+                "append": {"filter_column": "created_at", "start_value": "2024-01-01"},
                 "on_schema_change": "fail",
             }
         }

@@ -151,7 +151,7 @@ class TestTagExtraction:
                     "tags": ["incremental", "daily"],
                     "incremental": {
                         "strategy": "append",
-                        "append": {"time_column": "created_at"},
+                        "append": {"filter_column": "created_at"},
                     },
                 }
             },

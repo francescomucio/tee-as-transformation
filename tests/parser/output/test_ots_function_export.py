@@ -59,7 +59,7 @@ class TestOTSFunctionExport:
 
         assert len(modules) == 1
         module = modules["test_project.my_schema"]
-        assert module["ots_version"] == "0.2.0"  # Should be 0.2.0 when functions are present
+        assert module["ots_version"] == "0.2.2"  # Latest OTS version
         assert "functions" in module
         assert len(module["functions"]) == 1
 
@@ -85,11 +85,11 @@ class TestOTSFunctionExport:
 
         assert len(modules) == 1
         module = modules["test_project.my_schema"]
-        assert module["ots_version"] == "0.1.0"
+        assert module["ots_version"] == "0.2.2"
         assert "functions" not in module
 
     def test_ots_version_with_functions(self, project_config, sample_function):
-        """Test that OTS version is 0.2.0 when functions are present."""
+        """Test that OTS version is 0.2.1 when functions are present."""
         transformer = OTSTransformer(project_config)
         parsed_functions: dict[str, Function] = {
             "my_schema.calculate_percentage": sample_function,
@@ -99,7 +99,7 @@ class TestOTSFunctionExport:
 
         assert len(modules) == 1
         module = modules["test_project.my_schema"]
-        assert module["ots_version"] == "0.2.0"
+        assert module["ots_version"] == "0.2.2"
 
     def test_function_tags_export(self, project_config, sample_function):
         """Test that function tags are exported to OTS."""
@@ -223,7 +223,7 @@ class TestOTSFunctionExport:
 
         assert len(modules) == 1
         module = modules["test_project.my_schema"]
-        assert module["ots_version"] == "0.2.0"
+        assert module["ots_version"] == "0.2.2"
         assert len(module["transformations"]) == 1
         assert len(module["functions"]) == 1
 

@@ -72,8 +72,8 @@ class OTSConverter:
             # Convert functions (OTS 0.2.0+)
             parsed_functions = {}
             ots_version = module.get("ots_version", "0.1.0")
-            # Check if version is 0.2.0 or higher
-            # For simple versions like "0.1.0" and "0.2.0", string comparison works
+            # Check if version is 0.2.0 or higher (includes 0.2.1)
+            # For simple versions like "0.1.0", "0.2.0", and "0.2.1", string comparison works
             if ots_version >= "0.2.0":
                 functions = module.get("functions", [])
                 for function in functions:
@@ -282,6 +282,9 @@ class OTSConverter:
                 "datatype": col.get("datatype", "string"),
                 "description": col.get("description"),
             }
+            # Add auto_incremental if present (OTS 0.2.2+)
+            if col.get("auto_incremental"):
+                col_def["auto_incremental"] = True
             # Tests will be added separately in _convert_tests
             column_definitions.append(col_def)
 
@@ -330,27 +333,62 @@ class OTSConverter:
 
         if strategy == "delete_insert":
             delete_condition = incremental_details.get("delete_condition", "")
+            # Use filter_column, start_value, and destination_filter_column if present (OTS 0.2.2+)
+            # Fallback to start_date for backward compatibility (OTS < 0.2.2)
+            filter_column = incremental_details.get("filter_column", "")
+            start_value = incremental_details.get("start_value") or incremental_details.get("start_date", "auto")
+            destination_filter_column = incremental_details.get("destination_filter_column")
             result["delete_insert"] = {
                 "where_condition": delete_condition,
-                "time_column": "",  # OTS doesn't specify this separately
-                "start_date": "auto",
+                "filter_column": filter_column,
+                "start_value": start_value,
             }
+            if destination_filter_column:
+                result["delete_insert"]["destination_filter_column"] = destination_filter_column
+            lookback = incremental_details.get("lookback")
+            if lookback:
+                result["delete_insert"]["lookback"] = lookback
         elif strategy == "append":
-            incremental_details.get("filter_condition", "")
-            # Try to extract time_column from filter_condition
-            # This is a heuristic - OTS format doesn't explicitly separate these
+            # Use filter_column, start_value, and destination_filter_column if present (OTS 0.2.2+)
+            # Fallback to start_date for backward compatibility (OTS < 0.2.2)
+            filter_column = incremental_details.get("filter_column", "")
+            start_value = incremental_details.get("start_value") or incremental_details.get("start_date", "auto")
+            destination_filter_column = incremental_details.get("destination_filter_column")
+            if not filter_column:
+                # Fallback: Try to extract from filter_condition (for older OTS versions)
+                filter_condition = incremental_details.get("filter_condition", "")
+                # Simple heuristic: extract column name from "column >= value" or "column > value"
+                import re
+                match = re.match(r"(\w+)\s*[><=]+\s*", filter_condition)
+                if match:
+                    filter_column = match.group(1)
             result["append"] = {
-                "time_column": "",  # Would need to parse from filter_condition
-                "start_date": "auto",
+                "filter_column": filter_column,
+                "start_value": start_value,
             }
+            if destination_filter_column:
+                result["append"]["destination_filter_column"] = destination_filter_column
+            lookback = incremental_details.get("lookback")
+            if lookback:
+                result["append"]["lookback"] = lookback
         elif strategy == "merge":
             merge_key = incremental_details.get("merge_key", [])
-            update_columns = incremental_details.get("update_columns")
+            # Use filter_column, start_value, and destination_filter_column if present (OTS 0.2.2+)
+            # Fallback to start_date for backward compatibility (OTS < 0.2.2)
+            filter_column = incremental_details.get("filter_column", "")
+            start_value = incremental_details.get("start_value") or incremental_details.get("start_date", "auto")
+            destination_filter_column = incremental_details.get("destination_filter_column")
             result["merge"] = {
                 "unique_key": merge_key,
-                "time_column": "",  # OTS doesn't specify this separately
-                "start_date": "auto",
+                "filter_column": filter_column,
+                "start_value": start_value,
             }
+            if destination_filter_column:
+                result["merge"]["destination_filter_column"] = destination_filter_column
+            lookback = incremental_details.get("lookback")
+            if lookback:
+                result["merge"]["lookback"] = lookback
+            update_columns = incremental_details.get("update_columns")
             if update_columns:
                 result["merge"]["update_columns"] = update_columns
 

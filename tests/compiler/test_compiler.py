@@ -212,7 +212,7 @@ class TestCompileProject:
         # Verify YAML is valid
         with open(yaml_files[0]) as f:
             yaml_data = yaml.safe_load(f)
-            assert yaml_data["ots_version"] == "0.1.0"
+            assert yaml_data["ots_version"] == "0.2.2"
             assert yaml_data["module_name"] == "test_project.schema1"
 
 

@@ -45,9 +45,18 @@ class SchemaComparator:
             try:
                 return self.adapter.describe_query_schema(sql_query)
             except Exception as e:
-                logger.warning(
-                    f"describe_query_schema failed, falling back to LIMIT 0: {e}"
-                )
+                # Check if the error is due to a missing table reference (common with auto_incremental wrapped queries)
+                error_str = str(e).lower()
+                if "does not exist" in error_str or "not found" in error_str or "not authorized" in error_str:
+                    # This is likely a wrapped query referencing a table that doesn't exist yet
+                    # Log at debug level instead of warning since this is expected behavior
+                    logger.debug(
+                        f"describe_query_schema failed (likely due to missing table reference in wrapped query): {e}"
+                    )
+                else:
+                    logger.warning(
+                        f"describe_query_schema failed, falling back to LIMIT 0: {e}"
+                    )
                 # Fall through to LIMIT 0 approach
 
         # Fallback: Execute query with LIMIT 0 and extract schema from result
@@ -76,7 +85,9 @@ class SchemaComparator:
             if schema:
                 return schema
 
-            logger.warning(
+            # Check if the error in the outer try block was due to missing table reference
+            # If so, this is expected and we should log at debug level
+            logger.debug(
                 "Could not extract schema from query result, using empty schema"
             )
             return []

@@ -101,8 +101,9 @@ class MaterializationHandler:
                 incremental_config = {
                     "strategy": strategy,
                     strategy: {
-                        "time_column": metadata.get("time_column"),
-                        "start_date": metadata.get("start_date"),
+                        "filter_column": metadata.get("filter_column"),
+                        # start_value is the new generic name; keep backward compatibility with start_date
+                        "start_value": metadata.get("start_value", metadata.get("start_date")),
                         "lookback": metadata.get("lookback"),
                         "unique_key": metadata.get("unique_key"),
                         "where_condition": metadata.get("where_condition"),
@@ -134,20 +135,134 @@ class MaterializationHandler:
                 metadata.get("full_incremental_refresh") if metadata else None
             )
 
+            # Store original query for hash computation (before wrapping)
+            # The SQL hash should be computed from the original query, not the wrapped one
+            original_sql_query = sql_query
+
+            # Wrap query with auto_incremental logic if needed (before schema change detection)
+            # This ensures the wrapped query is used for schema comparison and execution
+            from .auto_incremental_wrapper import AutoIncrementalWrapper
+            
+            wrapper = AutoIncrementalWrapper(self.adapter)
+            table_exists = self.adapter.table_exists(table_name)
+            if metadata and wrapper.should_wrap(metadata):
+                strategy_type = incremental_config.get("strategy")
+                if strategy_type == "merge":
+                    merge_config = incremental_config.get("merge")
+                    if merge_config:
+                        sql_query = wrapper.wrap_query_for_merge(
+                            sql_query=sql_query,
+                            table_name=table_name,
+                            metadata=metadata,
+                            unique_key=merge_config.get("unique_key", []),
+                            time_filter=None,  # No time filter yet - will be added later if needed
+                            table_exists=table_exists,
+                        )
+                elif strategy_type == "append":
+                    append_config = incremental_config.get("append")
+                    if append_config:
+                        sql_query = wrapper.wrap_query_for_append(
+                            sql_query=sql_query,
+                            table_name=table_name,
+                            metadata=metadata,
+                            time_filter=None,  # No time filter yet - will be added later if needed
+                            table_exists=table_exists,
+                        )
+                elif strategy_type == "delete_insert":
+                    delete_insert_config = incremental_config.get("delete_insert")
+                    if delete_insert_config:
+                        sql_query = wrapper.wrap_query_for_delete_insert(
+                            sql_query=sql_query,
+                            table_name=table_name,
+                            metadata=metadata,
+                            unique_key=delete_insert_config.get("unique_key"),
+                            time_filter=None,  # No time filter yet - will be added later if needed
+                            table_exists=table_exists,
+                        )
+
+            # Check for schema changes BEFORE deciding whether to run incrementally
+            # If schema changes require full refresh, handle that first
+            schema_change_requires_full_refresh = False
+            if self.adapter.table_exists(table_name):
+                from .schema_change_handler import SchemaChangeHandler
+                from .schema_comparator import SchemaComparator
+
+                handler = SchemaChangeHandler(self.adapter)
+                comparator = SchemaComparator(self.adapter)
+
+                query_schema = comparator.infer_query_schema(sql_query)
+                table_schema = comparator.get_table_schema(table_name)
+                differences = comparator.compare_schemas(query_schema, table_schema)
+
+                if differences["has_changes"]:
+                    # Check if on_schema_change requires full refresh
+                    if on_schema_change in ["full_refresh", "full_incremental_refresh", "recreate_empty"]:
+                        schema_change_requires_full_refresh = True
+                        logger.info(
+                            f"Schema changes detected for {table_name} with on_schema_change='{on_schema_change}'. "
+                            f"Handling schema change before incremental run."
+                        )
+                        handler.handle_schema_changes(
+                            table_name,
+                            query_schema,
+                            table_schema,
+                            on_schema_change,
+                            sql_query=sql_query,
+                            full_incremental_refresh_config=full_incremental_refresh_config,
+                            incremental_config={"strategy": strategy, strategy: incremental_config.get(strategy)},
+                            metadata=metadata,
+                        )
+                    elif on_schema_change in ["append_new_columns", "sync_all_columns"]:
+                        # These don't require full refresh, handle them later in strategy execution
+                        pass
+                    elif on_schema_change == "fail":
+                        # Will be handled in strategy execution
+                        pass
+                    # ignore: no action needed
+
             # Check if we should run incrementally
-            should_run_incremental = executor.should_run_incremental(
-                table_name, sql_query, incremental_config
-            )
+            # Use ORIGINAL query for hash computation, not wrapped query
+            # If schema change required full refresh, we should run as full load
+            # Also, for merge/delete_insert strategies, table must exist to run incrementally
+            strategy = incremental_config.get("strategy") if incremental_config else None
+            table_exists_for_incremental = self.adapter.table_exists(table_name)
+            
+            # For merge and delete_insert, table must exist to run incrementally
+            if strategy in ["merge", "delete_insert"] and not table_exists_for_incremental:
+                logger.info(
+                    f"Table {table_name} does not exist. Cannot run incremental {strategy}. "
+                    "Running full load instead."
+                )
+                should_run_incremental = False
+            else:
+                should_run_incremental = (
+                    not schema_change_requires_full_refresh
+                    and executor.should_run_incremental(table_name, original_sql_query, incremental_config)
+                )
+
             if not should_run_incremental:
                 # Run as full load (create/replace table)
                 self.adapter.create_table(table_name, sql_query, metadata)
 
-                # Update state after full load to enable incremental runs
+                # Save state after full load to enable incremental runs
+                # Compute hashes from the original query (not wrapped)
+                sql_hash = self.state_manager.compute_sql_hash(original_sql_query)
+                config_hash = self.state_manager.compute_config_hash(incremental_config)
                 current_time = datetime.now(UTC).isoformat()
                 strategy = incremental_config.get("strategy") if incremental_config else None
-                self.state_manager.update_processed_value(table_name, current_time, strategy)
+                
+                # Save state with proper hashes so next run can detect if model changed
+                self.state_manager.save_model_state(
+                    model_name=table_name,
+                    materialization="incremental",
+                    sql_hash=sql_hash,
+                    config_hash=config_hash,
+                    last_processed_value=current_time,
+                    strategy=strategy,
+                )
             else:
                 # Run incremental strategy
+                # Note: strategy was already determined above
                 if strategy == "append":
                     append_config = incremental_config.get("append")
                     if not append_config:
@@ -162,6 +277,7 @@ class MaterializationHandler:
                         self.variables,
                         on_schema_change=on_schema_change,
                         full_incremental_refresh_config=full_incremental_refresh_config,
+                        metadata=metadata,
                     )
 
                 elif strategy == "merge":
@@ -178,6 +294,7 @@ class MaterializationHandler:
                         self.variables,
                         on_schema_change=on_schema_change,
                         full_incremental_refresh_config=full_incremental_refresh_config,
+                        metadata=metadata,
                     )
 
                 elif strategy == "delete_insert":
@@ -194,6 +311,7 @@ class MaterializationHandler:
                         self.variables,
                         on_schema_change=on_schema_change,
                         full_incremental_refresh_config=full_incremental_refresh_config,
+                        metadata=metadata,
                     )
 
                 else:

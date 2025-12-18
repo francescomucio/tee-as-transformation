@@ -350,7 +350,7 @@ def _merge_test_libraries(
     # If no project test library was created, create empty structure
     if not project_test_library:
         project_test_library = {
-            "ots_version": "0.2.0",  # Test libraries are part of OTS 0.2.0
+            "ots_version": "0.2.1",  # Test libraries are part of OTS 0.2.1
             "test_library_version": "1.0",
             "description": f"Test library for {project_name} project",
         }
@@ -436,7 +436,7 @@ def _merge_test_libraries(
 
     # Step 4: Build merged test library
     merged_test_library = {
-        "ots_version": "0.2.0",  # Test libraries are part of OTS 0.2.0
+        "ots_version": "0.2.1",  # Test libraries are part of OTS 0.2.1
         "test_library_version": project_test_library.get("test_library_version", "1.0"),
         "description": project_test_library.get(
             "description", f"Test library for {project_name} project"

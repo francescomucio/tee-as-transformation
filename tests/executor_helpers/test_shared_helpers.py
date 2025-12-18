@@ -128,3 +128,4 @@ class TestCreateEmptyBuildResults:
         assert results["analysis"]["total_models"] == 0
         assert results["analysis"]["dependency_graph"] == graph
 
+

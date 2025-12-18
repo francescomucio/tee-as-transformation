@@ -113,7 +113,7 @@ class TestTestConverter:
         target_path.mkdir()
         
         test_file = tests_dir / "test_var.sql"
-        test_file.write_text("SELECT * FROM table WHERE date >= {{ var('start_date', '2024-01-01') }}")
+        test_file.write_text("SELECT * FROM table WHERE date >= {{ var('start_value', '2024-01-01') }}")
         
         converter = TestConverter(
             target_path=target_path,
@@ -126,7 +126,7 @@ class TestTestConverter:
         
         target_test = target_path / "tests" / "test_var.sql"
         content = target_test.read_text()
-        assert "@start_date:2024-01-01" in content or "@start_date:'2024-01-01'" in content
+        assert "@start_value:2024-01-01" in content or "@start_value:'2024-01-01'" in content
         assert "{{ var(" not in content
 
     def test_skip_freshness_test(self, tmp_path: Path) -> None:

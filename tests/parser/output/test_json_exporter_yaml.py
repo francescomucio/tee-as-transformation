@@ -69,7 +69,7 @@ class TestJSONExporterYAML:
         # Verify JSON content
         with open(output_file, "r") as f:
             module_data = json.load(f)
-            assert module_data["ots_version"] == "0.1.0"
+            assert module_data["ots_version"] == "0.2.2"
             assert module_data["module_name"] == "test_project.schema1"
 
     def test_export_ots_modules_yaml(self, temp_dir, sample_parsed_models, project_config):
@@ -86,7 +86,7 @@ class TestJSONExporterYAML:
         # Verify YAML content
         with open(output_file, "r") as f:
             module_data = yaml.safe_load(f)
-            assert module_data["ots_version"] == "0.1.0"
+            assert module_data["ots_version"] == "0.2.2"
             assert module_data["module_name"] == "test_project.schema1"
             assert len(module_data["transformations"]) == 1
 
@@ -146,7 +146,7 @@ class TestJSONExporterYAML:
         # Verify module contains functions
         with open(output_file, "r") as f:
             module_data = json.load(f)
-            assert module_data["ots_version"] == "0.2.0"
+            assert module_data["ots_version"] == "0.2.2"
             assert "functions" in module_data
             assert len(module_data["functions"]) == 1
             assert module_data["functions"][0]["function_id"] == "schema1.calculate_percentage"
@@ -161,7 +161,7 @@ class TestJSONExporterYAML:
         
         with open(output_file, "r") as f:
             module_data = json.load(f)
-            assert module_data["ots_version"] == "0.1.0"
+            assert module_data["ots_version"] == "0.2.2"
             assert "functions" not in module_data
 
 

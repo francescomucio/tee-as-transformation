@@ -74,14 +74,14 @@ def write_metadata_file(target_file: Path, metadata: dict[str, Any], table_name:
         if "append" in inc:
             lines.append('        "append": {')
             lines.append(
-                f'            "time_column": "{inc["append"].get("time_column", "updated_at")}",'
+                f'            "filter_column": "{inc["append"].get("filter_column", "updated_at")}",'
             )
             lines.append("        },")
         if "merge" in inc:
             lines.append('        "merge": {')
             lines.append(f'            "unique_key": {inc["merge"].get("unique_key", [])},')
             lines.append(
-                f'            "time_column": "{inc["merge"].get("time_column", "updated_at")}",'
+                f'            "filter_column": "{inc["merge"].get("filter_column", "updated_at")}",'
             )
             lines.append("        },")
         lines.append("    },")

@@ -466,8 +466,8 @@ After implementation, users can use it like this:
         "strategy": "append",
         "on_schema_change": "append_new_columns",  # NEW
         "append": {
-            "time_column": "created_at",
-            "start_date": "2024-01-01"
+            "filter_column": "created_at",
+            "start_value": "2024-01-01"
         }
     }
 )

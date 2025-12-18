@@ -40,6 +40,9 @@ def temp_state_db_path():
     """Create a temporary state database file."""
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
         temp_path = f.name
+    # Delete the empty file - StateManager will create it as a proper DuckDB database
+    if os.path.exists(temp_path):
+        os.unlink(temp_path)
     yield temp_path
     # Cleanup
     if os.path.exists(temp_path):
@@ -64,7 +67,12 @@ def duckdb_adapter(duckdb_config):
 @pytest.fixture
 def state_manager(temp_state_db_path):
     """Create state manager instance."""
-    manager = ModelStateManager(state_db_path=temp_state_db_path)
+    import os
+    # Ensure parent directory exists
+    parent_dir = os.path.dirname(temp_state_db_path)
+    if parent_dir:
+        os.makedirs(parent_dir, exist_ok=True)
+    manager = ModelStateManager(state_database_path=temp_state_db_path)
     yield manager
     manager.close()
 
@@ -72,7 +80,7 @@ def state_manager(temp_state_db_path):
 @pytest.fixture
 def sample_append_config() -> dict[str, Any]:
     """Sample append configuration."""
-    return {"time_column": "created_at", "start_date": "2024-01-01", "lookback": "7 days"}
+    return {"filter_column": "created_at", "start_value": "2024-01-01", "lookback": "7 days"}
 
 
 @pytest.fixture
@@ -80,8 +88,8 @@ def sample_merge_config() -> dict[str, Any]:
     """Sample merge configuration."""
     return {
         "unique_key": ["id"],
-        "time_column": "updated_at",
-        "start_date": "auto",
+        "filter_column": "updated_at",
+        "start_value": "auto",
         "lookback": "3 hours",
     }
 
@@ -91,8 +99,8 @@ def sample_delete_insert_config() -> dict[str, Any]:
     """Sample delete+insert configuration."""
     return {
         "where_condition": "updated_at >= @start_date",
-        "time_column": "updated_at",
-        "start_date": "@start_date",
+        "filter_column": "updated_at",
+        "start_value": "@start_date",
     }
 
 
@@ -101,7 +109,7 @@ def sample_incremental_config() -> dict[str, Any]:
     """Sample incremental configuration."""
     return {
         "strategy": "append",
-        "append": {"time_column": "created_at", "start_date": "2024-01-01", "lookback": "7 days"},
+        "append": {"filter_column": "created_at", "start_value": "2024-01-01", "lookback": "7 days"},
     }
 
 

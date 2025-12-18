@@ -48,20 +48,20 @@ class TestLookbackApplication(TestIncrementalExecutor):
 
         result = executor._apply_lookback_to_time_filter(time_filter, sample_append_config)
 
-        assert result == "created_at >= (CAST('2024-01-01' AS DATE) - INTERVAL '7 days')"
+        assert result == "created_at >= (CAST('2024-01-01' AS TIMESTAMP) - INTERVAL '7 days')"
 
     def test_apply_lookback_with_hours(self, executor):
         """Test applying lookback with hours."""
-        config = {"time_column": "created_at", "lookback": "3 hours"}
+        config = {"filter_column": "created_at", "lookback": "3 hours"}
         time_filter = "created_at >= '2024-01-01'"
 
         result = executor._apply_lookback_to_time_filter(time_filter, config)
 
-        assert result == "created_at >= (CAST('2024-01-01' AS DATE) - INTERVAL '3 hours')"
+        assert result == "created_at >= (CAST('2024-01-01' AS TIMESTAMP) - INTERVAL '3 hours')"
 
     def test_apply_lookback_no_lookback(self, executor):
         """Test applying lookback when no lookback specified."""
-        config = {"time_column": "created_at"}
+        config = {"filter_column": "created_at"}
         time_filter = "created_at >= '2024-01-01'"
 
         result = executor._apply_lookback_to_time_filter(time_filter, config)
@@ -70,7 +70,7 @@ class TestLookbackApplication(TestIncrementalExecutor):
 
     def test_apply_lookback_invalid_format(self, executor):
         """Test applying lookback with invalid format."""
-        config = {"time_column": "created_at", "lookback": "invalid"}
+        config = {"filter_column": "created_at", "lookback": "invalid"}
         time_filter = "created_at >= '2024-01-01'"
 
         result = executor._apply_lookback_to_time_filter(time_filter, config)

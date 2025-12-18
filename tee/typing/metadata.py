@@ -63,13 +63,16 @@ class ColumnDefinition(TypedDict):
     description: NotRequired[str | None]
     # Tests can be simple strings or dicts with parameters and severity
     tests: NotRequired[list[ColumnTestName | dict[str, Any]]]
+    # If True, system will automatically calculate IDs using MAX(id) + ROW_NUMBER()
+    auto_incremental: NotRequired[bool]
 
 
 class IncrementalAppendConfig(TypedDict):
     """Configuration for append-only incremental strategy."""
 
-    time_column: str
-    start_date: NotRequired[str | None]  # "auto" for max(time_column) pattern, or specific date
+    filter_column: str
+    start_value: NotRequired[str | None]  # "auto" for max(filter_column) pattern, or specific value
+    destination_filter_column: NotRequired[str | None]  # Column name in target table (if different from filter_column)
     lookback: NotRequired[str | None]  # e.g., "7 days", "1 week"
 
 
@@ -77,8 +80,9 @@ class IncrementalMergeConfig(TypedDict):
     """Configuration for merge incremental strategy."""
 
     unique_key: list[str]
-    time_column: str
-    start_date: NotRequired[str | None]  # "auto" for max(time_column) pattern, or specific date
+    filter_column: str
+    start_value: NotRequired[str | None]  # "auto" for max(filter_column) pattern, or specific value
+    destination_filter_column: NotRequired[str | None]  # Column name in target table (if different from filter_column)
     lookback: NotRequired[str | None]  # e.g., "7 days", "1 week"
 
 
@@ -86,8 +90,9 @@ class IncrementalDeleteInsertConfig(TypedDict):
     """Configuration for delete+insert incremental strategy."""
 
     where_condition: str  # SQL WHERE clause to identify records to delete
-    time_column: str
-    start_date: NotRequired[str | None]  # "auto" for max(time_column) pattern, or specific date
+    filter_column: str
+    start_value: NotRequired[str | None]  # "auto" for max(filter_column) pattern, or specific value
+    destination_filter_column: NotRequired[str | None]  # Column name in target table (if different from filter_column)
     lookback: NotRequired[str | None]  # e.g., "7 days", "1 week"
 
 

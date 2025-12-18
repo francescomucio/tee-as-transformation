@@ -83,8 +83,8 @@ class ValidatedModelMetadata:
             if "append" not in self.incremental or not self.incremental["append"]:
                 raise ValueError("Append strategy requires 'append' configuration")
             append_config = self.incremental["append"]
-            if "time_column" not in append_config:
-                raise ValueError("Append strategy requires 'time_column' in append configuration")
+            if "filter_column" not in append_config:
+                raise ValueError("Append strategy requires 'filter_column' in append configuration")
 
         elif strategy == "merge":
             if "merge" not in self.incremental or not self.incremental["merge"]:
@@ -92,8 +92,8 @@ class ValidatedModelMetadata:
             merge_config = self.incremental["merge"]
             if "unique_key" not in merge_config or not merge_config["unique_key"]:
                 raise ValueError("Merge strategy requires 'unique_key' in merge configuration")
-            if "time_column" not in merge_config:
-                raise ValueError("Merge strategy requires 'time_column' in merge configuration")
+            if "filter_column" not in merge_config:
+                raise ValueError("Merge strategy requires 'filter_column' in merge configuration")
 
         elif strategy == "delete_insert":
             if "delete_insert" not in self.incremental or not self.incremental["delete_insert"]:
@@ -103,9 +103,9 @@ class ValidatedModelMetadata:
                 raise ValueError(
                     "Delete+insert strategy requires 'where_condition' in delete_insert configuration"
                 )
-            if "time_column" not in delete_insert_config:
+            if "filter_column" not in delete_insert_config:
                 raise ValueError(
-                    "Delete+insert strategy requires 'time_column' in delete_insert configuration"
+                    "Delete+insert strategy requires 'filter_column' in delete_insert configuration"
                 )
 
 

@@ -191,7 +191,19 @@ class StateManager:
         """Update the last processed value for a model."""
         state = self.get_model_state(model_name)
         if state is None:
-            logger.warning(f"Cannot update processed value for unknown model: {model_name}")
+            # State doesn't exist yet - this happens on first run after a full load
+            # Create the state with default values so we can track the processed value
+            logger.info(
+                f"Model state doesn't exist for {model_name}, creating it with processed value: {value}"
+            )
+            self.save_model_state(
+                model_name=model_name,
+                materialization="incremental",  # Default to incremental since this is called from incremental materialization
+                sql_hash="unknown",  # Will be updated on next run when we have the SQL hash
+                config_hash="unknown",  # Will be updated on next run when we have the config hash
+                last_processed_value=value,
+                strategy=strategy,
+            )
             return
 
         logger.info(

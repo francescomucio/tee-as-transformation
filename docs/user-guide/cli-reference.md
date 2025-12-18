@@ -28,7 +28,7 @@ Most commands support these common options:
 Variables are passed as JSON strings:
 
 ```bash
---vars '{"env": "prod", "start_date": "2024-01-01"}'
+--vars '{"env": "prod", "start_value": "2024-01-01"}'
 ```
 
 ### Selection Patterns
@@ -248,7 +248,7 @@ t4t run <project_folder> [options]
 t4t run ./my_project
 
 # Run with variables
-t4t run ./my_project --vars '{"env": "prod", "start_date": "2024-01-01"}'
+t4t run ./my_project --vars '{"env": "prod", "start_value": "2024-01-01"}'
 
 # Run specific models
 t4t run ./my_project --select my_model

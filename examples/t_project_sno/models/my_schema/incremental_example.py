@@ -8,8 +8,8 @@ metadata_append: ModelMetadata = {
     "incremental": {
         "strategy": "append",
         "append": {
-            "time_column": "created_at",
-            "start_date": "@start_date",  # Use variable from CLI
+            "filter_column": "created_at",
+            "start_value": "@start_date",  # Use variable from CLI
             "lookback": "7 days"
         }
     }
@@ -23,8 +23,8 @@ metadata_merge: ModelMetadata = {
         "strategy": "merge",
         "merge": {
             "unique_key": ["id"],
-            "time_column": "updated_at",
-            "start_date": "auto",  # Will use max(time_column) from target table
+            "filter_column": "updated_at",
+            "start_value": "auto",  # Will use max(filter_column) from target table
             "lookback": "3 hours"
         }
     }
@@ -38,8 +38,8 @@ metadata_delete_insert: ModelMetadata = {
         "strategy": "delete_insert",
         "delete_insert": {
             "where_condition": "updated_at >= '@start_date'",
-            "time_column": "updated_at",
-            "start_date": "@start_date",
+            "filter_column": "updated_at",
+            "start_value": "@start_date",
         }
     }
 }

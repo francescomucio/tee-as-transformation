@@ -24,9 +24,16 @@ class IncrementalHandler:
         self.logger = adapter.logger
 
     def execute_append(self, table_name: str, sql_query: str) -> None:
-        """Execute incremental append operation."""
+        """Execute incremental append into an existing table, or create if missing."""
         if not self.adapter.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
+
+        # Check if table exists
+        if not self.adapter.table_exists(table_name):
+            # First run: create table from query
+            self.logger.info(f"Table {table_name} does not exist. Creating it as a full load first.")
+            self.adapter.create_table(table_name, sql_query, metadata=None)
+            return
 
         # Convert SQL and qualify table references
         converted_query = self.adapter.utils.convert_and_qualify_sql(sql_query)

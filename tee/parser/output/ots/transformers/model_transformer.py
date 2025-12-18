@@ -115,6 +115,9 @@ class ModelTransformer(BaseTransformer):
                     "datatype": col["datatype"],
                     "description": col.get("description"),
                 }
+                # Add auto_incremental if present (OTS 0.2.2+)
+                if col.get("auto_incremental"):
+                    col_def["auto_incremental"] = True
                 schema_data["columns"].append(col_def)
 
             # Extract indexes if explicitly defined
@@ -177,15 +180,58 @@ class ModelTransformer(BaseTransformer):
                     "filter_condition": where_condition,  # Same as delete_condition
                 }
             )
+            # Add filter_column, start_value, and destination_filter_column if present (OTS 0.2.2+)
+            filter_column = di_config.get("filter_column")
+            if filter_column:
+                details["filter_column"] = filter_column
+            start_value = di_config.get("start_value")
+            if start_value:
+                details["start_value"] = start_value
+            destination_filter_column = di_config.get("destination_filter_column")
+            if destination_filter_column:
+                details["destination_filter_column"] = destination_filter_column
+            lookback = di_config.get("lookback")
+            if lookback:
+                details["lookback"] = lookback
         elif strategy == "append":
             append_config = inc_config.get("append", {})
-            time_col = append_config.get("time_column", "")
-            start_date = append_config.get("start_date", "")
-            details["filter_condition"] = f"{time_col} >= {start_date}"
+            time_col = append_config.get("filter_column", "")
+            start_value = append_config.get("start_value", "")
+            destination_filter_column = append_config.get("destination_filter_column")
+            # Generate filter_condition for backward compatibility
+            if time_col and start_value and start_value != "auto":
+                details["filter_condition"] = f"{time_col} >= {start_value}"
+            # Add filter_column, start_value, and destination_filter_column separately (OTS 0.2.2+)
+            if time_col:
+                details["filter_column"] = time_col
+            if start_value:
+                details["start_value"] = start_value
+            if destination_filter_column:
+                details["destination_filter_column"] = destination_filter_column
+            lookback = append_config.get("lookback")
+            if lookback:
+                details["lookback"] = lookback
         elif strategy == "merge":
             merge_config = inc_config.get("merge", {})
             unique_key = merge_config.get("unique_key", [])
             details["merge_key"] = unique_key
+            # Add filter_column, start_value, and destination_filter_column if present (OTS 0.2.2+)
+            filter_column = merge_config.get("filter_column")
+            if filter_column:
+                details["filter_column"] = filter_column
+                start_value = merge_config.get("start_value", "")
+                if start_value:
+                    details["start_value"] = start_value
+                destination_filter_column = merge_config.get("destination_filter_column")
+                if destination_filter_column:
+                    details["destination_filter_column"] = destination_filter_column
+                lookback = merge_config.get("lookback")
+                if lookback:
+                    details["lookback"] = lookback
+                # Generate filter_condition for backward compatibility if we have filter_column
+                # Note: For merge with "auto" start_value, filter_condition is complex, so we keep it minimal
+                if start_value and start_value != "auto":
+                    details["filter_condition"] = f"{filter_column} >= {start_value}"
             # Add update_columns if specified
             if "update_columns" in merge_config:
                 details["update_columns"] = merge_config["update_columns"]

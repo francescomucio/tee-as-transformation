@@ -8,6 +8,7 @@ This adapter provides Snowflake-specific functionality including:
 - Materialization support including external tables
 """
 
+import re
 import uuid
 from typing import Any
 
@@ -273,8 +274,14 @@ class SnowflakeAdapter(DatabaseAdapter):
 
             cursor = self.connection.cursor()
             try:
+                # Remove LIMIT clause from query if present (to avoid "LIMIT ... LIMIT 0" syntax error)
+                # We'll add our own LIMIT 0
+                # Remove trailing LIMIT clause (case-insensitive)
+                query_without_limit = re.sub(
+                    r'\s+LIMIT\s+\d+\s*$', '', sql_query.strip(), flags=re.IGNORECASE
+                )
                 # Create temporary view with LIMIT 0 to avoid data processing
-                create_view_sql = f"CREATE OR REPLACE TEMPORARY VIEW {qualified_temp_view} AS {sql_query} LIMIT 0"
+                create_view_sql = f"CREATE OR REPLACE TEMPORARY VIEW {qualified_temp_view} AS {query_without_limit} LIMIT 0"
                 cursor.execute(create_view_sql)
 
                 # Describe the view to get schema

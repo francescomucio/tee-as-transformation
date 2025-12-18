@@ -132,7 +132,7 @@ class TestOTSModuleReader:
         reader = OTSModuleReader()
         
         module_data = {
-            "ots_version": "0.1.0",
+            "ots_version": "0.2.2",
             "module_name": "test.module",
             "module_description": "Test module",
             "version": "1.0.0",
@@ -158,7 +158,7 @@ class TestOTSModuleReader:
 
         info = reader.get_module_info(module_data)
         assert info["module_name"] == "test.module"
-        assert info["ots_version"] == "0.1.0"
+        assert info["ots_version"] == "0.2.2"
         assert info["transformation_count"] == 1
         assert info["has_test_library"] is True
         assert len(info["module_tags"]) == 2

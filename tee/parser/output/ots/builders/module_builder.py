@@ -133,8 +133,9 @@ class ModuleBuilder:
         if not isinstance(module_tags, list):
             module_tags = []
 
-        # Determine OTS version: 0.2.0 if functions are present, 0.1.0 otherwise
-        ots_version = "0.2.0" if ots_functions else "0.1.0"
+        # Always use the latest OTS version (0.2.2)
+        # This ensures our exports are aligned with the latest standard
+        ots_version = "0.2.2"
 
         # Build module
         module: OTSModule = {
@@ -145,7 +146,7 @@ class ModuleBuilder:
             "transformations": transformations,
         }
 
-        # Add functions if present (OTS 0.2.0)
+        # Add functions if present (OTS 0.2.1)
         if ots_functions:
             module["functions"] = ots_functions
 

@@ -124,8 +124,8 @@ class TestDuckDBIncrementalPerformance:
         """
         config = {
             "unique_key": ["id"],
-            "time_column": "updated_at",
-            "start_date": "auto",
+            "filter_column": "updated_at",
+            "start_value": "auto",
             "lookback": "1 hour",
         }
 

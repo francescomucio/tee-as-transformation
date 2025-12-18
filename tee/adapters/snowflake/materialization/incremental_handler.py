@@ -61,7 +61,7 @@ class IncrementalHandler:
             raise ValueError("unique_key is required for incremental merge")
         if isinstance(unique_key, str):
             unique_key = [unique_key]
-        time_column = config.get("time_column")
+        filter_column = config.get("filter_column")
         columns = self.adapter.get_table_columns(table_name)
         if not columns:
             # As a fallback, attempt executing using select * mapping
@@ -71,7 +71,7 @@ class IncrementalHandler:
             # We still build merge but it may not be correct; raise to be explicit
             raise ValueError("Cannot resolve table columns for merge")
         merge_sql = self._generate_merge_sql(
-            table_name, source_sql, unique_key, columns, time_column
+            table_name, source_sql, unique_key, columns, filter_column
         )
         cursor = self.adapter.connection.cursor()
         try:
@@ -85,7 +85,7 @@ class IncrementalHandler:
 
     def execute_delete_insert(self, table_name: str, delete_sql: str, insert_sql: str) -> None:
         """Execute incremental delete+insert operation."""
-        if not self.connection:
+        if not self.adapter.connection:
             raise RuntimeError("Not connected to database. Call connect() first.")
 
         qualified_table = self.adapter._qualify_object_name(table_name)
@@ -111,21 +111,43 @@ class IncrementalHandler:
         source_sql: str,
         unique_key: list[str],
         all_columns: list[str],
-        time_column: str | None,
+        filter_column: str | None,
     ) -> str:
-        """Generate Snowflake MERGE SQL with tuple ON and optional dedup by latest time_column."""
+        """Generate Snowflake MERGE SQL with tuple ON and optional dedup by latest filter_column."""
         qualified_table = self.adapter.utils.qualify_object_name(table_name)
-        # Deduplicate by unique key picking latest by time_column if provided
-        if time_column:
-            partition_keys = ", ".join(unique_key)
-            dedup_cte = (
-                "WITH src AS (" + source_sql + "), dedup AS ("
-                f"SELECT * FROM src QUALIFY ROW_NUMBER() OVER (PARTITION BY ({partition_keys}) ORDER BY {time_column} DESC) = 1)"
-            )
-            using_alias = "dedup"
+        
+        # Check if source_sql already contains CTEs (e.g., from auto_incremental wrapper)
+        # The auto_incremental wrapper returns queries like: "WITH ... SELECT DISTINCT ..."
+        # When we have existing CTEs, we need to handle them differently to avoid nested CTE syntax errors
+        source_sql_upper = source_sql.strip().upper()
+        has_existing_ctes = source_sql_upper.startswith("WITH ")
+        
+        if has_existing_ctes:
+            # Source SQL already has CTEs from auto_incremental wrapper
+            # In Snowflake, we can't nest CTEs like: WITH new AS (WITH old AS ... SELECT ...)
+            # Instead, we'll use the wrapped query directly in the MERGE USING clause as a subquery
+            # The auto_incremental wrapper already handles exclusion of existing records
+            # So we can skip the CTE-based deduplication and use the query directly
+            # Use the wrapped query as a subquery in the MERGE USING clause
+            source_for_using = f"({source_sql})"
+            using_alias = "src"
+            # Don't create a CTE - use the subquery directly in MERGE
+            dedup_cte = ""  # No CTE needed - use subquery directly
         else:
-            dedup_cte = "WITH dedup AS (" + source_sql + ")"
-            using_alias = "dedup"
+            # Source SQL is a simple SELECT - use normal CTE-based deduplication
+            source_for_cte = source_sql
+            
+            # Deduplicate by unique key picking latest by filter_column if provided
+            if filter_column:
+                partition_keys = ", ".join(unique_key)
+                dedup_cte = (
+                    "WITH src AS (" + source_for_cte + "), dedup AS ("
+                    f"SELECT * FROM src QUALIFY ROW_NUMBER() OVER (PARTITION BY ({partition_keys}) ORDER BY {filter_column} DESC) = 1)"
+                )
+                using_alias = "dedup"
+            else:
+                dedup_cte = "WITH dedup AS (" + source_for_cte + ")"
+                using_alias = "dedup"
         tuple_left = ", ".join([f"t.{k}" for k in unique_key])
         tuple_right = ", ".join([f"s.{k}" for k in unique_key])
         # Update set excludes keys
@@ -137,10 +159,21 @@ class IncrementalHandler:
         )
         insert_cols = ", ".join(all_columns)
         insert_vals = ", ".join([f"s.{c}" for c in all_columns])
-        merge_sql = (
-            f"{dedup_cte} \n"
-            f"MERGE INTO {qualified_table} t USING {using_alias} s ON ({tuple_left}) = ({tuple_right}) \n"
-            f"WHEN MATCHED THEN UPDATE SET {update_set} \n"
-            f"WHEN NOT MATCHED THEN INSERT ({insert_cols}) VALUES ({insert_vals})"
-        )
+        
+        # Build MERGE statement
+        if has_existing_ctes:
+            # For queries with existing CTEs, use subquery directly in USING clause
+            merge_sql = (
+                f"MERGE INTO {qualified_table} t USING {source_for_using} s ON ({tuple_left}) = ({tuple_right}) \n"
+                f"WHEN MATCHED THEN UPDATE SET {update_set} \n"
+                f"WHEN NOT MATCHED THEN INSERT ({insert_cols}) VALUES ({insert_vals})"
+            )
+        else:
+            # For simple queries, use CTE-based approach
+            merge_sql = (
+                f"{dedup_cte} \n"
+                f"MERGE INTO {qualified_table} t USING {using_alias} s ON ({tuple_left}) = ({tuple_right}) \n"
+                f"WHEN MATCHED THEN UPDATE SET {update_set} \n"
+                f"WHEN NOT MATCHED THEN INSERT ({insert_cols}) VALUES ({insert_vals})"
+            )
         return merge_sql

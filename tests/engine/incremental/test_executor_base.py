@@ -5,7 +5,7 @@ Base test class and fixtures for incremental executor tests.
 import pytest
 from unittest.mock import Mock
 
-from tee.engine.incremental_executor import IncrementalExecutor
+from tee.engine.materialization.incremental_executor import IncrementalExecutor
 from tee.engine.model_state import ModelStateManager
 from tee.typing.metadata import (
     IncrementalConfig,
@@ -34,15 +34,15 @@ class TestIncrementalExecutor:
     @pytest.fixture
     def sample_append_config(self) -> IncrementalAppendConfig:
         """Sample append configuration."""
-        return {"time_column": "created_at", "start_date": "2024-01-01", "lookback": "7 days"}
+        return {"filter_column": "created_at", "start_value": "2024-01-01", "lookback": "7 days"}
 
     @pytest.fixture
     def sample_merge_config(self) -> IncrementalMergeConfig:
         """Sample merge configuration."""
         return {
             "unique_key": ["id"],
-            "time_column": "updated_at",
-            "start_date": "auto",
+            "filter_column": "updated_at",
+            "start_value": "auto",
             "lookback": "3 hours",
         }
 
@@ -51,8 +51,8 @@ class TestIncrementalExecutor:
         """Sample delete+insert configuration."""
         return {
             "where_condition": "updated_at >= @start_date",
-            "time_column": "updated_at",
-            "start_date": "@start_date",
+            "filter_column": "updated_at",
+            "start_value": "@start_date",
         }
 
     @pytest.fixture
@@ -61,8 +61,8 @@ class TestIncrementalExecutor:
         return {
             "strategy": "append",
             "append": {
-                "time_column": "created_at",
-                "start_date": "2024-01-01",
+                "filter_column": "created_at",
+                "start_value": "2024-01-01",
                 "lookback": "7 days",
             },
         }

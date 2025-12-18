@@ -48,6 +48,7 @@ class SchemaChangeHandler:
         sql_query: str | None = None,
         full_incremental_refresh_config: dict[str, Any] | None = None,
         incremental_config: dict[str, Any] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """
         Handle schema changes based on on_schema_change setting.
@@ -68,6 +69,18 @@ class SchemaChangeHandler:
             logger.debug(f"No schema changes detected for {table_name}")
             return
 
+        # Enrich new_columns with auto_incremental flag from metadata if available
+        if metadata and "schema" in metadata:
+            metadata_schema = metadata["schema"]
+            metadata_col_map = {col["name"]: col for col in metadata_schema if isinstance(col, dict)}
+            
+            # Add auto_incremental flag to new columns if present in metadata
+            for new_col in differences["new_columns"]:
+                col_name = new_col.get("name")
+                if col_name and col_name in metadata_col_map:
+                    if metadata_col_map[col_name].get("auto_incremental"):
+                        new_col["auto_incremental"] = True
+
         # Log detected changes
         logger.info(
             f"Schema changes detected for {table_name}: "
@@ -82,10 +95,10 @@ class SchemaChangeHandler:
         elif on_schema_change == "ignore":
             self._handle_ignore(table_name)
         elif on_schema_change == "append_new_columns":
-            self._handle_append_new_columns(table_name, differences["new_columns"])
+            self._handle_append_new_columns(table_name, differences["new_columns"], metadata)
         elif on_schema_change == "sync_all_columns":
             self._handle_sync_all_columns(
-                table_name, differences["new_columns"], differences["missing_columns"]
+                table_name, differences["new_columns"], differences["missing_columns"], metadata
             )
         elif on_schema_change == "full_refresh":
             if not sql_query:
@@ -140,11 +153,28 @@ class SchemaChangeHandler:
         logger.info(f"Ignoring schema changes for {table_name}")
 
     def _handle_append_new_columns(
-        self, table_name: str, new_columns: list[dict[str, Any]]
+        self, table_name: str, new_columns: list[dict[str, Any]], metadata: dict[str, Any] | None = None
     ) -> None:
-        """Add new columns to existing table."""
+        """
+        Add new columns to existing table.
+        
+        Note: If any new column is marked as auto_incremental, this will fail
+        because auto_incremental columns require a full refresh to assign IDs correctly.
+        """
         if not new_columns:
             return
+
+        # Check if any new column is auto_incremental
+        auto_incremental_cols = [
+            col for col in new_columns if col.get("auto_incremental", False)
+        ]
+        if auto_incremental_cols:
+            col_names = [col["name"] for col in auto_incremental_cols]
+            raise ValueError(
+                f"Cannot add auto_incremental columns {col_names} to existing table {table_name} "
+                f"using 'append_new_columns'. AutoIncremental columns require a full refresh "
+                f"(on_schema_change='full_refresh' or 'full_incremental_refresh') to assign IDs correctly."
+            )
 
         logger.info(f"Adding {len(new_columns)} new columns to {table_name}")
         for column in new_columns:
@@ -155,8 +185,26 @@ class SchemaChangeHandler:
         table_name: str,
         new_columns: list[dict[str, Any]],
         missing_columns: list[dict[str, Any]],
+        metadata: dict[str, Any] | None = None,
     ) -> None:
-        """Sync all columns: add new, remove missing."""
+        """
+        Sync all columns: add new, remove missing.
+        
+        Note: If any new column is marked as auto_incremental, this will fail
+        because auto_incremental columns require a full refresh to assign IDs correctly.
+        """
+        # Check if any new column is auto_incremental
+        auto_incremental_cols = [
+            col for col in new_columns if col.get("auto_incremental", False)
+        ]
+        if auto_incremental_cols:
+            col_names = [col["name"] for col in auto_incremental_cols]
+            raise ValueError(
+                f"Cannot add auto_incremental columns {col_names} to existing table {table_name} "
+                f"using 'sync_all_columns'. AutoIncremental columns require a full refresh "
+                f"(on_schema_change='full_refresh' or 'full_incremental_refresh') to assign IDs correctly."
+            )
+
         # Add new columns
         if new_columns:
             logger.info(f"Adding {len(new_columns)} new columns to {table_name}")
@@ -174,13 +222,18 @@ class SchemaChangeHandler:
 
     def _handle_full_refresh(self, table_name: str, sql_query: str) -> None:
         """Drop table and recreate with full query (no incremental filtering)."""
-        logger.info(f"Performing full refresh for {table_name}: dropping and recreating table")
+        logger.info(
+            f"Schema change detected for {table_name} with on_schema_change='full_refresh'. "
+            f"Dropping and recreating table with new schema."
+        )
         
         # Drop existing table
         self.adapter.drop_table(table_name)
+        logger.info(f"Dropped table {table_name} due to schema change")
         
         # Recreate with full query (no filtering)
         self.adapter.create_table(table_name, sql_query)
+        logger.info(f"Recreated table {table_name} with new schema")
 
     def _handle_full_incremental_refresh(
         self,

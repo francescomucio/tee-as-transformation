@@ -240,10 +240,20 @@ class DuckDBAdapter(DatabaseAdapter):
             raise RuntimeError("Not connected to database. Call connect() first.")
 
         try:
-            result = self.connection.execute(
-                "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = ?", [table_name]
-            ).fetchone()
-            return result[0] > 0
+            # Handle schema-qualified table names (e.g., "my_schema.dim_brand")
+            if "." in table_name:
+                schema_name, table_name_only = table_name.split(".", 1)
+                result = self.connection.execute(
+                    "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ? AND table_name = ?",
+                    [schema_name, table_name_only]
+                ).fetchone()
+            else:
+                # No schema specified, check in default schema
+                result = self.connection.execute(
+                    "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = ?",
+                    [table_name]
+                ).fetchone()
+            return result[0] > 0 if result else False
         except Exception:
             return False
 

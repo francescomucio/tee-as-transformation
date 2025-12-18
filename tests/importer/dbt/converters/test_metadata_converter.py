@@ -240,7 +240,7 @@ class TestMetadataConverter:
         assert "incremental" in result
         assert result["incremental"]["strategy"] == "append"
         assert "append" in result["incremental"]
-        assert result["incremental"]["append"]["time_column"] == "updated_at"
+        assert result["incremental"]["append"]["filter_column"] == "updated_at"
 
     def test_convert_incremental_config_merge(self):
         """Test converting incremental config with merge strategy."""
@@ -262,7 +262,7 @@ class TestMetadataConverter:
         assert result["incremental"]["strategy"] == "merge"
         assert "merge" in result["incremental"]
         assert result["incremental"]["merge"]["unique_key"] == ["id"]
-        assert result["incremental"]["merge"]["time_column"] == "updated_at"
+        assert result["incremental"]["merge"]["filter_column"] == "updated_at"
 
     def test_convert_incremental_config_unique_key_list(self):
         """Test converting incremental config with unique_key as list."""
